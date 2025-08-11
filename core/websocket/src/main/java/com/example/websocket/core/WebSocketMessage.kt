@@ -3,6 +3,9 @@ package com.example.websocket.core
 import com.example.websocket.constant.WebSocketFieldConstants
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
 
 /**
  * WebSocket을 통해 송수신되는 메시지의 데이터 클래스
@@ -121,6 +124,91 @@ data class WebSocketMessage(
 ) {
 
     companion object {
+
+        private val json = Json {
+            ignoreUnknownKeys = true
+            encodeDefaults = false
+        }
+
+        // ================================
+        // JSON/Map 변환 메서드
+        // ================================
+
+        /**
+         * JSON 문자열을 WebSocketMessage로 변환
+         */
+        fun fromJson(jsonString: String): WebSocketMessage {
+            return json.decodeFromString(jsonString)
+        }
+
+        /**
+         * WebSocketMessage를 JSON 문자열로 변환
+         */
+        fun toJson(message: WebSocketMessage): String {
+            return json.encodeToString(message)
+        }
+
+        /**
+         * Map을 WebSocketMessage로 변환
+         */
+        fun fromMap(map: Map<String, Any?>): WebSocketMessage {
+            return WebSocketMessage(
+                type = map[WebSocketFieldConstants.FIELD_TYPE] as String,
+                roomId = map[WebSocketFieldConstants.FIELD_ROOM_ID] as? String,
+                senderId = map[WebSocketFieldConstants.FIELD_SENDER_ID] as? String,
+                messageType = map[WebSocketFieldConstants.FIELD_MESSAGE_TYPE] as? String,
+                payload = convertToStringMap(map[WebSocketFieldConstants.FIELD_PAYLOAD]),
+                messageId = map[WebSocketFieldConstants.FIELD_MESSAGE_ID] as? String,
+                replyToMessageId = map[WebSocketFieldConstants.FIELD_REPLY_TO_MESSAGE_ID] as? String,
+                timestamp = (map[WebSocketFieldConstants.FIELD_TIMESTAMP] as? Number)?.toDouble(),
+                projectId = map[WebSocketFieldConstants.FIELD_PROJECT_ID] as? String,
+                channelType = map[WebSocketFieldConstants.FIELD_CHANNEL_TYPE] as? String,
+                authToken = map[WebSocketFieldConstants.FIELD_AUTH_TOKEN] as? String,
+                errorCode = map[WebSocketFieldConstants.FIELD_ERROR_CODE] as? String,
+                metadata = convertToStringMap(map[WebSocketFieldConstants.FIELD_METADATA])
+            )
+        }
+
+        /**
+         * WebSocketMessage를 Map으로 변환
+         */
+        fun toMap(message: WebSocketMessage): Map<String, Any?> {
+            return buildMap {
+                put(WebSocketFieldConstants.FIELD_TYPE, message.type)
+                message.roomId?.let { put(WebSocketFieldConstants.FIELD_ROOM_ID, it) }
+                message.senderId?.let { put(WebSocketFieldConstants.FIELD_SENDER_ID, it) }
+                message.messageType?.let { put(WebSocketFieldConstants.FIELD_MESSAGE_TYPE, it) }
+                message.payload?.let { put(WebSocketFieldConstants.FIELD_PAYLOAD, it) }
+                message.messageId?.let { put(WebSocketFieldConstants.FIELD_MESSAGE_ID, it) }
+                message.replyToMessageId?.let {
+                    put(
+                        WebSocketFieldConstants.FIELD_REPLY_TO_MESSAGE_ID,
+                        it
+                    )
+                }
+                message.timestamp?.let { put(WebSocketFieldConstants.FIELD_TIMESTAMP, it) }
+                message.projectId?.let { put(WebSocketFieldConstants.FIELD_PROJECT_ID, it) }
+                message.channelType?.let { put(WebSocketFieldConstants.FIELD_CHANNEL_TYPE, it) }
+                message.authToken?.let { put(WebSocketFieldConstants.FIELD_AUTH_TOKEN, it) }
+                message.errorCode?.let { put(WebSocketFieldConstants.FIELD_ERROR_CODE, it) }
+                message.metadata?.let { put(WebSocketFieldConstants.FIELD_METADATA, it) }
+            }
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        private fun convertToStringMap(obj: Any?): Map<String, String>? {
+            return when (obj) {
+                null -> null
+                is Map<*, *> -> {
+                    obj.entries.associate { (k, v) ->
+                        k.toString() to (v?.toString() ?: "")
+                    }
+                }
+
+                else -> null
+            }
+        }
+        
         // ================================
         // 메시지 타입 상수
         // ================================
@@ -131,6 +219,7 @@ data class WebSocketMessage(
         const val TYPE_DELETE_MESSAGE = "DELETE_MESSAGE"
 
         // ACK 메시지 타입
+        const val TYPE_ACK = "ACK"  // 서버에서 보내는 일반 ACK
         const val TYPE_MESSAGE_ACK = "MESSAGE_ACK"
         const val TYPE_EDIT_MESSAGE_ACK = "EDIT_MESSAGE_ACK"
         const val TYPE_DELETE_MESSAGE_ACK = "DELETE_MESSAGE_ACK"
@@ -311,6 +400,16 @@ data class WebSocketMessage(
     fun getTextContent(): String? {
         return payload?.get(WebSocketFieldConstants.PAYLOAD_CONTENT)
     }
+
+    /**
+     * JSON 문자열로 변환
+     */
+    fun toJson(): String = toJson(this)
+
+    /**
+     * Map으로 변환
+     */
+    fun toMap(): Map<String, Any?> = toMap(this)
 
     /**
      * 메시지의 간단한 문자열 표현

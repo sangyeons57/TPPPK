@@ -74,6 +74,16 @@ class WebSocketDomainMapper @Inject constructor() {
                 )
             }
 
+            WebSocketMessage.TYPE_ACK -> {
+                // 서버에서 보내는 일반 ACK - replyToMessageId로 메시지 ACK임을 판단
+                WebSocketDomainEvent.MessageAck(
+                    messageId = message.replyToMessageId
+                        ?: "", // ACK의 경우 replyToMessageId가 원본 메시지 ID
+                    ackType = WebSocketMessage.TYPE_MESSAGE_ACK, // 일반 메시지 ACK로 처리
+                    roomId = roomId ?: message.roomId
+                )
+            }
+            
             WebSocketMessage.TYPE_MESSAGE_ACK,
             WebSocketMessage.TYPE_EDIT_MESSAGE_ACK,
             WebSocketMessage.TYPE_DELETE_MESSAGE_ACK -> {

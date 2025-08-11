@@ -10,6 +10,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 /**
@@ -84,9 +87,42 @@ class FileUploadDataSourceImpl @Inject constructor(
     // 리소스 정리를 위한 코루틴 스코프
     private val cleanupScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    override fun uploadFileWithProgress(storagePath: String, fileUri: Uri): Flow<FileUploadResult> {
-        TODO("문제 발생으로 내부구현 제거함")
-    }
+    override fun uploadFileWithProgress(storagePath: String, fileUri: Uri): Flow<FileUploadResult> =
+        callbackFlow {
+            try {
+                val storageRef = storage.reference.child(storagePath)
+                val uploadTask = storageRef.putFile(fileUri)
+
+                uploadTask.addOnProgressListener { taskSnapshot ->
+                    val progress = FileUploadProgress(
+                        bytesTransferred = taskSnapshot.bytesTransferred,
+                        totalBytes = taskSnapshot.totalByteCount
+                    )
+                    trySend(FileUploadResult.Progress(progress))
+                }
+
+                uploadTask.addOnSuccessListener { _ ->
+                    storageRef.downloadUrl.addOnSuccessListener { downloadUri ->
+                        trySend(FileUploadResult.Success(downloadUri.toString()))
+                        close()
+                    }.addOnFailureListener { exception ->
+                        trySend(FileUploadResult.Failure(exception))
+                        close(exception)
+                    }
+                }.addOnFailureListener { exception ->
+                    trySend(FileUploadResult.Failure(exception))
+                    close(exception)
+                }
+
+            } catch (e: Exception) {
+                trySend(FileUploadResult.Failure(e))
+                close(e)
+            }
+
+            awaitClose {
+                // 업로드 작업 정리
+            }
+        }
 
     override suspend fun uploadCompressedImage(
         storagePath: String,
@@ -95,7 +131,34 @@ class FileUploadDataSourceImpl @Inject constructor(
         maxHeight: Int,
         quality: Int
     ): CustomResult<String, Exception> {
-        TODO("문제 발생으로 내부구현 제거함")
+        return try {
+            // 이미지 압축
+            val compressionOptions =
+                com.example.core_common.util.ImageCompressor.CompressionOptions(
+                    maxWidth = maxWidth,
+                    maxHeight = maxHeight,
+                    quality = quality,
+                    maxFileSizeBytes = 3 * 1024 * 1024 // 3MB 제한
+                )
+
+            val compressedUri = com.example.core_common.util.ImageCompressor.compressImage(
+                context = context,
+                imageUri = fileUri,
+                options = compressionOptions
+            )
+
+            // Firebase Storage에 업로드
+            val storageRef = storage.reference.child(storagePath)
+            val uploadTask = storageRef.putFile(compressedUri)
+
+            val taskSnapshot = uploadTask.await()
+            val downloadUrl = storageRef.downloadUrl.await()
+
+            CustomResult.Success(downloadUrl.toString())
+
+        } catch (e: Exception) {
+            CustomResult.Failure(e)
+        }
     }
 
     override suspend fun uploadThumbnail(
@@ -103,7 +166,34 @@ class FileUploadDataSourceImpl @Inject constructor(
         fileUri: Uri,
         thumbnailSize: Int
     ): CustomResult<String, Exception> {
+        return try {
+            // 썸네일용 압축 옵션 (작은 크기, 높은 압축률)
+            val compressionOptions =
+                com.example.core_common.util.ImageCompressor.CompressionOptions(
+                    maxWidth = thumbnailSize,
+                    maxHeight = thumbnailSize,
+                    quality = 60, // 썸네일은 품질보다 크기 우선
+                    maxFileSizeBytes = 500 * 1024 // 500KB 제한
+                )
 
-        TODO("문제 발생으로 내부구현 제거함")
+            val compressedUri = com.example.core_common.util.ImageCompressor.compressImage(
+                context = context,
+                imageUri = fileUri,
+                options = compressionOptions
+            )
+
+            // Firebase Storage에 업로드
+            val thumbnailPath = storagePath.replace("/", "/thumbnails/")
+            val storageRef = storage.reference.child(thumbnailPath)
+            val uploadTask = storageRef.putFile(compressedUri)
+
+            val taskSnapshot = uploadTask.await()
+            val downloadUrl = storageRef.downloadUrl.await()
+
+            CustomResult.Success(downloadUrl.toString())
+
+        } catch (e: Exception) {
+            CustomResult.Failure(e)
+        }
     }
 }

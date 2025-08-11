@@ -217,6 +217,45 @@ value class MessagePayload(val value: String) {
             }
             return forTextWithAttachments(content, imageAttachments)
         }
+
+        /**
+         * 업로드 중인 이미지 메시지용 페이로드 생성 (placeholder)
+         */
+        fun forImagePlaceholder(
+            content: String = "",
+            localUri: String,
+            filename: String? = null,
+            uploadProgress: Float = 0f
+        ): MessagePayload {
+            val attachment = buildMap<String, Any?> {
+                put("kind", "image")
+                put("url", localUri) // 임시로 로컬 URI 사용
+                put("mime", "image/jpeg")
+                put("uploading", true)
+                put("progress", uploadProgress)
+                filename?.let { put("filename", it) }
+            }
+            return forTextWithAttachments(content, listOf(attachment))
+        }
+
+        /**
+         * 다중 업로드 중인 이미지 메시지용 페이로드 생성
+         */
+        fun forImagePlaceholders(
+            content: String = "",
+            localUris: List<String>
+        ): MessagePayload {
+            val attachments = localUris.map { localUri ->
+                buildMap<String, Any?> {
+                    put("kind", "image")
+                    put("url", localUri)
+                    put("mime", "image/jpeg")
+                    put("uploading", true)
+                    put("progress", 0f)
+                }
+            }
+            return forTextWithAttachments(content, attachments)
+        }
     }
 
     /**
@@ -272,6 +311,11 @@ value class MessagePayload(val value: String) {
             val jsonObject = asJsonObject()
             val attachmentsArray = jsonObject["attachments"]?.jsonArray ?: return emptyList()
 
+            android.util.Log.d(
+                "MessagePayload",
+                "🖼️ [UI표시] Payload에서 첨부파일 추출: ${attachmentsArray.size}개"
+            )
+
             attachmentsArray.mapNotNull { element ->
                 try {
                     val jsonObj = element.jsonObject
@@ -319,6 +363,130 @@ value class MessagePayload(val value: String) {
             asJsonObject().containsKey("attachments") && getAttachments().isNotEmpty()
         } catch (e: Exception) {
             false
+        }
+    }
+
+    /**
+     * 업로드 중인 첨부파일이 있는지 확인
+     */
+    fun hasUploadingAttachments(): Boolean {
+        return try {
+            getAttachments().any { attachment ->
+                attachment["uploading"] as? Boolean == true
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
+     * 평균 업로드 진행률 계산
+     */
+    fun getUploadProgress(): Float {
+        return try {
+            val attachments = getAttachments()
+            val uploadingAttachments = attachments.filter {
+                it["uploading"] as? Boolean == true
+            }
+
+            if (uploadingAttachments.isEmpty()) return 1f
+
+            val totalProgress = uploadingAttachments.sumOf { attachment ->
+                (attachment["progress"] as? Number)?.toDouble() ?: 0.0
+            }
+
+            (totalProgress / uploadingAttachments.size).toFloat()
+
+        } catch (e: Exception) {
+            0f
+        }
+    }
+
+    /**
+     * 특정 첨부파일의 업로드 진행률 업데이트
+     */
+    fun updateUploadProgress(localUri: String, progress: Float): MessagePayload {
+        return try {
+            val jsonObject = asJsonObject()
+            val attachmentsArray = jsonObject["attachments"]?.jsonArray ?: return this
+
+            val updatedAttachments = attachmentsArray.map { element ->
+                val attachment = element.jsonObject
+                val currentUrl = attachment["url"]?.jsonPrimitive?.content
+
+                if (currentUrl == localUri) {
+                    // 진행률 업데이트
+                    buildJsonObject {
+                        attachment.forEach { (key, value) ->
+                            when (key) {
+                                "progress" -> put(key, progress)
+                                else -> put(key, value)
+                            }
+                        }
+                    }
+                } else {
+                    attachment
+                }
+            }
+
+            val updatedJson = buildJsonObject {
+                jsonObject.forEach { (key, value) ->
+                    when (key) {
+                        "attachments" -> put(key, JsonArray(updatedAttachments))
+                        else -> put(key, value)
+                    }
+                }
+            }
+
+            MessagePayload(updatedJson.toString())
+
+        } catch (e: Exception) {
+            this // 실패시 원본 반환
+        }
+    }
+
+    /**
+     * 첨부파일의 로컬 URI를 Firebase Storage URL로 업데이트
+     */
+    fun updateAttachmentUrl(localUri: String, firebaseUrl: String): MessagePayload {
+        return try {
+            val jsonObject = asJsonObject()
+            val attachmentsArray = jsonObject["attachments"]?.jsonArray ?: return this
+
+            val updatedAttachments = attachmentsArray.map { element ->
+                val attachment = element.jsonObject
+                val currentUrl = attachment["url"]?.jsonPrimitive?.content
+
+                if (currentUrl == localUri) {
+                    // URL 업데이트 및 업로드 상태 제거
+                    buildJsonObject {
+                        attachment.forEach { (key, value) ->
+                            when (key) {
+                                "url" -> put(key, firebaseUrl)
+                                "uploading" -> {} // 제거
+                                "progress" -> {} // 제거
+                                else -> put(key, value)
+                            }
+                        }
+                    }
+                } else {
+                    attachment
+                }
+            }
+
+            val updatedJson = buildJsonObject {
+                jsonObject.forEach { (key, value) ->
+                    when (key) {
+                        "attachments" -> put(key, JsonArray(updatedAttachments))
+                        else -> put(key, value)
+                    }
+                }
+            }
+
+            MessagePayload(updatedJson.toString())
+
+        } catch (e: Exception) {
+            this // 실패시 원본 반환
         }
     }
 }

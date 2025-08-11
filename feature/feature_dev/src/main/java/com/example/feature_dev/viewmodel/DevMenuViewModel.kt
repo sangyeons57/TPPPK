@@ -491,7 +491,7 @@ class DevMenuViewModel @Inject constructor(
             Log.d("DevMenuViewModel-Sync", "   - Stream Name: $streamName")
 
             try {
-                val result = syncUseCase(streamName)
+                val result = syncUseCase.syncChannel(channelId)
                 when (result) {
                     is CustomResult.Success -> {
                         _outBoxStatus.value = "✅ 증분 동기화 완료"
@@ -758,7 +758,7 @@ class DevMenuViewModel @Inject constructor(
                 _outBoxStatus.value = "🔄 동기화 실행 중..."
                 val streamName = "messages-$channelId"
 
-                when (val result = syncUseCase(streamName)) {
+                when (val result = syncUseCase.syncChannel(channelId)) {
                     is CustomResult.Success -> {
                         Log.d("DevMenuViewModel-Sync", "✅ Sync completed successfully")
 

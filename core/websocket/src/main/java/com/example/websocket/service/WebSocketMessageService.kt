@@ -2,6 +2,7 @@ package com.example.websocket.service
 
 import android.util.Log
 import com.example.core_common.result.CustomResult
+import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.base.Message
 import com.example.domain.model.data.UserSession
 import com.example.domain.vo.ChannelId
@@ -105,10 +106,10 @@ class WebSocketMessageService @Inject constructor(
                         return@onEach
                     }
 
-                    // 중복 저장 방지: 이미 존재하는 메시지인지 확인
-                    val existingMessage = messageRepository.findById(DocumentId(event.messageId))
+                    // 중복 저장 방지: 이미 존재하는 메시지인지 로컬 DB에서 확인
+                    val existingMessage = messageRepository.findById(event.messageId)
 
-                    if (existingMessage is CustomResult.Success) {
+                    if (existingMessage != null) {
                         Log.d(TAG, "메시지 이미 존재함, 저장 스킵: ${event.messageId}")
                         return@onEach
                     }
@@ -144,10 +145,24 @@ class WebSocketMessageService @Inject constructor(
             .filterIsInstance<WebSocketDomainEvent.MessageEdited>()
             .onEach { event ->
                 try {
-                    // Room DB에서 메시지 업데이트 (update 메서드가 있다고 가정)
-                    Log.d(TAG, "메시지 수정 이벤트 처리: ${event.messageId}")
-                    // TODO: Repository에 update 메서드 구현 후 활성화
-                    // messageRepository.updatePayload(DocumentId(event.messageId), MessagePayload.forText(event.newContent))
+                    Log.d(TAG, "메시지 수정 이벤트 처리(업서트): ${event.messageId}")
+                    val existing = messageRepository.findById(event.messageId)
+                    if (existing != null) {
+                        existing.updatePayload(MessagePayload.forText(event.newContent))
+                        messageRepository.save(existing)
+                    } else {
+                        // 업서트: 없는 경우 새 메시지로 생성(isNew=true)
+                        val created = Message.create(
+                            id = DocumentId(event.messageId),
+                            senderId = UserId(event.senderId),
+                            messageType = MessageType.TEXT,
+                            payload = MessagePayload.forText(event.newContent),
+                            replyToMessageId = null,
+                            mentions = emptyList(),
+                            channelId = ChannelId(event.roomId ?: "")
+                        )
+                        messageRepository.save(created)
+                    }
                 } catch (e: Exception) {
                     Log.e(TAG, "메시지 수정 자동 저장 중 예외: ${event.messageId}", e)
                 }
@@ -159,13 +174,25 @@ class WebSocketMessageService @Inject constructor(
             .filterIsInstance<WebSocketDomainEvent.MessageDeleted>()
             .onEach { event ->
                 try {
-                    Log.d(TAG, "메시지 삭제 이벤트 처리: ${event.messageId}")
-                    val existingMessage =
-                        messageRepository.findById(DocumentId(event.messageId))
-                    if (existingMessage is CustomResult.Success) {
-                        existingMessage.data.delete()
-                        messageRepository.save(existingMessage.data)
+                    Log.d(TAG, "메시지 삭제 이벤트 처리(업서트): ${event.messageId}")
+                    val existingMessage = messageRepository.findById(event.messageId)
+                    if (existingMessage != null) {
+                        existingMessage.delete()
+                        messageRepository.save(existingMessage)
                         Log.d(TAG, "메시지 삭제 처리 완료: ${event.messageId}")
+                    } else {
+                        // 업서트: 없는 경우 새 메시지 생성 후 삭제 마킹(isNew=true)
+                        val created = Message.create(
+                            id = DocumentId(event.messageId),
+                            senderId = UserId(event.senderId),
+                            messageType = MessageType.TEXT,
+                            payload = MessagePayload.forText(""),
+                            replyToMessageId = null,
+                            mentions = emptyList(),
+                            channelId = ChannelId(event.roomId ?: "")
+                        )
+                        created.delete()
+                        messageRepository.save(created)
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "메시지 삭제 자동 저장 중 예외: ${event.messageId}", e)

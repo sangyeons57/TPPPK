@@ -1,7 +1,6 @@
 package com.example.domain_usecase.provider.file
 
 import com.example.domain_repository.base.FileRepository
-import com.example.domain_repository.base.MediaRepository
 import com.example.domain_usecase.usecase.file.DeleteFileUseCase
 import com.example.domain_usecase.usecase.file.DeleteFileUseCaseImpl
 import com.example.domain_usecase.usecase.file.DownloadFileUseCase
@@ -10,10 +9,10 @@ import com.example.domain_usecase.usecase.file.GetFileUrlUseCase
 import com.example.domain_usecase.usecase.file.GetFileUrlUseCaseImpl
 import com.example.domain_usecase.usecase.file.UploadFileUseCase
 import com.example.domain_usecase.usecase.file.UploadFileUseCaseImpl
-import com.example.domain_usecase.usecase.media.DeleteMediaUseCase
-import com.example.domain_usecase.usecase.media.DeleteMediaUseCaseImpl
-import com.example.domain_usecase.usecase.media.UploadMediaUseCase
-import com.example.domain_usecase.usecase.media.UploadMediaUseCaseImpl
+import com.example.domain_usecase.usecase.file.UploadMessageAttachmentsUseCase
+import com.example.domain_usecase.usecase.file.UploadMessageAttachmentsUseCaseImpl
+import dagger.hilt.android.qualifiers.ApplicationContext
+import android.content.Context
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -26,7 +25,7 @@ import javax.inject.Singleton
 @Singleton
 class FileManagementUseCaseProvider @Inject constructor(
     private val fileRepository: FileRepository,
-    private val mediaRepository: MediaRepository
+    @ApplicationContext private val context: Context
 ) {
 
     /**
@@ -38,8 +37,10 @@ class FileManagementUseCaseProvider @Inject constructor(
             deleteFileUseCase = DeleteFileUseCaseImpl(this.fileRepository),
             getFileUrlUseCase = GetFileUrlUseCaseImpl(this.fileRepository),
             downloadFileUseCase = DownloadFileUseCaseImpl(this.fileRepository),
-            uploadMediaUseCase = UploadMediaUseCaseImpl(this.mediaRepository),
-            deleteMediaUseCase = DeleteMediaUseCaseImpl(this.mediaRepository),
+            uploadMessageAttachmentsUseCase = UploadMessageAttachmentsUseCaseImpl(
+                fileRepository = this.fileRepository,
+                context = this.context
+            )
         )
     }
 }
@@ -52,6 +53,5 @@ data class FileManagementUseCases(
     val deleteFileUseCase: DeleteFileUseCase,
     val getFileUrlUseCase: GetFileUrlUseCase,
     val downloadFileUseCase: DownloadFileUseCase,
-    val uploadMediaUseCase: UploadMediaUseCase,
-    val deleteMediaUseCase: DeleteMediaUseCase,
+    val uploadMessageAttachmentsUseCase: UploadMessageAttachmentsUseCase,
 )

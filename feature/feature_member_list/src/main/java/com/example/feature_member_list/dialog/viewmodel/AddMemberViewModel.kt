@@ -6,15 +6,19 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.ProjectId
 import com.example.domain.vo.UserId
+import com.example.domain.vo.user.UserName
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain_usecase.provider.auth.AuthSessionUseCases
 import com.example.domain_usecase.provider.friend.FriendUseCaseProvider
 import com.example.domain_usecase.provider.friend.FriendUseCases
-import com.example.domain_usecase.provider.project.CoreProjectUseCaseProvider
-import com.example.domain_usecase.provider.project.CoreProjectUseCases
+import com.example.domain_usecase.provider.dm.DMUseCaseProvider
+import com.example.domain_usecase.provider.dm.DMUseCases
+import com.example.domain_usecase.usecase.user.SearchUsersByNameUseCaseImpl
+import com.example.domain_usecase.usecase.project.SendMemberInvitationDMUseCase
 import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectMemberUseCases
 import com.example.feature_member_list.dialog.ui.FriendItem
+import com.example.feature_member_list.dialog.ui.SearchedUser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,11 +30,12 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class AddMemberDialogUiState(
-    val projectInviteLink: String? = null, // 프로젝트 참가 링크
     val friends: List<FriendItem> = emptyList(), // 친구 목록
-    val selectedFriends: Set<UserId> = emptySet(), // 선택된 친구들
-    val isLoadingLink: Boolean = false, // 링크 생성 로딩
+    val selectedMembers: Set<UserId> = emptySet(), // 선택된 멤버들 (친구 + 검색된 사용자)
+    val searchQuery: String = "", // 사용자 이름 검색 쿼리
+    val searchedUsers: List<SearchedUser> = emptyList(), // 검색된 사용자 목록
     val isLoadingFriends: Boolean = false, // 친구 목록 로딩
+    val isLoadingSearch: Boolean = false, // 사용자 검색 로딩
     val error: String? = null,
     val addSuccess: Boolean = false
 )
@@ -44,13 +49,15 @@ sealed class AddMemberDialogEvent {
 @HiltViewModel
 class AddMemberViewModel @Inject constructor(
     private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider,
-    private val coreProjectUseCaseProvider: CoreProjectUseCaseProvider,
+    private val dmUseCaseProvider: DMUseCaseProvider,
     private val friendUseCaseProvider: FriendUseCaseProvider,
-    private val authSessionUseCaseProvider: AuthSessionUseCaseProvider
+    private val authSessionUseCaseProvider: AuthSessionUseCaseProvider,
+    private val searchUsersByNameUseCase: SearchUsersByNameUseCaseImpl,
+    private val sendMemberInvitationDMUseCase: SendMemberInvitationDMUseCase
 ) : ViewModel() {
 
     private var projectMemberUseCases: ProjectMemberUseCases? = null
-    private var coreProjectUseCases: CoreProjectUseCases? = null
+    private var dmUseCases: DMUseCases? = null
     private var friendUseCases: FriendUseCases? = null
     private var authSessionUseCases: AuthSessionUseCases? = null
 
@@ -125,192 +132,197 @@ class AddMemberViewModel @Inject constructor(
     }
 
     /**
-     * 프로젝트 초대 링크를 로드합니다.
+     * 사용자 이름으로 검색합니다.
      */
-    suspend fun loadProjectInviteLink(projectId: DocumentId) {
-        // 기존 초대 링크가 있다면 생성하지 않고 바로 새로운 링크 생성을 권장
-        generateProjectInviteLink(projectId)
-    }
+    fun searchUserByName(userName: String) {
+        if (userName.isBlank()) {
+            _uiState.update { it.copy(searchedUsers = emptyList()) }
+            return
+        }
 
-    /**
-     * 새로운 프로젝트 초대 링크를 생성합니다.
-     */
-    fun generateProjectInviteLink(projectId: DocumentId) {
-        // CoreProjectUseCases 초기화
-        if (coreProjectUseCases == null && authSessionUseCases != null) {
-            viewModelScope.launch {
-                val currentUser = authSessionUseCases!!.getCurrentUserSessionUseCase()
-                when (currentUser) {
-                    is CustomResult.Success -> {
-                        coreProjectUseCases = coreProjectUseCaseProvider.createForProject(
-                            projectId = projectId,
-                            userId = currentUser.data.userId
-                        )
-                    }
-                    else -> {
-                        viewModelScope.launch {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingSearch = true, error = null) }
+            
+            try {
+                searchUsersByNameUseCase(userName, 10).collect { result ->
+                    when (result) {
+                        is CustomResult.Success -> {
+                            val users = result.data
+                            val searchedUsers = users.map { user ->
+                                SearchedUser(
+                                    userId = UserId(user.id.value),
+                                    userName = user.name,
+                                    userEmail = user.email.value,
+                                    profileImageUrl = null // User model doesn't have profileImageUrl property
+                                )
+                            }
                             _uiState.update {
                                 it.copy(
-                                    isLoadingLink = false,
-                                    error = "사용자 인증 정보를 가져올 수 없습니다."
+                                    searchedUsers = searchedUsers,
+                                    isLoadingSearch = false,
+                                    error = null
                                 )
                             }
                         }
-                    }
-                }
-            }
-        }
 
-        val useCases = coreProjectUseCases ?: return
-
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoadingLink = true, error = null) }
-            
-            try {
-                val currentUser = authSessionUseCases!!.getCurrentUserSessionUseCase()
-                when (currentUser) {
-                    is CustomResult.Success -> {
-                        // 1. 초대 생성 (DocumentId 반환)
-                        val createResult = useCases.generateInviteLinkUseCase(
-                            inviterId = currentUser.data.userId,
-                            projectId = ProjectId.from(projectId),
-                            expiresInHours = 24 // 기본 24시간
-                        )
-                        
-                        when (createResult) {
-                            is CustomResult.Success -> {
-                                // 2. 생성된 DocumentId로 링크 생성
-                                val invitationId = createResult.data
-                                val inviteLink = useCases.generateInviteLinkFromIdUseCase(invitationId)
-                                
-                                _uiState.update { 
-                                    it.copy(
-                                        projectInviteLink = inviteLink,
-                                        isLoadingLink = false,
-                                        error = null
-                                    ) 
-                                }
-                                _eventFlow.emit(AddMemberDialogEvent.ShowSnackbar("새로운 초대 링크가 생성되었습니다."))
-                            }
-                            is CustomResult.Failure -> {
-                                _uiState.update { 
-                                    it.copy(
-                                        isLoadingLink = false, 
-                                        error = "초대 링크 생성 실패: ${createResult.error.message}"
-                                    ) 
-                                }
-                            }
-                            else -> {
-                                _uiState.update { it.copy(isLoadingLink = true) }
+                        is CustomResult.Failure -> {
+                            _uiState.update {
+                                it.copy(
+                                    searchedUsers = emptyList(),
+                                    isLoadingSearch = false,
+                                    error = "사용자 검색 실패: ${result.error.message}"
+                                )
                             }
                         }
-                    }
-                    is CustomResult.Failure -> {
-                        _uiState.update { 
-                            it.copy(
-                                isLoadingLink = false, 
-                                error = "사용자 인증 실패: ${currentUser.error.message}"
-                            ) 
+
+                        is CustomResult.Loading -> {
+                            // 로딩 상태는 이미 설정됨
                         }
-                    }
-                    else -> {
-                        _uiState.update { it.copy(isLoadingLink = true) }
+
+                        else -> {
+                            // 기타 상태 처리
+                        }
                     }
                 }
             } catch (e: Exception) {
-                _uiState.update { 
+                _uiState.update {
                     it.copy(
-                        isLoadingLink = false, 
-                        error = "초대 링크 생성 중 오류 발생: ${e.message}"
-                    ) 
+                        searchedUsers = emptyList(),
+                        isLoadingSearch = false,
+                        error = "사용자 검색 실패: ${e.message}"
+                    )
                 }
             }
         }
     }
 
     /**
-     * 친구 선택 상태를 변경합니다.
+     * 검색 쿼리 변경을 처리합니다.
      */
-    fun onFriendSelectionChanged(userId: UserId, isSelected: Boolean) {
-        _uiState.update { currentState ->
-            val newSelectedFriends = currentState.selectedFriends.toMutableSet()
-            if (isSelected) {
-                newSelectedFriends.add(userId)
-            } else {
-                newSelectedFriends.remove(userId)
-            }
-            currentState.copy(selectedFriends = newSelectedFriends)
+    fun onSearchQueryChanged(query: String) {
+        _uiState.update { it.copy(searchQuery = query) }
+        // 검색어가 비어있으면 검색 결과 정리
+        if (query.isBlank()) {
+            _uiState.update { it.copy(searchedUsers = emptyList()) }
         }
     }
 
     /**
-     * 선택된 친구들에게 프로젝트 초대를 보냅니다.
+     * 멤버 선택 상태를 변경합니다.
      */
-    fun inviteFriends(projectId: DocumentId, selectedFriendIds: Set<UserId>) {
-        if (selectedFriendIds.isEmpty()) {
-            viewModelScope.launch { 
-                _eventFlow.emit(AddMemberDialogEvent.ShowSnackbar("초대할 친구를 선택해주세요.")) 
+    fun onMemberSelectionChanged(userId: UserId, isSelected: Boolean) {
+        _uiState.update { currentState ->
+            val newSelectedMembers = currentState.selectedMembers.toMutableSet()
+            if (isSelected) {
+                newSelectedMembers.add(userId)
+            } else {
+                newSelectedMembers.remove(userId)
+            }
+            currentState.copy(selectedMembers = newSelectedMembers)
+        }
+    }
+
+    /**
+     * 선택된 멤버들에게 DM으로 프로젝트 초대를 보냅니다.
+     */
+    fun inviteMembers(projectId: DocumentId, selectedMemberIds: Set<UserId>) {
+        if (selectedMemberIds.isEmpty()) {
+            viewModelScope.launch {
+                _eventFlow.emit(AddMemberDialogEvent.ShowSnackbar("초대할 사용자를 선택해주세요.")) 
             }
             return
         }
 
-        // 프로젝트별 UseCase 그룹 생성
-        if (projectMemberUseCases == null) {
-            projectMemberUseCases = projectMemberUseCaseProvider.createForProject(projectId)
-        }
-        val useCases = projectMemberUseCases ?: return
-
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingFriends = true) }
-            var allSuccess = true
             var successCount = 0
+            var failureCount = 0
 
-            // TODO: 실제로는 친구에게 프로젝트 참가 요청을 보내는 기능 구현
-            // 현재는 프로젝트 멤버로 직접 추가하는 방식으로 임시 구현
-            for (friendId in selectedFriendIds) {
-                try {
-                    val result = useCases.addProjectMemberUseCase(
-                        userId = friendId,
-                        initialRoleIds = emptyList() // 기본 역할 없음
-                    )
-                    if (result.isSuccess) {
-                        successCount++
-                    } else {
-                        allSuccess = false
-                        val friendName = _uiState.value.friends
-                            .find { it.userId == friendId }?.userName?.value ?: "알 수 없는 사용자"
-                        _eventFlow.emit(AddMemberDialogEvent.ShowSnackbar("${friendName}님 초대 실패"))
+            try {
+                for (memberId in selectedMemberIds) {
+                    try {
+                        // 대상 사용자 이름 찾기 (친구 목록에서 또는 검색 결과에서)
+                        val targetUserName = findUserNameById(memberId)
+                        if (targetUserName != null) {
+                            // SendMemberInvitationDMUseCase 사용하여 DM 초대 메시지 전송
+                            sendMemberInvitationDMUseCase(
+                                targetUserId = memberId,
+                                targetUserName = targetUserName,
+                                projectId = projectId
+                            )
+                                .collect { result ->
+                                    when (result) {
+                                        is CustomResult.Success -> {
+                                            successCount++
+                                        }
+
+                                        is CustomResult.Failure -> {
+                                            failureCount++
+                                        }
+
+                                        is CustomResult.Loading -> {
+                                            // 로딩 상태
+                                        }
+
+                                        else -> {
+                                            // 기타 상태
+                                        }
+                                    }
+                                }
+                        } else {
+                            failureCount++
+                        }
+                    } catch (e: Exception) {
+                        failureCount++
                     }
-                } catch (e: Exception) {
-                    allSuccess = false
-                    _eventFlow.emit(AddMemberDialogEvent.ShowSnackbar("초대 중 오류 발생: ${e.message}"))
                 }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isLoadingFriends = false,
+                        error = "초대 중 오류 발생: ${e.message}"
+                    )
+                }
+                return@launch
             }
 
             _uiState.update {
                 it.copy(
                     isLoadingFriends = false,
-                    addSuccess = allSuccess,
-                    selectedFriends = emptySet() // 선택 초기화
+                    addSuccess = failureCount == 0,
+                    selectedMembers = emptySet() // 선택 초기화
                 )
             }
 
             if (successCount > 0) {
-                _eventFlow.emit(AddMemberDialogEvent.ShowSnackbar("${successCount}명의 친구에게 초대를 보냈습니다."))
+                _eventFlow.emit(AddMemberDialogEvent.ShowSnackbar("${successCount}명에게 DM 초대를 보냈습니다."))
                 _eventFlow.emit(AddMemberDialogEvent.MembersAddedSuccessfully)
             }
-            if (!allSuccess) {
-                _eventFlow.emit(AddMemberDialogEvent.ShowSnackbar("일부 친구 초대에 실패했습니다."))
+            if (failureCount > 0) {
+                _eventFlow.emit(AddMemberDialogEvent.ShowSnackbar("${failureCount}명의 초대에 실패했습니다."))
             }
         }
     }
 
     /**
-     * 초대 링크 복사 완료 처리
+     * 사용자 ID로 사용자 이름을 찾습니다.
      */
-    fun onInviteLinkCopied(link: String) {
-        viewModelScope.launch {
-            _eventFlow.emit(AddMemberDialogEvent.ShowSnackbar("초대 링크가 클립보드에 복사되었습니다."))
+    private fun findUserNameById(userId: UserId): UserName? {
+        val currentState = _uiState.value
+
+        // 친구 목록에서 찾기
+        val friend = currentState.friends.find { it.userId == userId }
+        if (friend != null) {
+            return friend.userName
         }
+
+        // 검색 결과에서 찾기
+        val searchedUser = currentState.searchedUsers.find { it.userId == userId }
+        if (searchedUser != null) {
+            return searchedUser.userName
+        }
+
+        return null
     }
+
 }

@@ -71,27 +71,26 @@ class AddCategoryUseCaseImpl(
 
         // 2. Determine the next order by considering both categories and NoCategory channels
         // For unified ordering, we need to find the maximum order from both categories and NoCategory channels
-        val existingCategoriesResult = categoryRepository.observeAll().first()
-        val nextOrder = when (existingCategoriesResult) {
-            is CustomResult.Success -> {
-                val categories = existingCategoriesResult.data.map { it as Category }
-                
-                // Find the maximum order among all categories (excluding NoCategory itself which is fixed at 0.0)
-                val maxCategoryOrder = categories
-                    .filter { it.order.value > Category.NO_CATEGORY_ORDER } // Exclude NoCategory (0.0)
-                    .maxOfOrNull { it.order.value } ?: Category.NO_CATEGORY_ORDER
+        // Wait until repository emits a terminal state (Success or Failure),
+        // skipping initial Loading/Progress/Initial emissions from observeAll().
+        val terminalResult = categoryRepository
+            .observeAll()
+            .first { it is CustomResult.Success || it is CustomResult.Failure }
 
-                // New category gets the next available order (minimum 1.0)
-                val newOrder = maxOf(maxCategoryOrder + Category.CATEGORY_ORDER_INCREMENT, Category.MIN_CATEGORY_ORDER)
-                newOrder
-            }
-            is CustomResult.Failure -> {
-                return CustomResult.Failure(existingCategoriesResult.error)
-            }
-            else -> {
-                return CustomResult.Failure(Exception("Failed to get existing categories."))
-            }
+        val categories = when (terminalResult) {
+            is CustomResult.Success -> terminalResult.data.filterIsInstance<Category>()
+            is CustomResult.Failure -> return CustomResult.Failure(terminalResult.error)
+            else -> return CustomResult.Failure(Exception("Unexpected result state"))
         }
+
+        val maxCategoryOrder = categories
+            .filter { it.order.value > Category.NO_CATEGORY_ORDER }
+            .maxOfOrNull { it.order.value } ?: Category.NO_CATEGORY_ORDER
+
+        val nextOrder = maxOf(
+            maxCategoryOrder + Category.CATEGORY_ORDER_INCREMENT,
+            Category.MIN_CATEGORY_ORDER
+        )
 
         // 3. Create new Category object
         val newCategory = Category.create(

@@ -24,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -156,7 +157,14 @@ fun ChatMessageItemComposable(
                     val attachments = remember(message.payload) {
                         try {
                             val messagePayload = MessagePayload(message.payload)
-                            messagePayload.getAttachments()
+                            val attachmentList = messagePayload.getAttachments()
+                            if (attachmentList.isNotEmpty()) {
+                                android.util.Log.d(
+                                    "ChatMessageItem",
+                                    "🖼️ [UI표시] 메시지 아이템에서 첨부파일 렌더링: ${attachmentList.size}개"
+                                )
+                            }
+                            attachmentList
                         } catch (e: Exception) {
                             emptyList()
                         }
@@ -227,6 +235,140 @@ fun ChatMessageItemComposable(
                 onAddMember = onAddMember,
                 modifier = modifier.padding(vertical = 6.dp)
             )
+        }
+
+        MessageType.IMAGE -> {
+            // 이미지 메시지 처리 - 기본적으로 TEXT와 동일하게 처리
+            // TODO: 추후 이미지 전용 UI 구현 시 업데이트
+            Row(
+                modifier = modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp)
+                    .combinedClickable(
+                        onClick = { /* 일반 클릭은 Bubble 자체에는 불필요할 수 있음 */ },
+                        onLongClick = onLongClick
+                    ),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (isFirstInGroup) {
+                    SimpleUserProfileImage(
+                        imageUrl = message.userProfileUrl,
+                        contentDescription = "${message.userName} 프로필",
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .clickable(onClick = onUserProfileClick),
+                    )
+                } else {
+                    Spacer(modifier = Modifier.width(40.dp))
+                }
+
+                Column {
+                    if (isFirstInGroup) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = message.userName,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+
+                            MessageStatusRow(
+                                message = message,
+                                onRetryMessage = onRetryMessage,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
+
+                    val displayMessage = message.message
+                    val processedText = parseMentionsForDisplay(
+                        displayMessage,
+                        participants,
+                        projectMembers,
+                        projectRoles
+                    )
+
+                    // 이미지 메시지의 경우 이미지 우선 표시
+                    if (message.hasImages) {
+                        ImageMessageComponent(
+                            message = message,
+                            onImageClick = onImageClick
+                        )
+                    } else {
+                        ChatMessageText(
+                            processedText = processedText,
+                            onMentionClick = onMentionClick
+                        )
+                    }
+
+                    // 수정 표시 (메시지 내용 아래에 표시)
+                    if (message.isModified) {
+                        Text(
+                            text = "(수정됨)",
+                            fontSize = 10.sp,
+                            fontStyle = FontStyle.Italic,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                            modifier = Modifier.padding(start = 8.dp, top = 2.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        MessageType.SYSTEM -> {
+            // 일반 시스템 메시지
+            Box(
+                modifier = modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = message.message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+
+        MessageType.SYSTEM_PROJECT_LEAVE -> {
+            // 프로젝트 떠나기 시스템 메시지
+            Box(
+                modifier = modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = message.message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+
+        MessageType.SYSTEM_USER_INVITE -> {
+            // 사용자 초대 시스템 메시지
+            Box(
+                modifier = modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = message.message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    textAlign = TextAlign.Center
+                )
+            }
         }
 
     }

@@ -30,11 +30,7 @@ public final class WebSocketEventConstants {
     /** 방 나가기 성공 알림 */
     public static final String LEFT_ROOM = "LEFT_ROOM";
     
-    /** 방 입장 성공 알림 (별칭) */
-    public static final String ROOM_JOINED = "ROOM_JOINED";
-    
-    /** 방 나가기 성공 알림 (별칭) */
-    public static final String ROOM_LEFT = "ROOM_LEFT";
+    // 별칭 제거: 클라이언트와 통일된 표준 타입만 사용
     
     // ================================
     // 메시지 관련 이벤트

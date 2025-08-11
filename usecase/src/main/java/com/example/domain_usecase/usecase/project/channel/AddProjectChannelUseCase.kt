@@ -79,7 +79,10 @@ class AddProjectChannelUseCaseImpl(
         }
 
         // 1. Fetch all channels in the project to calculate the correct order
-        val projectChannelsResult = projectChannelRepository.observeAll().first()
+        // Wait for terminal state (Success/Failure), skipping Loading/Initial/Progress
+        val projectChannelsResult = projectChannelRepository
+            .observeAll()
+            .first { it is CustomResult.Success || it is CustomResult.Failure }
         val allProjectChannels = when (projectChannelsResult) {
             is CustomResult.Success -> projectChannelsResult.data.filterIsInstance<ProjectChannel>()
             is CustomResult.Failure -> return CustomResult.Failure(projectChannelsResult.error)

@@ -100,6 +100,25 @@ value class CollectionPath(val value: String) {
             CollectionPath("${projectChannel(projectId, channelId).value}/${Message.COLLECTION_NAME}")
         fun projectChannelMessage(projectId: String, channelId: String, messageId: String): CollectionPath =
             CollectionPath("${projectChannelMessages(projectId, channelId).value}/$messageId")
+
+        /* -------------------- Storage Paths (Firebase Storage) -------------------- */
+        /**
+         * 채널 메시지 첨부 파일의 저장 경로 (디렉터리)
+         * 예: channels/{channelId}/messages/{messageId}/attachments
+         */
+        fun storageMessageAttachments(channelId: String, messageId: String): CollectionPath =
+            CollectionPath("channels/$channelId/messages/$messageId/attachments")
+
+        /**
+         * 채널 메시지 첨부 파일의 개별 파일 경로
+         * 예: channels/{channelId}/messages/{messageId}/attachments/{fileName}
+         */
+        fun storageMessageAttachment(
+            channelId: String,
+            messageId: String,
+            fileName: String
+        ): CollectionPath =
+            CollectionPath("${storageMessageAttachments(channelId, messageId).value}/$fileName")
         
         /* -------------------- Task Paths -------------------- */
         fun tasks(projectId: String, channelId: String): CollectionPath =

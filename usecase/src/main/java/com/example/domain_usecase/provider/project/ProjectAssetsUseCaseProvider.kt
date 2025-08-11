@@ -1,7 +1,7 @@
 package com.example.domain_usecase.provider.project
 
 import com.example.domain.vo.CollectionPath
-import com.example.domain_repository.base.MediaRepository
+import com.example.domain_repository.base.FileRepository
 import com.example.domain_repository.base.ProjectRepository
 import com.example.domain_usecase.usecase.project.assets.RemoveProjectProfileImageUseCase
 import com.example.domain_usecase.usecase.project.assets.RemoveProjectProfileImageUseCaseImpl
@@ -17,7 +17,7 @@ import javax.inject.Singleton
 @Singleton
 class ProjectAssetsUseCaseProvider @Inject constructor(
     private val projectRepository: ProjectRepository,
-    private val mediaRepository: MediaRepository,
+    private val fileRepository: FileRepository,
 ) {
 
     /**

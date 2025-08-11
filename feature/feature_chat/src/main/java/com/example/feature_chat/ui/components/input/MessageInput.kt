@@ -71,6 +71,7 @@ fun MessageInput(
     text: String,
     isEditing: Boolean = false,
     isEnabled: Boolean = true,
+    canSend: Boolean = false,
     onTextChange: (String) -> Unit = {},
     onSendClick: () -> Unit = {},
     onAttachmentClick: () -> Unit = {},
@@ -220,6 +221,7 @@ fun MessageInput(
                     ),
                     keyboardActions = KeyboardActions(
                         onSend = {
+                            if (!canSend) return@KeyboardActions
                             if (isEditing) {
                                 onCancelEdit()
                             } else {
@@ -239,16 +241,13 @@ fun MessageInput(
                 // 전송 버튼
                 Button(
                     onClick = {
-                        if (isEditing) {
-                            onCancelEdit()
-                        } else {
-                            onSendClick()
-                        }
+                        if (!canSend) return@Button
+                        if (isEditing) onCancelEdit() else onSendClick()
                         // 전송 후 포커스 해제 및 키보드 숨김
                         focusManager.clearFocus()
                         keyboardController?.hide()
                     },
-                    enabled = isEnabled && text.isNotBlank(),
+                    enabled = isEnabled && canSend,
                     shape = CircleShape,
                     contentPadding = PaddingValues(12.dp),
                     modifier = Modifier.size(48.dp)

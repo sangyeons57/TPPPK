@@ -15,8 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import com.example.core_ui.components.attachment.ChatImage
 import com.example.feature_chat.model.ChatMessageUiModel
 
 /**
@@ -32,6 +31,11 @@ fun ImageMessageComponent(
     val imageUrls = message.imageUrls
 
     if (imageUrls.isEmpty()) return
+
+    android.util.Log.d(
+        "ImageMessageComponent",
+        "🖼️ [UI표시] 이미지 메시지 컴포넌트 렌더링: ${imageUrls.size}개 이미지"
+    )
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -69,19 +73,37 @@ fun ImageMessageComponent(
 
         // 전송 상태 표시
         if (message.isSending) {
+            // 업로드 진행률 표시 로직 추가
+            val uploadProgress = message.getUploadProgress()
+            
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(12.dp),
-                    strokeWidth = 2.dp
-                )
-                Text(
-                    text = "이미지 업로드 중...",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                if (uploadProgress < 1f) {
+                    // 진행률 표시
+                    CircularProgressIndicator(
+                        progress = uploadProgress,
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp
+                    )
+                    Text(
+                        text = "업로드 중... ${(uploadProgress * 100).toInt()}%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    // 업로드 완료, 서버 전송 중
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(12.dp),
+                        strokeWidth = 2.dp
+                    )
+                    Text(
+                        text = "전송 중...",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         } else if (message.sendFailed) {
             Text(
@@ -107,14 +129,11 @@ private fun SingleImageView(
             .clip(RoundedCornerShape(12.dp))
             .clickable { onClick() }
     ) {
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(imageUrl)
-                .crossfade(true)
-                .build(),
+        android.util.Log.d("SingleImageView", "🖼️ [UI표시] 단일 이미지 뷰 렌더링: $imageUrl")
+        ChatImage(
+            model = imageUrl,
             contentDescription = "이미지",
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
+            modifier = Modifier.fillMaxSize()
         )
 
         if (isLoading) {
@@ -265,14 +284,10 @@ private fun MultipleImageItem(
             .clip(RoundedCornerShape(8.dp))
             .clickable { onClick() }
     ) {
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(imageUrl)
-                .crossfade(true)
-                .build(),
+        ChatImage(
+            model = imageUrl,
             contentDescription = "이미지",
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
+            modifier = Modifier.fillMaxSize()
         )
 
         if (isLoading) {

@@ -20,9 +20,13 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -45,6 +49,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
@@ -55,6 +60,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
+import com.example.feature_chat.ui.components.input.AttachmentPreviewTray
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_chat.model.ChatEvent
@@ -121,7 +129,28 @@ fun ChatScreen(
         }
     )
 
-    // UI 강제 리프레시/강제 스크롤 유발하는 이벤트 바인딩 제거 (불필요한 재그림 억제)
+    // ChatEvent 처리 (스크롤 이벤트 포함)
+    LaunchedEffect(viewModel) {
+        viewModel.eventFlow.collectLatest { event ->
+            when (event) {
+                is ChatEvent.ScrollToBottom -> {
+                    coroutineScope.launch {
+                        listState.animateScrollToItem(0)
+                    }
+                }
+
+                is ChatEvent.ShowSnackbar -> {
+                    snackbarHostState.showSnackbar(event.message)
+                }
+
+                is ChatEvent.ClearFocus -> {
+                    focusManager.clearFocus()
+                }
+
+                else -> {} // 다른 이벤트는 UI에서 직접 처리
+            }
+        }
+    }
 
     // Auto position to bottom once when initial data is ready (reverseLayout=true에서 index 0이 최신)
     // 초기 자동 스크롤 제거: 불필요한 재그림/스크롤 트리거 방지
@@ -147,7 +176,17 @@ fun ChatScreen(
     // Anchor Jump 후 최적화 제거
 
     // 키보드 상태 변경 시 스크롤 위치 조정
-    // LaunchedEffect(isKeyboardVisible) { /* 키보드 표시 시 강제 스크롤 임시 비활성화 */ }
+    LaunchedEffect(isKeyboardVisible) {
+        if (isKeyboardVisible) {
+            // 키보드가 나타나면 최하단으로 부드럽게 스크롤
+            delay(100) // 키보드 애니메이션 완료 대기
+            if (listState.firstVisibleItemIndex <= 5) { // 거의 하단에 있을 때만
+                coroutineScope.launch {
+                    listState.animateScrollToItem(0)
+                }
+            }
+        }
+    }
 
     // Note: With Paging3, auto-scroll on new messages should be handled differently
     // Consider using LaunchedEffect with item count or specific events
@@ -175,34 +214,46 @@ fun ChatScreen(
         },
         bottomBar = {
             if (uiState.error == null || uiState.error?.contains("WebSocket 구현 예정") == false) {
-                MessageInput(
+                Column(
                     modifier = Modifier
                         .navigationBarsPadding()
-                        .imePadding(),
-                    text = uiState.pendingMessageText,
-                    isEditing = uiState.isEditing,
-                    isEnabled = viewModel.canPerformWriteOperations(),
-                    onTextChange = viewModel::onMessageInputChange,
-                    onSendClick = {
-                        if (uiState.isEditing) {
-                            viewModel.confirmEditMessage()
-                        } else {
-                            viewModel.onSendMessageClick()
-                        }
-                    },
-                    onAttachmentClick = { imagePickerLauncher.launch("image/*") },
-                    onCancelEdit = viewModel::cancelEdit,
-                    onKeyboardStateChange = { keyboardVisible ->
-                        isKeyboardVisible = keyboardVisible
-                    },
-                    onScrollToBottom = { /* 강제 스크롤 임시 비활성화 */ },
-                    onMentionSuggestionClick = viewModel::onMentionSuggestionClick,
-                    participants = uiState.participants,
-                    projectMembers = uiState.projectMembers,
-                    projectRoles = uiState.projectRoles,
-                    mentionSuggestions = uiState.mentionSuggestions,
-                    isMentionSuggestionVisible = uiState.isMentionSuggestionVisible
-                )
+                        .imePadding()
+                ) {
+                    AttachmentPreviewTray(
+                        selectedUris = uiState.selectedAttachmentUris,
+                        onRemove = { uri -> viewModel.removeSelectedAttachment(uri) },
+                        onClearAll = { viewModel.clearSelectedAttachments() }
+                    )
+
+                    MessageInput(
+                        text = uiState.pendingMessageText,
+                        isEditing = uiState.isEditing,
+                        isEnabled = viewModel.canPerformWriteOperations(),
+                        canSend = (uiState.pendingMessageText.isNotBlank() || uiState.selectedAttachmentUris.isNotEmpty()),
+                        onTextChange = viewModel::onMessageInputChange,
+                        onSendClick = {
+                            if (uiState.isEditing) {
+                                viewModel.confirmEditMessage()
+                            } else {
+                                viewModel.onSendMessageClick()
+                            }
+                        },
+                        onAttachmentClick = { imagePickerLauncher.launch("image/*") },
+                        onCancelEdit = viewModel::cancelEdit,
+                        onKeyboardStateChange = { keyboardVisible ->
+                            isKeyboardVisible = keyboardVisible
+                        },
+                        onScrollToBottom = {
+                            coroutineScope.launch { listState.animateScrollToItem(0) }
+                        },
+                        onMentionSuggestionClick = viewModel::onMentionSuggestionClick,
+                        participants = uiState.participants,
+                        projectMembers = uiState.projectMembers,
+                        projectRoles = uiState.projectRoles,
+                        mentionSuggestions = uiState.mentionSuggestions,
+                        isMentionSuggestionVisible = uiState.isMentionSuggestionVisible
+                    )
+                }
             } else {
                 Log.d("ChatScreen", "Chat input area hidden as chat is pending WebSocket implementation.")
             }
@@ -283,6 +334,7 @@ fun ChatScreen(
                             currentImageIndex = index
                             showImageViewer = true
                         },
+                        onAddMember = viewModel::onAddMember,
                         initialMessageId = viewModel.getInitialMessageId()
                     )
                 }
@@ -340,6 +392,7 @@ private fun ChatContentPreview(uiState: ChatUiState){
                 text = uiState.pendingMessageText,
                 isEditing = uiState.isEditing,
                 isEnabled = true,
+                canSend = (uiState.pendingMessageText.isNotBlank() || uiState.selectedAttachmentUris.isNotEmpty()),
                 onTextChange = {},
                 onSendClick = {},
                 onAttachmentClick = {},

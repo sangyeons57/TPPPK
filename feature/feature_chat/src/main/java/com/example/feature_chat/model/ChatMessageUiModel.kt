@@ -1,6 +1,7 @@
 package com.example.feature_chat.model
 
 import com.example.domain.vo.message.MentionInfo
+import com.example.domain.vo.message.MessagePayload
 import com.example.domain.vo.message.MessageType
 import java.time.Instant // Import Instant
 
@@ -39,4 +40,28 @@ data class ChatMessageUiModel(
     // 멘션 기능
     val mentions: List<MentionInfo> = emptyList(), // 메시지에 포함된 멘션들
     val isMentionedMessage: Boolean = false // 현재 사용자가 멘션된 메시지인지
-) 
+) {
+    /**
+     * 업로드 진행률 계산 (payload에서 추출)
+     */
+    fun getUploadProgress(): Float {
+        return try {
+            val messagePayload = MessagePayload(payload)
+            messagePayload.getUploadProgress()
+        } catch (e: Exception) {
+            1f // 에러시 완료로 간주
+        }
+    }
+
+    /**
+     * 업로드 중인 첨부파일이 있는지 확인
+     */
+    fun hasUploadingAttachments(): Boolean {
+        return try {
+            val messagePayload = MessagePayload(payload)
+            messagePayload.hasUploadingAttachments()
+        } catch (e: Exception) {
+            false
+        }
+    }
+}

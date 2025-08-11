@@ -63,11 +63,14 @@ class FileDataSourceImpl @Inject constructor(
      */
     override suspend fun uploadFile(storagePath: String, fileUri: Uri): CustomResult<String, Exception> {
         return try {
+            android.util.Log.d("FileDataSource", "🔄 [Firebase업로드] Storage 업로드 시작: $storagePath")
             val storageRef = storage.getReference(storagePath)
             val uploadTask = storageRef.putFile(fileUri).await()
             val downloadUrl = uploadTask.storage.downloadUrl.await().toString()
+            android.util.Log.d("FileDataSource", "✅ [Firebase업로드] Storage 업로드 성공: $downloadUrl")
             CustomResult.Success(downloadUrl)
         } catch (e: Exception) {
+            android.util.Log.e("FileDataSource", "❌ [Firebase업로드] Storage 업로드 실패: $storagePath", e)
             CustomResult.Failure(e)
         }
     }

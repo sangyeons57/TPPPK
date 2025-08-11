@@ -1,4 +1,4 @@
-package com.example.feature_home.dialog.viewmodel
+package com.example.feature_home.component.AddProjectElement
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -23,6 +23,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.example.core_ui.util.withLoading
+import com.example.feature_home.dialog.viewmodel.AddProjectElementDialogEvent
+import com.example.feature_home.dialog.viewmodel.AddProjectElementDialogUiState
+import com.example.feature_home.dialog.viewmodel.CreateElementType
+import java.time.Instant
 
 /**
  * AddProjectElementDialogViewModel: 프로젝트 요소(카테고리/채널) 생성 다이얼로그의 ViewModel
@@ -40,6 +45,14 @@ class AddProjectElementDialogViewModel @Inject constructor(
     val eventFlow: SharedFlow<AddProjectElementDialogEvent> = _eventFlow.asSharedFlow()
 
     private var projectId: DocumentId? = null
+
+    /**
+     * 다이얼로그 내 입력 상태/오류/선택값을 모두 초기화합니다.
+     * - 다음 열림 시 깨끗한 상태로 시작하도록 보장
+     */
+    fun resetFormState() {
+        _uiState.value = AddProjectElementDialogUiState()
+    }
 
     /**
      * 다이얼로그 초기화
@@ -123,44 +136,45 @@ class AddProjectElementDialogViewModel @Inject constructor(
      * 카테고리 생성 처리
      */
     fun onCreateCategory() {
-        val currentState = _uiState.value
         val projectId = this.projectId ?: return
 
         viewModelScope.launch {
-            _uiState.value = currentState.copy(isLoading = true, categoryNameError = null)
-
             try {
+                // 이전 오류 상태 초기화
+                _uiState.value = _uiState.value.copy(categoryNameError = null)
                 val structureUseCases = projectStructureUseCaseProvider.createForProject(projectId)
                 // Let domain validation handle the validation - trim first to ensure clean input
-                val categoryName = CategoryName(currentState.categoryName.trim())
-                
-                when (val result = structureUseCases.addCategoryUseCase(projectId, categoryName)) {
-                    is CustomResult.Success -> {
-                        _uiState.value = currentState.copy(isLoading = false)
-                        _eventFlow.emit(AddProjectElementDialogEvent.CategoryCreated(result.data))
-                        _eventFlow.emit(AddProjectElementDialogEvent.DismissDialog)
-                    }
-                    is CustomResult.Failure -> {
-                        _uiState.value = currentState.copy(
-                            isLoading = false,
-                            categoryNameError = result.error.message ?: "카테고리 생성에 실패했습니다."
-                        )
-                    }
-                    else -> {
-                        _uiState.value = currentState.copy(
-                            isLoading = false,
-                            categoryNameError = "카테고리 생성에 실패했습니다."
-                        )
+                val categoryName = CategoryName(_uiState.value.categoryName.trim())
+
+                _uiState.withLoading(setLoading = { s, l -> s.copy(isLoading = l) }) {
+                    when (val result =
+                        structureUseCases.addCategoryUseCase(projectId, categoryName)) {
+                        is CustomResult.Success -> {
+                            _eventFlow.emit(AddProjectElementDialogEvent.CategoryCreated(result.data))
+                            _eventFlow.emit(AddProjectElementDialogEvent.DismissDialog)
+                        }
+
+                        is CustomResult.Failure -> {
+                            _uiState.value = _uiState.value.copy(
+                                categoryNameError = result.error.message ?: "카테고리 생성에 실패했습니다."
+                            )
+                        }
+
+                        else -> {
+                            _uiState.value = _uiState.value.copy(
+                                categoryNameError = "카테고리 생성에 실패했습니다."
+                            )
+                        }
                     }
                 }
             } catch (e: IllegalArgumentException) {
                 // Domain validation errors (from CategoryName validation)
-                _uiState.value = currentState.copy(
+                _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     categoryNameError = e.message ?: "카테고리 이름이 올바르지 않습니다."
                 )
             } catch (e: Exception) {
-                _uiState.value = currentState.copy(
+                _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     categoryNameError = "카테고리 생성 중 오류가 발생했습니다."
                 )
@@ -172,61 +186,61 @@ class AddProjectElementDialogViewModel @Inject constructor(
      * 채널 생성 처리
      */
     fun onCreateChannel() {
-        val currentState = _uiState.value
         val projectId = this.projectId ?: return
 
         // 채널 이름 검증
-        if (currentState.channelName.isBlank()) {
-            _uiState.value = currentState.copy(
+        if (_uiState.value.channelName.isBlank()) {
+            _uiState.value = _uiState.value.copy(
                 channelNameError = "채널 이름을 입력해주세요."
             )
             return
         }
 
-        if (currentState.channelName.length > 50) {
-            _uiState.value = currentState.copy(
+        if (_uiState.value.channelName.length > 50) {
+            _uiState.value = _uiState.value.copy(
                 channelNameError = "채널 이름은 50자 이하로 입력해주세요."
             )
             return
         }
 
         viewModelScope.launch {
-            _uiState.value = currentState.copy(isLoading = true)
-
             try {
+                // 이전 오류 상태 초기화
+                _uiState.value = _uiState.value.copy(channelNameError = null)
                 val channelUseCases = projectChannelUseCaseProvider.createForProject(projectId)
-                val channelName = Name(currentState.channelName.trim())
+                val channelName = Name(_uiState.value.channelName.trim())
                 
                 // 카테고리 ID 처리 (null이면 NO_CATEGORY_ID 사용)
-                val categoryId = currentState.selectedCategoryId 
+                val categoryId = _uiState.value.selectedCategoryId 
                     ?: Category.NO_CATEGORY_ID
-                
-                when (val result = channelUseCases.addProjectChannelUseCase(
-                    projectId = projectId,
-                    channelName = channelName,
-                    categoryId = DocumentId(categoryId),
-                    channelType = currentState.selectedChannelType
-                )) {
-                    is CustomResult.Success -> {
-                        _uiState.value = currentState.copy(isLoading = false)
-                        _eventFlow.emit(AddProjectElementDialogEvent.ChannelCreated(result.data))
-                        _eventFlow.emit(AddProjectElementDialogEvent.DismissDialog)
-                    }
-                    is CustomResult.Failure -> {
-                        _uiState.value = currentState.copy(
-                            isLoading = false,
-                            channelNameError = result.error.message ?: "채널 생성에 실패했습니다."
-                        )
-                    }
-                    else -> {
-                        _uiState.value = currentState.copy(
-                            isLoading = false,
-                            channelNameError = "채널 생성에 실패했습니다."
-                        )
+
+                _uiState.withLoading(setLoading = { s, l -> s.copy(isLoading = l) }) {
+                    when (val result = channelUseCases.addProjectChannelUseCase(
+                        projectId = projectId,
+                        channelName = channelName,
+                        categoryId = DocumentId(categoryId),
+                        channelType = _uiState.value.selectedChannelType
+                    )) {
+                        is CustomResult.Success -> {
+                            _eventFlow.emit(AddProjectElementDialogEvent.ChannelCreated(result.data))
+                            _eventFlow.emit(AddProjectElementDialogEvent.DismissDialog)
+                        }
+
+                        is CustomResult.Failure -> {
+                            _uiState.value = _uiState.value.copy(
+                                channelNameError = result.error.message ?: "채널 생성에 실패했습니다."
+                            )
+                        }
+
+                        else -> {
+                            _uiState.value = _uiState.value.copy(
+                                channelNameError = "채널 생성에 실패했습니다."
+                            )
+                        }
                     }
                 }
             } catch (e: Exception) {
-                _uiState.value = currentState.copy(
+                _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     channelNameError = "채널 생성 중 오류가 발생했습니다."
                 )
@@ -240,6 +254,8 @@ class AddProjectElementDialogViewModel @Inject constructor(
     fun onDismiss() {
         viewModelScope.launch {
             _eventFlow.emit(AddProjectElementDialogEvent.DismissDialog)
+            // 닫힐 때 폼 상태 정리
+            resetFormState()
         }
     }
 
@@ -250,77 +266,89 @@ class AddProjectElementDialogViewModel @Inject constructor(
         val projectId = this.projectId ?: return
         
         viewModelScope.launch {
-            try {
-                val structureUseCases = projectStructureUseCaseProvider.createForProject(projectId)
-                when (val result = structureUseCases.getProjectAllCategoriesUseCase().first()) {
-                    is CustomResult.Success -> {
-                        // UI 레이어에서 NoCategory 추가 처리
-                        val categories = result.data.toMutableList()
-                        
-                        // NoCategory가 없으면 UI 표시용으로 추가
-                        val hasNoCategory = categories.any { it.id.value == Category.NO_CATEGORY_ID }
-                        if (!hasNoCategory) {
+            _uiState.withLoading(setLoading = { s, l -> s.copy(isLoading = l) }) {
+                try {
+                    val structureUseCases =
+                        projectStructureUseCaseProvider.createForProject(projectId)
+
+                    // Flow가 Success/Failure를 방출할 때까지 로딩 상태로 대기
+                    val terminalResult = structureUseCases
+                        .getProjectAllCategoriesUseCase()
+                        .first { it is CustomResult.Success || it is CustomResult.Failure }
+
+                    when (terminalResult) {
+                        is CustomResult.Success -> {
+                            val categories = terminalResult.data.toMutableList()
+
+                            // NoCategory가 없으면 UI 표시용으로 추가
+                            val hasNoCategory =
+                                categories.any { it.id.value == Category.NO_CATEGORY_ID }
+                            if (!hasNoCategory) {
+                                val noCategory = Category.fromDataSource(
+                                    id = DocumentId(Category.NO_CATEGORY_ID),
+                                    name = CategoryName.NO_CATEGORY_NAME,
+                                    order = CategoryOrder(Category.NO_CATEGORY_ORDER),
+                                    createdBy = OwnerId("system"),
+                                    createdAt = Instant.now(),
+                                    updatedAt = Instant.now(),
+                                    isCategory = IsCategoryFlag.FALSE
+                                )
+                                categories.add(0, noCategory)
+                            }
+
+                            _uiState.value = _uiState.value.copy(
+                                availableCategories = categories.sortedBy { it.order.value }
+                            )
+                        }
+
+                        is CustomResult.Failure -> {
+                            // 실패 시 NoCategory만 표시
                             val noCategory = Category.fromDataSource(
                                 id = DocumentId(Category.NO_CATEGORY_ID),
                                 name = CategoryName.NO_CATEGORY_NAME,
                                 order = CategoryOrder(Category.NO_CATEGORY_ORDER),
                                 createdBy = OwnerId("system"),
-                                createdAt = java.time.Instant.now(),
-                                updatedAt = java.time.Instant.now(),
+                                createdAt = Instant.now(),
+                                updatedAt = Instant.now(),
                                 isCategory = IsCategoryFlag.FALSE
                             )
-                            categories.add(0, noCategory)
+                            _uiState.value = _uiState.value.copy(
+                                availableCategories = listOf(noCategory)
+                            )
                         }
-                        
-                        _uiState.value = _uiState.value.copy(
-                            availableCategories = categories.sortedBy { it.order.value }
-                        )
+
+                        else -> {
+                            // 이 분기는 first { Success || Failure } 조건상 거의 도달하지 않지만,
+                            // 방어적으로 기본 NoCategory만 표시
+                            val noCategory = Category.fromDataSource(
+                                id = DocumentId(Category.NO_CATEGORY_ID),
+                                name = CategoryName.NO_CATEGORY_NAME,
+                                order = CategoryOrder(Category.NO_CATEGORY_ORDER),
+                                createdBy = OwnerId("system"),
+                                createdAt = Instant.now(),
+                                updatedAt = Instant.now(),
+                                isCategory = IsCategoryFlag.FALSE
+                            )
+                            _uiState.value = _uiState.value.copy(
+                                availableCategories = listOf(noCategory)
+                            )
+                        }
                     }
-                    is CustomResult.Failure -> {
-                        // 카테고리 로드 실패 시 NoCategory만 표시
-                        val noCategory = Category.fromDataSource(
-                            id = DocumentId(Category.NO_CATEGORY_ID),
-                            name = CategoryName.NO_CATEGORY_NAME,
-                            order = CategoryOrder(Category.NO_CATEGORY_ORDER),
-                            createdBy = OwnerId("system"),
-                            createdAt = java.time.Instant.now(),
-                            updatedAt = java.time.Instant.now(),
-                            isCategory = IsCategoryFlag.FALSE
-                        )
-                        _uiState.value = _uiState.value.copy(
-                            availableCategories = listOf(noCategory)
-                        )
-                    }
-                    else -> {
-                        // 다른 상태의 경우 NoCategory만 표시
-                        val noCategory = Category.fromDataSource(
-                            id = DocumentId(Category.NO_CATEGORY_ID),
-                            name = CategoryName.NO_CATEGORY_NAME,
-                            order = CategoryOrder(Category.NO_CATEGORY_ORDER),
-                            createdBy = OwnerId("system"),
-                            createdAt = java.time.Instant.now(),
-                            updatedAt = java.time.Instant.now(),
-                            isCategory = IsCategoryFlag.FALSE
-                        )
-                        _uiState.value = _uiState.value.copy(
-                            availableCategories = listOf(noCategory)
-                        )
-                    }
+                } catch (e: Exception) {
+                    // 예외 발생 시 NoCategory만 표시
+                    val noCategory = Category.fromDataSource(
+                        id = DocumentId(Category.NO_CATEGORY_ID),
+                        name = CategoryName.NO_CATEGORY_NAME,
+                        order = CategoryOrder(Category.NO_CATEGORY_ORDER),
+                        createdBy = OwnerId("system"),
+                        createdAt = Instant.now(),
+                        updatedAt = Instant.now(),
+                        isCategory = IsCategoryFlag.FALSE
+                    )
+                    _uiState.value = _uiState.value.copy(
+                        availableCategories = listOf(noCategory)
+                    )
                 }
-            } catch (e: Exception) {
-                // 예외 발생 시 NoCategory만 표시
-                val noCategory = Category.fromDataSource(
-                    id = DocumentId(Category.NO_CATEGORY_ID),
-                    name = CategoryName.NO_CATEGORY_NAME,
-                    order = CategoryOrder(Category.NO_CATEGORY_ORDER),
-                    createdBy = OwnerId("system"),
-                    createdAt = java.time.Instant.now(),
-                    updatedAt = java.time.Instant.now(),
-                    isCategory = IsCategoryFlag.FALSE
-                )
-                _uiState.value = _uiState.value.copy(
-                    availableCategories = listOf(noCategory)
-                )
             }
         }
     }

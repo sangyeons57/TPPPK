@@ -82,40 +82,40 @@ object WebSocketFieldConstants {
     const val MESSAGE_TYPE_SYSTEM_USER_INVITE = "SYSTEM_USER_INVITE"
 
     // ================================
-    // 페이로드 키 상수 (서버와 일치)
+    // 페이로드 키 상수 (서버 PayloadConstants.java와 100% 일치)
     // ================================
 
-    /** 메시지 텍스트 내용 */
+    /** 메시지 텍스트 내용 - 서버: CONTENT */
     const val PAYLOAD_CONTENT = "content"
 
-    /** 메시지 제목 */
+    /** 메시지 제목 - 서버: TITLE */
     const val PAYLOAD_TITLE = "title"
 
-    /** 메시지 부제목 */
+    /** 메시지 부제목 - 서버: SUBTITLE */
     const val PAYLOAD_SUBTITLE = "subtitle"
 
-    /** 이미지 URL */
+    /** 이미지 URL - 서버: IMAGE_URL */
     const val PAYLOAD_IMAGE_URL = "imageUrl"
 
-    /** 파일 URL */
+    /** 파일 URL - 서버: FILE_URL */
     const val PAYLOAD_FILE_URL = "fileUrl"
 
-    /** 파일 이름 */
+    /** 파일 이름 - 서버: FILE_NAME */
     const val PAYLOAD_FILE_NAME = "fileName"
 
-    /** 파일 크기 */
+    /** 파일 크기 - 서버: FILE_SIZE */
     const val PAYLOAD_FILE_SIZE = "fileSize"
 
-    /** 파일 타입 */
+    /** 파일 타입 - 서버: FILE_TYPE */
     const val PAYLOAD_FILE_TYPE = "fileType"
 
-    /** MIME 타입 */
+    /** MIME 타입 - 서버: MIME_TYPE */
     const val PAYLOAD_MIME_TYPE = "mimeType"
 
-    /** 썸네일 URL */
+    /** 썸네일 URL - 서버: THUMBNAIL_URL */
     const val PAYLOAD_THUMBNAIL_URL = "thumbnailUrl"
 
-    /** 업로드 진행률 */
+    /** 업로드 진행률 - 서버: UPLOAD_PROGRESS */
     const val PAYLOAD_UPLOAD_PROGRESS = "uploadProgress"
 
     // ================================
@@ -327,5 +327,100 @@ object WebSocketFieldConstants {
             thumbnailUrl?.let { put(PAYLOAD_THUMBNAIL_URL, it) }
             fileName?.let { put(PAYLOAD_FILE_NAME, it) }
         }
+    }
+
+    // ================================
+    // 서버-클라이언트 키 동기화 검증
+    // ================================
+
+    /**
+     * 서버 상수와 동기화 상태 확인 (개발용)
+     * 이 함수는 개발/테스트 시 서버와 클라이언트 키가 일치하는지 확인합니다.
+     */
+    fun validateServerClientSync(): Map<String, Boolean> {
+        return mapOf(
+            "FIELD_KEYS_MATCH" to validateFieldKeys(),
+            "PAYLOAD_KEYS_MATCH" to validatePayloadKeys(),
+            "MESSAGE_TYPES_MATCH" to validateMessageTypes()
+        )
+    }
+
+    private fun validateFieldKeys(): Boolean {
+        // 서버 WebSocketEventConstants.java의 FIELD_* 상수와 비교
+        val serverFieldKeys = setOf(
+            "type", "roomId", "senderId", "messageType", "timestamp",
+            "messageId", "replyToMessageId", "payload", "projectId",
+            "channelType", "authToken", "errorCode", "metadata"
+        )
+
+        val clientFieldKeys = setOf(
+            FIELD_TYPE, FIELD_ROOM_ID, FIELD_SENDER_ID, FIELD_MESSAGE_TYPE,
+            FIELD_TIMESTAMP, FIELD_MESSAGE_ID, FIELD_REPLY_TO_MESSAGE_ID,
+            FIELD_PAYLOAD, FIELD_PROJECT_ID, FIELD_CHANNEL_TYPE,
+            FIELD_AUTH_TOKEN, FIELD_ERROR_CODE, FIELD_METADATA
+        )
+
+        return serverFieldKeys == clientFieldKeys
+    }
+
+    private fun validatePayloadKeys(): Boolean {
+        // 서버 PayloadConstants.java의 주요 키들과 비교
+        val serverPayloadKeys = setOf(
+            "content", "title", "subtitle", "imageUrl", "fileUrl",
+            "fileName", "fileSize", "fileType", "mimeType", "thumbnailUrl"
+        )
+
+        val clientPayloadKeys = setOf(
+            PAYLOAD_CONTENT, PAYLOAD_TITLE, PAYLOAD_SUBTITLE, PAYLOAD_IMAGE_URL,
+            PAYLOAD_FILE_URL, PAYLOAD_FILE_NAME, PAYLOAD_FILE_SIZE,
+            PAYLOAD_FILE_TYPE, PAYLOAD_MIME_TYPE, PAYLOAD_THUMBNAIL_URL
+        )
+
+        return serverPayloadKeys.all { it in clientPayloadKeys }
+    }
+
+    private fun validateMessageTypes(): Boolean {
+        // 서버 WebSocketEventConstants.java의 MESSAGE_TYPE_* 상수와 비교
+        val serverMessageTypes = setOf(
+            "TEXT", "SYSTEM", "IMAGE", "FILE", "SYSTEM_DATE",
+            "SYSTEM_PROJECT_JOIN", "SYSTEM_PROJECT_LEAVE", "SYSTEM_USER_INVITE"
+        )
+
+        val clientMessageTypes = setOf(
+            MESSAGE_TYPE_TEXT, MESSAGE_TYPE_SYSTEM, MESSAGE_TYPE_IMAGE,
+            MESSAGE_TYPE_FILE, MESSAGE_TYPE_SYSTEM_DATE,
+            MESSAGE_TYPE_SYSTEM_PROJECT_JOIN, MESSAGE_TYPE_SYSTEM_PROJECT_LEAVE,
+            MESSAGE_TYPE_SYSTEM_USER_INVITE
+        )
+
+        return serverMessageTypes == clientMessageTypes
+    }
+
+    /**
+     * 메시지 구조 유효성 검증
+     */
+    fun validateMessageStructure(messageMap: Map<String, Any?>): Boolean {
+        // 필수 필드 확인
+        val requiredFields = setOf(FIELD_TYPE)
+        val hasRequiredFields = requiredFields.all { messageMap.containsKey(it) }
+
+        // 타입별 필수 필드 확인
+        val messageType = messageMap[FIELD_MESSAGE_TYPE] as? String
+        val typeSpecificValidation = when (messageType) {
+            MESSAGE_TYPE_TEXT -> messageMap[FIELD_PAYLOAD] != null
+            MESSAGE_TYPE_IMAGE -> {
+                val payload = messageMap[FIELD_PAYLOAD] as? Map<*, *>
+                payload?.containsKey(PAYLOAD_IMAGE_URL) == true
+            }
+
+            MESSAGE_TYPE_SYSTEM -> {
+                val payload = messageMap[FIELD_PAYLOAD] as? Map<*, *>
+                payload?.containsKey(PAYLOAD_SYSTEM_TYPE) == true
+            }
+
+            else -> true // 알 수 없는 타입은 기본 검증만 수행
+        }
+
+        return hasRequiredFields && typeSpecificValidation
     }
 }

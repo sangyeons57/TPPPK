@@ -16,6 +16,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import com.example.core_common.util.AuthUtil
+import com.example.core_common.util.SyncThrottler
 import com.example.data_datasource.remote.MessageRemoteDataSource
 import com.example.data_model.local.MessageDao
 import com.example.data_model.local.MessageEntity
@@ -36,6 +37,7 @@ import com.example.domain.vo.message.MessageType
 import com.example.domain_repository.base.MessageRepository
 import com.example.mapper.DtoMapper
 import com.example.mapper.message.MessageMapper
+import com.example.domain.model.sync.SyncCursorStore
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -58,8 +60,30 @@ class MessageRepositoryImpl @Inject constructor(
 
     private val messageMapper: DtoMapper<Message, MessageDTO>,
     private val entityMapper: MessageMapper, // MessageEntity <-> Message 변환용
+
+    // 동기화 관련 의존성
+    private val syncThrottler: SyncThrottler,
+    private val cursorStore: SyncCursorStore
 ) : DefaultRepositoryImpl<Message, MessageDTO>(messageRemoteDataSource, messageMapper),
     MessageRepository {
+    /**
+     * 로컬(Room) 우선 저장 업서트 구현
+     * - 메시지 저장은 Room DAO를 통해 즉시 반영한다
+     * - 원격 저장은 WebSocket 경로에서 서버가 책임진다
+     */
+    override suspend fun save(entity: Message): CustomResult<DocumentId, Exception> {
+        return try {
+            db.withTransaction {
+                val entityModel = entityMapper.domainToEntity(entity)
+                messageDao.upsert(entityModel)
+            }
+            CustomResult.Success(entity.id)
+        } catch (e: Exception) {
+            Log.e("MessageRepository", "Room save(upsert) 실패: ${entity.id.value}", e)
+            CustomResult.Failure(e)
+        }
+    }
+
     // 모든 기본 CRUD 메서드들은 부모 클래스에서 자동으로 처리됩니다!
     override suspend fun sendMessage(
         channelId: String,
@@ -122,9 +146,28 @@ class MessageRepositoryImpl @Inject constructor(
     // LocalMessageRepository 통합 메서드들
     // ================================
 
+    private var currentPagingSource: MessagePagingSource? = null
+
     override fun getMessagesPagingSource(channelId: String): PagingSource<Long, Message> {
         require(channelId.isNotBlank()) { "channelId must not be blank for message paging" }
-        return MessagePagingSource(db, messageDao, entityMapper, channelId = channelId)
+        val newPagingSource = MessagePagingSource(
+            db = db,
+            messageDao = messageDao,
+            messageMapper = entityMapper,
+            channelId = channelId,
+            syncThrottler = syncThrottler,
+            cursorStore = cursorStore
+        )
+        currentPagingSource = newPagingSource
+        return newPagingSource
+    }
+
+    /**
+     * 현재 PagingSource를 강제로 invalidate (ACK 처리 후 UI 즉시 갱신용)
+     */
+    fun invalidateCurrentPagingSource() {
+        currentPagingSource?.invalidate()
+        Log.d("MessageRepository", "🔄 PagingSource 강제 invalidate 실행")
     }
 
     /**
@@ -134,32 +177,46 @@ class MessageRepositoryImpl @Inject constructor(
         private val db: RoomDatabase,
         private val messageDao: MessageDao,
         private val messageMapper: MessageMapper,
-        private val channelId: String // 빈 문자열이면 모든 채널, 지정하면 해당 채널만
+        private val channelId: String, // 빈 문자열이면 모든 채널, 지정하면 해당 채널만
+        private val syncThrottler: SyncThrottler,
+        private val cursorStore: SyncCursorStore
     ) : PagingSource<Long, Message>() {
 
         // 디바운싱을 위한 코루틴 스코프
         private val debounceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
         private var invalidationJob: Job? = null
         private var isLoadingInProgress = false
+
+        // 로그 최적화를 위한 변수들
+        private var lastInvalidationLogTime = 0L
+        private var lastLoadLogTime = 0L
         
         private val tableObserver =
-            object : androidx.room.InvalidationTracker.Observer("messages") {
+            object : androidx.room.InvalidationTracker.Observer("messages", "outboxRecord") {
                 override fun onInvalidated(tables: Set<String>) {
-                    Log.d(
-                        "MessagePagingSource",
-                        "🔔 Room Invalidation 발생: tables=${tables.joinToString()} (channel=$channelId)"
-                    )
-                    // 진행 중인 로딩이 있으면 무효화 지연
-                    if (isLoadingInProgress) {
-                        Log.d("MessagePagingSource", "⏳ 로딩 중이므로 무효화 지연: $channelId")
-                        return
+                    val currentTime = System.currentTimeMillis()
+                    // 무효화 로그는 1초에 한 번만 출력
+                    if (currentTime - lastInvalidationLogTime > 1000L) {
+                        Log.d(
+                            "MessagePagingSource",
+                            "🔔 Room Invalidation: tables=${tables.joinToString()} (channel=$channelId)"
+                        )
+                        lastInvalidationLogTime = currentTime
                     }
                     
-                    // 디바운싱: 300ms 내에 추가 변경이 없으면 무효화 실행
+                    // 진행 중인 로딩이 있으면 무효화 지연
+                    if (isLoadingInProgress) {
+                        return
+                    }
+
+                    // 디바운싱: 100ms 내에 추가 변경이 없으면 무효화 실행 (빠른 반응성)
                     invalidationJob?.cancel()
                     invalidationJob = debounceScope.launch {
-                        delay(300L)
-                        Log.d("MessagePagingSource", "🔄 디바운싱된 무효화 실행: $channelId")
+                        delay(100L)
+                        // 디바운싱 실행 로그도 간소화
+                        if (currentTime - lastInvalidationLogTime > 500L) {
+                            Log.d("MessagePagingSource", "🔄 디바운싱 무효화: $channelId")
+                        }
                         this@MessagePagingSource.invalidate()
                     }
                 }
@@ -211,13 +268,17 @@ class MessageRepositoryImpl @Inject constructor(
                 if (params !is LoadParams.Refresh) {
                     if (currentTime - lastLoadTimestamp < MIN_LOAD_INTERVAL_MS) {
                         consecutiveEmptyLoads++
-                        Log.d(
-                            "MessagePagingSource",
-                            "⚠️ 빠른 연속 로딩 감지: 간격=${currentTime - lastLoadTimestamp}ms, 연속=${consecutiveEmptyLoads}"
-                        )
+                        // 빠른 연속 로딩 로그를 1초에 한 번만 출력
+                        if (currentTime - lastLoadLogTime > 1000L) {
+                            Log.d(
+                                "MessagePagingSource",
+                                "⚠️ 빠른 연속 로딩 감지: 간격=${currentTime - lastLoadTimestamp}ms, 연속=${consecutiveEmptyLoads}"
+                            )
+                            lastLoadLogTime = currentTime
+                        }
 
                         if (consecutiveEmptyLoads >= MAX_CONSECUTIVE_EMPTY_LOADS) {
-                            Log.d(
+                            Log.w(
                                 "MessagePagingSource",
                                 "🚫 무한 루프 차단: 연속 빈 로딩 ${consecutiveEmptyLoads}회"
                             )
@@ -255,24 +316,59 @@ class MessageRepositoryImpl @Inject constructor(
             val anchorTimestamp = anchorTimestampParam ?: Long.MAX_VALUE
             Log.d(
                 "MessagePagingSource",
-                "🔄 Refresh 시작(단방향: 과거만): anchorTs=$anchorTimestamp, limit=$limit, channel=$channelIdParam"
+                "🔄 Refresh 시작(양방향): anchorTs=$anchorTimestamp, limit=$limit, channel=$channelIdParam"
             )
 
-            // 과거 쪽(before)만 DESC로 읽기
-            val beforeDesc = messageDao.getMessagesBefore(channelIdParam, anchorTimestamp, limit)
-            val messages = beforeDesc.map { entity -> messageMapper.entityToDomain(entity) }
+            // 양방향 로딩: 앵커 기준으로 최신/과거 양쪽 데이터 로드
+            val halfLimit = (limit / 2).coerceAtLeast(10) // 최소 10개씩
+
+            // 1. 앵커 이후 데이터 (최신 방향) - ASC 순서로 가져온 후 DESC로 뒤집기
+            val afterAsc = messageDao.getMessagesAfter(channelIdParam, anchorTimestamp, halfLimit)
+            val afterDesc = afterAsc.reversed()
+
+            // 2. 앵커 이전 데이터 (과거 방향) - 이미 DESC 순서
+            val remainingLimit = limit - afterDesc.size
+            val beforeDesc = if (remainingLimit > 0) {
+                messageDao.getMessagesBefore(channelIdParam, anchorTimestamp, remainingLimit)
+            } else {
+                emptyList()
+            }
+
+            // 3. 데이터 결합 (최신 → 과거 순서 유지)
+            val combinedEntities = afterDesc + beforeDesc
+            val messages = combinedEntities.map { entity -> messageMapper.entityToDomain(entity) }
+
+            // 4. 동기화 확인 및 실행 (데이터 부족 시)
+            checkAndSyncIfNeeded(
+                channelId = channelIdParam,
+                resultSize = messages.size,
+                requestedLimit = limit,
+                timestamp = anchorTimestamp,
+                loadType = "Refresh"
+            )
+
             currentLoadedItems = messages.size
             if (messages.isNotEmpty()) consecutiveEmptyLoads = 0
 
-            val oldestTimestamp = beforeDesc.lastOrNull()?.createdAt
+            val newestTimestamp = combinedEntities.firstOrNull()?.createdAt
+            val oldestTimestamp = combinedEntities.lastOrNull()?.createdAt
 
-            // 단방향 키: 최신(prevKey)은 끊고, 과거(nextKey)만 제공
-            val prevKey: Long? = null
-            val nextKey: Long? = oldestTimestamp
+            // 양방향 키 설정
+            val prevKey: Long? = if (afterDesc.isEmpty() || afterDesc.size < halfLimit) {
+                null // 더 최신 데이터 없음
+            } else {
+                newestTimestamp
+            }
+
+            val nextKey: Long? = if (beforeDesc.isEmpty() || beforeDesc.size < remainingLimit) {
+                null // 더 과거 데이터 없음
+            } else {
+                oldestTimestamp
+            }
 
             Log.d(
                 "MessagePagingSource",
-                "🔄 Refresh(단방향) 결과: size=${messages.size}, oldest=$oldestTimestamp, prevKey=$prevKey, nextKey=$nextKey, totalLoaded=$currentLoadedItems"
+                "🔄 Refresh(양방향) 결과: total=${messages.size} (최신=${afterDesc.size}, 과거=${beforeDesc.size}), newest=$newestTimestamp, oldest=$oldestTimestamp, prevKey=$prevKey, nextKey=$nextKey"
             )
 
             return LoadResult.Page(
@@ -291,6 +387,15 @@ class MessageRepositoryImpl @Inject constructor(
             val entitiesAsc = messageDao.getMessagesAfter(channelIdParam, afterTimestamp ?: 0L, limit)
             val entities = entitiesAsc.reversed()
             val messages = entities.map { entity -> messageMapper.entityToDomain(entity) }
+
+            // 동기화 확인 및 실행 (데이터 부족 시)
+            checkAndSyncIfNeeded(
+                channelId = channelIdParam,
+                resultSize = messages.size,
+                requestedLimit = limit,
+                timestamp = afterTimestamp,
+                loadType = "Prepend"
+            )
 
             currentLoadedItems += messages.size
             if (messages.isNotEmpty()) consecutiveEmptyLoads = 0
@@ -328,6 +433,15 @@ class MessageRepositoryImpl @Inject constructor(
             val entities = messageDao.getMessagesBefore(channelIdParam, beforeTimestamp ?: Long.MAX_VALUE, limit)
             val messages = entities.map { entity -> messageMapper.entityToDomain(entity) }
 
+            // 동기화 확인 및 실행 (데이터 부족 시)
+            checkAndSyncIfNeeded(
+                channelId = channelIdParam,
+                resultSize = messages.size,
+                requestedLimit = limit,
+                timestamp = beforeTimestamp,
+                loadType = "Append"
+            )
+
             currentLoadedItems += messages.size
             if (messages.isNotEmpty()) consecutiveEmptyLoads = 0
 
@@ -360,6 +474,100 @@ class MessageRepositoryImpl @Inject constructor(
             val anchorPosition = state.anchorPosition ?: return null
             val anchorItem = state.closestItemToPosition(anchorPosition)
             return anchorItem?.createdAt?.toEpochMilli()
+        }
+
+        // ================================
+        // 동기화 확인 관련 헬퍼 메서드들
+        // ================================
+
+        /**
+         * 서버에 더 많은 데이터가 있는지 확인
+         */
+        private suspend fun checkIfMoreDataAvailable(
+            channelId: String,
+            requestTimestamp: Long?
+        ): Boolean {
+            return try {
+                // 커서 스토어에서 마지막 동기화 시점 확인
+                val streamName = "messages-$channelId"
+                val lastCursor = cursorStore.getCursor(streamName)
+                val lastSyncTime = lastCursor?.toLongOrNull() ?: 0L
+                val requestTime = requestTimestamp ?: System.currentTimeMillis()
+
+                // 요청 시점이 마지막 동기화보다 이전이면 더 많은 데이터 있을 가능성
+                val hasMoreData = requestTime < lastSyncTime
+
+                Log.d("MessagePagingSource", "🔍 More data check for channel '$channelId':")
+                Log.d("MessagePagingSource", "   Request timestamp: $requestTime")
+                Log.d("MessagePagingSource", "   Last sync cursor: $lastCursor ($lastSyncTime)")
+                Log.d("MessagePagingSource", "   Has more data: $hasMoreData")
+
+                hasMoreData
+            } catch (e: Exception) {
+                Log.w("MessagePagingSource", "⚠️ Failed to check more data availability", e)
+                // 확인 실패 시 안전하게 false 반환 (불필요한 동기화 방지)
+                false
+            }
+        }
+
+        /**
+         * 쓰로틀링 확인 후 동기화 필요성 로깅만 수행
+         * 실제 동기화는 UseCase 또는 ViewModel 레이어에서 수행
+         */
+        private suspend fun logSyncNeedIfThrottled(
+            channelId: String,
+            loadType: String,
+            reason: String
+        ): Boolean {
+            return if (syncThrottler.canSync(channelId, loadType)) {
+                Log.d(
+                    "MessagePagingSource",
+                    "🚀 Sync needed for '$channelId:$loadType' (reason: $reason)"
+                )
+                true
+            } else {
+                Log.d(
+                    "MessagePagingSource",
+                    "🔥 Sync throttled for '$channelId:$loadType' (reason: $reason)"
+                )
+                false
+            }
+        }
+
+        /**
+         * 데이터 부족 상황에서 동기화 필요성 확인
+         */
+        private suspend fun checkAndSyncIfNeeded(
+            channelId: String,
+            resultSize: Int,
+            requestedLimit: Int,
+            timestamp: Long?,
+            loadType: String
+        ): Boolean {
+            // 데이터가 충분하면 동기화 불필요
+            if (resultSize >= requestedLimit) {
+                return false
+            }
+
+            Log.d("MessagePagingSource", "📊 Data shortage detected:")
+            Log.d("MessagePagingSource", "   Channel: $channelId")
+            Log.d("MessagePagingSource", "   Load type: $loadType")
+            Log.d("MessagePagingSource", "   Result size: $resultSize / $requestedLimit")
+            Log.d("MessagePagingSource", "   Timestamp: $timestamp")
+
+            // 서버에 더 많은 데이터가 있는지 확인
+            val hasMoreData = checkIfMoreDataAvailable(channelId, timestamp)
+            if (!hasMoreData) {
+                Log.d("MessagePagingSource", "📊 No more data available on server")
+                return false
+            }
+
+            // 쓰로틀링 확인 후 동기화 필요성 로깅
+            return logSyncNeedIfThrottled(
+                channelId,
+                loadType,
+                "data shortage: $resultSize/$requestedLimit"
+            )
         }
     }
 

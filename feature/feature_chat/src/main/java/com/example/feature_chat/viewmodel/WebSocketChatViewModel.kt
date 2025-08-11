@@ -15,6 +15,9 @@ import com.example.domain.vo.DocumentId
 import com.example.domain.vo.MentionType
 import com.example.domain.vo.UserId
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
+import com.example.core_common.util.SyncThrottler
+import com.example.domain_usecase.usecase.sync.SyncUseCase
+import com.example.domain_usecase.usecase.project.AcceptMemberInvitationUseCase
 import com.example.feature_chat.model.ChatEvent
 import com.example.feature_chat.model.ChatMessageUiModel
 import com.example.feature_chat.model.ChatUiState
@@ -24,9 +27,11 @@ import com.example.websocket.core.WebSocketConnectionState
 import com.example.websocket.event.WebSocketDomainEvent
 import com.example.websocket.usecase.WebSocketUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -57,6 +62,9 @@ class WebSocketChatViewModel @Inject constructor(
     private val authSessionUseCaseProvider: AuthSessionUseCaseProvider,
     private val webSocketUseCaseProvider: WebSocketUseCaseProvider,
     private val chatServiceProvider: ChatServiceProvider,
+    private val syncThrottler: SyncThrottler,
+    private val syncUseCase: SyncUseCase,
+    private val acceptMemberInvitationUseCase: AcceptMemberInvitationUseCase
 ) : ViewModel() {
 
     private val channelId: String = savedStateHandle.getRequiredString(RouteArgs.CHANNEL_ID)
@@ -116,6 +124,34 @@ class WebSocketChatViewModel @Inject constructor(
                 )
                 if (joinResult.isSuccess) {
                     Log.d("ViewModel", "✅ 방 입장 성공: $channelId")
+
+                    // 초기 동기화 실행 (Room DB가 비어있을 때를 대비) - Initial 타입 쿨타임 적용
+                    if (syncThrottler.canSync(channelId, "Initial")) {
+                        Log.d("ViewModel", "🚀 채널 입장시 초기 동기화 시작: $channelId")
+                        try {
+                            val syncResult = syncUseCase.syncChannel(channelId)
+                            if (syncResult.isSuccess) {
+                                syncThrottler.markSynced(channelId, "Initial")
+                                Log.d("ViewModel", "✅ 초기 동기화 완료: $channelId")
+                            } else {
+                                when (syncResult) {
+                                    is CustomResult.Failure -> Log.w(
+                                        "ViewModel",
+                                        "⚠️ 초기 동기화 실패: $channelId - ${syncResult.error.message}"
+                                    )
+
+                                    else -> Log.w(
+                                        "ViewModel",
+                                        "⚠️ 초기 동기화 실패: $channelId - Unknown error"
+                                    )
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Log.e("ViewModel", "💥 초기 동기화 예외: $channelId", e)
+                        }
+                    } else {
+                        Log.d("ViewModel", "🔥 채널 입장시 초기 동기화 쿨다운 중: $channelId")
+                    }
 
                     // 디버그: 로컬 DB 최신 10개 로그 출력
                     withContext(Dispatchers.IO) {
@@ -220,116 +256,14 @@ class WebSocketChatViewModel @Inject constructor(
         }
     }
 
-    /**
-     * 메시지 전송 (MessageService 위임)
-     */
-    fun sendMessage(content: String, replyToMessageId: String? = null) {
-        viewModelScope.launch {
-            try {
-                val senderId = AuthUtil.getCurrentUserId()
+    // sendMessage(content, ...) 래퍼 제거: ViewModel에서는 onSendMessageClick에서 service를 직접 호출
 
-                val result = services.messageService.sendTextMessage(
-                    senderId = UserId(senderId),
-                    content = content,
-                    replyToMessageId = replyToMessageId?.let { DocumentId(it) }
-                )
-
-                when (result) {
-                    is CustomResult.Success -> {
-                        Log.d("ViewModel", "✅ 메시지 전송 성공: ${result.data.value}")
-                    }
-
-                    is CustomResult.Failure -> {
-                        Log.e("ViewModel", "❌ 메시지 전송 실패", result.error)
-                        _eventFlow.emit(ChatEvent.ShowSnackbar("메시지 전송에 실패했습니다"))
-                    }
-
-                    else -> {
-                        Log.w("ViewModel", "⚠️ 메시지 전송 결과: 알 수 없는 상태")
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("ViewModel", "❌ 메시지 전송 중 예외", e)
-                _eventFlow.emit(ChatEvent.ShowSnackbar("메시지 전송 중 오류가 발생했습니다"))
-            }
-        }
-    }
-
-    /**
-     * 이미지 메시지 전송 (MessageService 위임)
-     */
-    fun sendImageMessage(imageUri: Uri, content: String = "", replyToMessageId: String? = null) {
-        viewModelScope.launch {
-            try {
-                val senderId = AuthUtil.getCurrentUserId()
-
-                val result = services.messageService.sendImageMessage(
-                    senderId = UserId(senderId),
-                    imageUri = imageUri,
-                    content = content,
-                    replyToMessageId = replyToMessageId?.let { DocumentId(it) }
-                )
-
-                when (result) {
-                    is CustomResult.Success -> {
-                        Log.d("ViewModel", "✅ 이미지 메시지 전송 성공: ${result.data.value}")
-                    }
-
-                    is CustomResult.Failure -> {
-                        Log.e("ViewModel", "❌ 이미지 메시지 전송 실패", result.error)
-                        _eventFlow.emit(ChatEvent.ShowSnackbar("이미지 전송에 실패했습니다"))
-                    }
-
-                    else -> {
-                        Log.w("ViewModel", "⚠️ 이미지 메시지 전송 결과: 알 수 없는 상태")
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("ViewModel", "❌ 이미지 메시지 전송 중 예외", e)
-                _eventFlow.emit(ChatEvent.ShowSnackbar("이미지 전송 중 오류가 발생했습니다"))
-            }
-        }
-    }
+    // 이미지 메시지 전송 전용 API는 제거하고, 통합 send만 사용하도록 유도
 
     /**
      * 다중 이미지 메시지 전송 (MessageService 위임)
      */
-    fun sendImagesMessage(
-        imageUris: List<Uri>,
-        content: String = "",
-        replyToMessageId: String? = null
-    ) {
-        viewModelScope.launch {
-            try {
-                val senderId = AuthUtil.getCurrentUserId()
-
-                val result = services.messageService.sendImagesMessage(
-                    senderId = UserId(senderId),
-                    imageUris = imageUris,
-                    content = content,
-                    replyToMessageId = replyToMessageId?.let { DocumentId(it) }
-                )
-
-                when (result) {
-                    is CustomResult.Success -> {
-                        Log.d("ViewModel", "✅ 이미지들 메시지 전송 성공: ${result.data.value}")
-                    }
-
-                    is CustomResult.Failure -> {
-                        Log.e("ViewModel", "❌ 이미지들 메시지 전송 실패", result.error)
-                        _eventFlow.emit(ChatEvent.ShowSnackbar("이미지 전송에 실패했습니다"))
-                    }
-
-                    else -> {
-                        Log.w("ViewModel", "⚠️ 이미지들 메시지 전송 결과: 알 수 없는 상태")
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("ViewModel", "❌ 이미지들 메시지 전송 중 예외", e)
-                _eventFlow.emit(ChatEvent.ShowSnackbar("이미지 전송 중 오류가 발생했습니다"))
-            }
-        }
-    }
+    // 다중 이미지 전송 전용 API는 제거하고, 통합 send만 사용하도록 유도
 
     /**
      * 프로젝트 멤버 초대 메시지 전송 (MessageService 위임)
@@ -340,22 +274,30 @@ class WebSocketChatViewModel @Inject constructor(
                 val senderId = AuthUtil.getCurrentUserId()
                 val currentProjectId = projectId ?: return@launch
 
-                val result = services.messageService.sendMemberInvitationMessage(
+                val inviteContent = "${inviterName}님이 '${projectName}' 프로젝트로 초대했습니다."
+                val metadata = mapOf(
+                    "projectId" to currentProjectId,
+                    "projectName" to projectName,
+                    "inviterName" to inviterName,
+                    "targetUserId" to targetUserId
+                )
+                val result = services.messageService.sendMessage(
                     senderId = UserId(senderId),
-                    targetUserId = targetUserId,
-                    projectId = currentProjectId,
-                    projectName = projectName,
-                    inviterName = inviterName
+                    textContent = inviteContent,
+                    isSystemMessage = true,
+                    systemType = "USER_INVITE",
+                    additionalMetadata = metadata
                 )
 
                 when (result) {
-                    is CustomResult.Success -> {
-                        Log.d("ViewModel", "✅ 멤버 초대 메시지 전송 성공: ${result.data.value}")
+                    is CustomResult.Success<*> -> {
+                        Log.d("ViewModel", "✅ 멤버 초대 메시지 전송 성공: ${result.data}")
                         _eventFlow.emit(ChatEvent.ShowSnackbar("멤버 초대 메시지를 전송했습니다"))
+                        _eventFlow.emit(ChatEvent.ScrollToBottom)
                     }
 
-                    is CustomResult.Failure -> {
-                        Log.e("ViewModel", "❌ 멤버 초대 메시지 전송 실패", result.error)
+                    is CustomResult.Failure<*> -> {
+                        Log.e("ViewModel", "❌ 멤버 초대 메시지 전송 실패: ${result.error}")
                         _eventFlow.emit(ChatEvent.ShowSnackbar("멤버 초대 전송에 실패했습니다"))
                     }
 
@@ -382,11 +324,12 @@ class WebSocketChatViewModel @Inject constructor(
                 )
                 
                 when (result) {
-                    is CustomResult.Success -> {
-                        Log.d("ViewModel", "✅ 메시지 수정 성공")
+                    is CustomResult.Success<*> -> {
+                        Log.d("ViewModel", "✅ 메시지 수정 요청 전송(낙관적 적용됨)")
                     }
-                    is CustomResult.Failure -> {
-                        Log.e("ViewModel", "❌ 메시지 수정 실패", result.error)
+
+                    is CustomResult.Failure<*> -> {
+                        Log.e("ViewModel", "❌ 메시지 수정 실패: ${result.error}")
                         _eventFlow.emit(ChatEvent.ShowSnackbar("메시지 수정에 실패했습니다"))
                     }
                     else -> {
@@ -409,12 +352,12 @@ class WebSocketChatViewModel @Inject constructor(
                 val result = services.messageService.deleteMessage(DocumentId(messageId))
                 
                 when (result) {
-                    is CustomResult.Success -> {
-                        Log.d("ViewModel", "✅ 메시지 삭제 성공")
+                    is CustomResult.Success<*> -> {
+                        Log.d("ViewModel", "✅ 메시지 삭제 요청 전송(낙관적 적용됨)")
                     }
 
-                    is CustomResult.Failure -> {
-                        Log.e("ViewModel", "❌ 메시지 삭제 실패", result.error)
+                    is CustomResult.Failure<*> -> {
+                        Log.e("ViewModel", "❌ 메시지 삭제 실패: ${result.error}")
                         _eventFlow.emit(ChatEvent.ShowSnackbar("메시지 삭제에 실패했습니다"))
                     }
 
@@ -425,6 +368,39 @@ class WebSocketChatViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e("ViewModel", "❌ 메시지 삭제 중 예외", e)
                 _eventFlow.emit(ChatEvent.ShowSnackbar("메시지 삭제 중 오류가 발생했습니다"))
+            }
+        }
+    }
+
+    /**
+     * 실패한 메시지 재전송
+     */
+    fun retryFailedMessage(messageId: String) {
+        viewModelScope.launch {
+            try {
+                Log.d("ViewModel", "🔄 실패한 메시지 재전송 시작: $messageId")
+
+                val result = services.messageService.retryFailedImageMessage(DocumentId(messageId))
+
+                when (result) {
+                    is CustomResult.Success<*> -> {
+                        Log.d("ViewModel", "✅ 메시지 재전송 성공: $messageId")
+                        _eventFlow.emit(ChatEvent.ShowSnackbar("메시지 재전송을 시작했습니다"))
+                    }
+
+                    is CustomResult.Failure<*> -> {
+                        Log.e("ViewModel", "❌ 메시지 재전송 실패: ${result.error}")
+                        _eventFlow.emit(ChatEvent.ShowSnackbar("메시지 재전송에 실패했습니다: ${result.error}"))
+                    }
+
+                    else -> {
+                        Log.w("ViewModel", "⚠️ 메시지 재전송 결과: 알 수 없는 상태")
+                        _eventFlow.emit(ChatEvent.ShowSnackbar("메시지 재전송 상태를 확인할 수 없습니다"))
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("ViewModel", "❌ 메시지 재전송 중 예외", e)
+                _eventFlow.emit(ChatEvent.ShowSnackbar("메시지 재전송 중 오류가 발생했습니다"))
             }
         }
     }
@@ -488,7 +464,8 @@ class WebSocketChatViewModel @Inject constructor(
 
                         is WebSocketDomainEvent.MessageReceived -> {
                             Log.d("ViewModel", "📨 메시지 수신: ${event.messageId}")
-                            // Paging3가 자동으로 Room DB 업데이트를 감지하여 UI에 반영
+                            // ChatMessagesList에서 스크롤 위치를 자동 판단하여 처리
+                            // 무조건 ScrollToBottom 하지 않고 사용자 스크롤 위치 존중
                         }
 
                         is WebSocketDomainEvent.MessageAck -> {
@@ -499,6 +476,13 @@ class WebSocketChatViewModel @Inject constructor(
                             // MessageService의 ACK 처리 호출
                             viewModelScope.launch {
                                 services.messageService.handleMessageAck(event.messageId)
+                                // 낙관적 메타 정리 (편집/삭제 공통)
+                                services.messageService.handleOptimisticAck(event.messageId)
+
+                                // UI 갱신 이벤트 전송 (로딩 인디케이터 제거용)
+                                _eventFlow.emit(ChatEvent.ScrollToBottom)
+
+                                Log.d("ViewModel", "🔄 ACK 처리 후 UI 갱신 이벤트 전송: ${event.messageId}")
                             }
                         }
 
@@ -510,6 +494,8 @@ class WebSocketChatViewModel @Inject constructor(
                             // MessageService의 실패 처리 호출
                             viewModelScope.launch {
                                 services.messageService.handleMessageFailure(event.messageId)
+                                // 낙관적 롤백 적용
+                                services.messageService.handleOptimisticFailure(event.messageId)
                             }
                             // 사용자에게 실패 알림
                             _eventFlow.emit(ChatEvent.ShowSnackbar("메시지 전송에 실패했습니다"))
@@ -549,7 +535,7 @@ class WebSocketChatViewModel @Inject constructor(
     private fun observeOfflineQueue() {
         viewModelScope.launch {
             // 주기적으로 큐 상태 업데이트 (5초마다)
-            while (true) {
+            while (isActive) {
                 try {
                     val (pendingCount, failedCount) = services.messageService.offlineMessageQueue.getQueueInfo()
 
@@ -564,6 +550,10 @@ class WebSocketChatViewModel @Inject constructor(
                     if (pendingCount > 0 || failedCount > 0) {
                         Log.d("ViewModel", "📋 큐 상태 업데이트: 대기 ${pendingCount}개, 실패 ${failedCount}개")
                     }
+                } catch (e: CancellationException) {
+                    // 취소는 정상 종료로 간주
+                    Log.d("ViewModel", "ℹ️ 큐 상태 모니터링 취소됨")
+                    break
                 } catch (e: Exception) {
                     Log.e("ViewModel", "❌ 큐 상태 모니터링 실패", e)
                 }
@@ -578,7 +568,7 @@ class WebSocketChatViewModel @Inject constructor(
      */
     private fun startPeriodicCacheCleanup() {
         viewModelScope.launch {
-            while (true) {
+            while (isActive) {
                 try {
                     delay(60 * 60 * 1000L) // 1시간 대기
 
@@ -587,6 +577,10 @@ class WebSocketChatViewModel @Inject constructor(
                         services.messageService.cleanupCache()
                     }
                     Log.d("ViewModel", "✅ 주기적 캐시 정리 완료")
+                } catch (e: CancellationException) {
+                    // 취소는 정상 종료로 간주
+                    Log.d("ViewModel", "ℹ️ 주기적 캐시 정리 취소됨")
+                    break
                 } catch (e: Exception) {
                     Log.e("ViewModel", "❌ 주기적 캐시 정리 실패", e)
                     // 실패해도 계속 시도
@@ -622,37 +616,7 @@ class WebSocketChatViewModel @Inject constructor(
     // 🎯 파일 업로드 관련 (UI 전용)
     // ================================
 
-    /**
-     * 이미지 업로드
-     */
-    fun uploadImage(uri: Uri) {
-        viewModelScope.launch {
-            try {
-                // TODO: 이미지 업로드 로직 구현
-                Log.d("ViewModel", "📸 이미지 업로드 시작: $uri")
-                _eventFlow.emit(ChatEvent.ShowSnackbar("이미지 업로드 기능은 준비 중입니다"))
-            } catch (e: Exception) {
-                Log.e("ViewModel", "❌ 이미지 업로드 실패", e)
-                _eventFlow.emit(ChatEvent.ShowSnackbar("이미지 업로드에 실패했습니다"))
-            }
-        }
-    }
-
-    /**
-     * 파일 업로드
-     */
-    fun uploadFile(uri: Uri) {
-        viewModelScope.launch {
-            try {
-                // TODO: 파일 업로드 로직 구현
-                Log.d("ViewModel", "📁 파일 업로드 시작: $uri")
-                _eventFlow.emit(ChatEvent.ShowSnackbar("파일 업로드 기능은 준비 중입니다"))
-            } catch (e: Exception) {
-                Log.e("ViewModel", "❌ 파일 업로드 실패", e)
-                _eventFlow.emit(ChatEvent.ShowSnackbar("파일 업로드에 실패했습니다"))
-            }
-        }
-    }
+    // 업로드 프리뷰/버튼 동작은 onImagesSelected + onSendMessageClick에서 처리. 개별 uploadImage/uploadFile 제거
 
     // ================================
     // 🎯 메시지 타임아웃 관리 (UI 전용)
@@ -713,59 +677,17 @@ class WebSocketChatViewModel @Inject constructor(
             try {
                 Log.d("ViewModel", "📸 이미지 선택됨: ${uris.size}개")
 
-                val userId = UserId(currentUserId ?: AuthUtil.getCurrentUserId() ?: "")
-
-                if (uris.size == 1) {
-                    // 단일 이미지 전송
-                    val result = services.messageService.sendImageMessage(
-                        senderId = userId,
-                        imageUri = uris.first(),
-                        content = "", // 이미지만 전송하는 경우 빈 내용
-                        replyToMessageId = null
+                // 선택 즉시 전송하지 않고, 임시 선택 목록에 추가
+                _uiState.update { current ->
+                    val merged =
+                        current.selectedAttachmentUris.toMutableList().apply { addAll(uris) }
+                    current.copy(
+                        selectedAttachmentUris = merged,
+                        isAttachmentAreaVisible = merged.isNotEmpty()
                     )
-
-                    when (result) {
-                        is CustomResult.Success -> {
-                            Log.d("ViewModel", "✅ 이미지 메시지 전송 성공: ${result.data}")
-                            _eventFlow.emit(ChatEvent.ShowSnackbar("이미지를 전송했습니다"))
-                        }
-
-                        is CustomResult.Failure -> {
-                            Log.e("ViewModel", "❌ 이미지 메시지 전송 실패", result.error)
-                            _eventFlow.emit(ChatEvent.ShowSnackbar("이미지 전송에 실패했습니다: ${result.error.message}"))
-                        }
-
-                        else -> {
-                            Log.w("ViewModel", "⏳ 이미지 메시지 전송 대기 중...")
-                        }
-                    }
-                } else {
-                    // 다중 이미지 전송
-                    val result = services.messageService.sendImagesMessage(
-                        senderId = userId,
-                        imageUris = uris,
-                        content = "", // 이미지만 전송하는 경우 빈 내용
-                        replyToMessageId = null
-                    )
-
-                    when (result) {
-                        is CustomResult.Success -> {
-                            Log.d("ViewModel", "✅ 다중 이미지 메시지 전송 성공: ${result.data}")
-                            _eventFlow.emit(ChatEvent.ShowSnackbar("${uris.size}개의 이미지를 전송했습니다"))
-                        }
-
-                        is CustomResult.Failure -> {
-                            Log.e("ViewModel", "❌ 다중 이미지 메시지 전송 실패", result.error)
-                            _eventFlow.emit(ChatEvent.ShowSnackbar("이미지 전송에 실패했습니다: ${result.error.message}"))
-                        }
-
-                        else -> {
-                            Log.w("ViewModel", "⏳ 다중 이미지 메시지 전송 대기 중...")
-                        }
-                    }
                 }
-                
-                _eventFlow.emit(ChatEvent.ImagesSelected(uris))
+
+                // UI 상태만 갱신하며 별도 이벤트 발행은 하지 않음
             } catch (e: Exception) {
                 Log.e("ViewModel", "❌ 이미지 선택 처리 실패", e)
                 _eventFlow.emit(ChatEvent.ShowSnackbar("이미지 선택 처리에 실패했습니다: ${e.message}"))
@@ -840,9 +762,42 @@ class WebSocketChatViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val content = uiState.value.pendingMessageText.trim()
-                if (content.isNotBlank()) {
-                    sendMessage(content)
-                    _uiState.update { it.copy(pendingMessageText = "") }
+                val attachments = uiState.value.selectedAttachmentUris
+
+                // 전송 가능 조건: 텍스트 있거나 첨부가 있거나
+                if (content.isBlank() && attachments.isEmpty()) return@launch
+
+                val senderId = AuthUtil.getCurrentUserId()
+
+                val result = services.messageService.sendMessage(
+                    senderId = UserId(senderId),
+                    textContent = content,
+                    imageUris = attachments,
+                    replyToMessageId = null
+                )
+
+                when (result) {
+                    is CustomResult.Success -> {
+                        Log.d("ViewModel", "✅ 메시지 전송 성공: ${result.data}")
+                        _eventFlow.emit(ChatEvent.ScrollToBottom)
+                        // 전송 성공 시 입력/첨부 초기화
+                        _uiState.update {
+                            it.copy(
+                                pendingMessageText = "",
+                                selectedAttachmentUris = emptyList(),
+                                isAttachmentAreaVisible = false
+                            )
+                        }
+                    }
+
+                    is CustomResult.Failure -> {
+                        Log.e("ViewModel", "❌ 메시지 전송 실패: ${result.error}")
+                        _eventFlow.emit(ChatEvent.ShowSnackbar("메시지 전송에 실패했습니다"))
+                    }
+
+                    else -> {
+                        Log.w("ViewModel", "⚠️ 메시지 전송 결과: 알 수 없는 상태")
+                    }
                 }
             } catch (e: Exception) {
                 Log.e("ViewModel", "❌ 메시지 전송 클릭 처리 실패", e)
@@ -852,18 +807,46 @@ class WebSocketChatViewModel @Inject constructor(
     }
 
     /**
-     * 첨부파일 클릭 처리
+     * 선택된 단일 첨부 제거
      */
-    fun onAttachmentClick() {
+    fun removeSelectedAttachment(uri: Uri) {
         viewModelScope.launch {
             try {
-                Log.d("ViewModel", "📎 첨부파일 클릭")
-                _eventFlow.emit(ChatEvent.AttachmentClicked)
+                _uiState.update { current ->
+                    val updated = current.selectedAttachmentUris.filterNot { it == uri }
+                    current.copy(
+                        selectedAttachmentUris = updated,
+                        isAttachmentAreaVisible = updated.isNotEmpty()
+                    )
+                }
             } catch (e: Exception) {
-                Log.e("ViewModel", "❌ 첨부파일 클릭 처리 실패", e)
+                Log.e("ViewModel", "❌ 첨부 제거 실패", e)
             }
         }
     }
+
+    /**
+     * 선택된 모든 첨부 제거
+     */
+    fun clearSelectedAttachments() {
+        viewModelScope.launch {
+            try {
+                _uiState.update { current ->
+                    current.copy(
+                        selectedAttachmentUris = emptyList(),
+                        isAttachmentAreaVisible = false
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("ViewModel", "❌ 첨부 전체 제거 실패", e)
+            }
+        }
+    }
+
+    /**
+     * 첨부파일 클릭 처리
+     */
+    // onAttachmentClick 제거: ChatScreen에서 바로 이미지 피커 실행
 
     /**
      * 편집 취소
@@ -952,16 +935,17 @@ class WebSocketChatViewModel @Inject constructor(
                 val result = services.messageService.retryFailedMessage(messageId)
 
                 when (result) {
-                    is CustomResult.Success -> {
+                    is CustomResult.Success<*> -> {
                         Log.d("ViewModel", "✅ 메시지 재전송 성공: $messageId")
                         _eventFlow.emit(ChatEvent.ShowSnackbar("메시지를 다시 전송했습니다"))
+                        _eventFlow.emit(ChatEvent.ScrollToBottom)
                     }
 
-                    is CustomResult.Failure -> {
-                        Log.e("ViewModel", "❌ 메시지 재전송 실패", result.error)
+                    is CustomResult.Failure<*> -> {
+                        Log.e("ViewModel", "❌ 메시지 재전송 실패: ${result.error}")
                         val errorMessage = when {
-                            result.error.message?.contains("네트워크") == true -> "네트워크 연결을 확인해주세요"
-                            result.error.message?.contains("이미지") == true -> "이미지 전송에 실패했습니다"
+                            result.error.toString().contains("네트워크") == true -> "네트워크 연결을 확인해주세요"
+                            result.error.toString().contains("이미지") == true -> "이미지 전송에 실패했습니다"
                             else -> "메시지 재전송에 실패했습니다"
                         }
                         _eventFlow.emit(ChatEvent.ShowSnackbar(errorMessage))
@@ -1017,6 +1001,47 @@ class WebSocketChatViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e("ViewModel", "❌ 메시지 삭제 확인 실패", e)
                 _eventFlow.emit(ChatEvent.ShowSnackbar("메시지 삭제에 실패했습니다"))
+            }
+        }
+    }
+
+    /**
+     * 멤버 초대 수락 처리
+     */
+    fun onAddMember(projectId: String, targetUserId: String) {
+        viewModelScope.launch {
+            try {
+                Log.d("ViewModel", "👥 멤버 초대 수락: projectId=$projectId, targetUserId=$targetUserId")
+
+                acceptMemberInvitationUseCase(projectId = projectId, targetUserId = targetUserId)
+                    .collect { result ->
+                        when (result) {
+                            is CustomResult.Success -> {
+                                Log.d("ViewModel", "✅ 멤버 초대 수락 성공")
+                                _eventFlow.emit(ChatEvent.ShowSnackbar("프로젝트에 성공적으로 참여했습니다!"))
+                            }
+
+                            is CustomResult.Failure -> {
+                                Log.e("ViewModel", "❌ 멤버 초대 수락 실패", result.error)
+                                _eventFlow.emit(ChatEvent.ShowSnackbar("프로젝트 참여에 실패했습니다: ${result.error.message}"))
+                            }
+
+                            is CustomResult.Loading -> {
+                                Log.d("ViewModel", "⏳ 멤버 초대 수락 중...")
+                            }
+
+                            is CustomResult.Initial -> {
+                                Log.d("ViewModel", "🔄 멤버 초대 수락 초기 상태")
+                            }
+
+                            is CustomResult.Progress -> {
+                                Log.d("ViewModel", "📊 멤버 초대 수락 진행 중: ${result.progress}")
+                            }
+                        }
+                    }
+            } catch (e: Exception) {
+                Log.e("ViewModel", "❌ 멤버 초대 수락 중 예외 발생", e)
+                _eventFlow.emit(ChatEvent.ShowSnackbar("프로젝트 참여 중 오류가 발생했습니다"))
             }
         }
     }

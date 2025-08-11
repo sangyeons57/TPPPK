@@ -211,8 +211,14 @@ public class ChatWebSocketHandler {
         currentRoomId = roomId;
         roomManager.joinRoom(roomId, userId, this);
         
-        // Send join confirmation
-        ChatMessage joinConfirmation = ChatMessage.createSystemMessage(WebSocketEventConstants.ROOM_JOINED, roomId, "server", "Successfully joined room: " + roomId, Instant.now());
+        // Send join confirmation (standardized type name)
+        ChatMessage joinConfirmation = ChatMessage.createSystemMessage(
+                WebSocketEventConstants.JOINED_ROOM,
+                roomId,
+                userId,
+                "Successfully joined room: " + roomId,
+                Instant.now()
+        );
         sendMessage(joinConfirmation);
         logger.info("✅ User {} successfully joined room {}", userId, roomId);
     }
@@ -223,8 +229,14 @@ public class ChatWebSocketHandler {
             roomManager.leaveRoom(roomId, userId, this);
             currentRoomId = null;
             
-            // Send successful leave confirmation
-            ChatMessage leaveConfirmation = ChatMessage.createSystemMessage(WebSocketEventConstants.ROOM_LEFT, roomId, "server", "Successfully left room: " + roomId, Instant.now());
+            // Send successful leave confirmation (standardized type name)
+            ChatMessage leaveConfirmation = ChatMessage.createSystemMessage(
+                    WebSocketEventConstants.LEFT_ROOM,
+                    roomId,
+                    userId,
+                    "Successfully left room: " + roomId,
+                    Instant.now()
+            );
             sendMessage(leaveConfirmation);
         } else {
             logger.warn("❌ User {} attempted to leave room {} but is in room {}", 

@@ -57,6 +57,10 @@ object ImageCompressor {
         options: CompressionOptions = CompressionOptions()
     ): Uri = withContext(Dispatchers.IO) {
         try {
+            android.util.Log.d(
+                "ImageCompressor",
+                "🔄 [이미지압축] 이미지 압축 시작: quality=${options.quality}%, maxSize=${options.maxWidth}x${options.maxHeight}"
+            )
             val inputStream = context.contentResolver.openInputStream(imageUri)
                 ?: throw IllegalArgumentException("Cannot open input stream for URI: $imageUri")
 
@@ -72,8 +76,13 @@ object ImageCompressor {
             val compressedFile = compressAndSave(context, resizedBitmap, options)
             resizedBitmap.recycle() // 메모리 해제
 
+            android.util.Log.d(
+                "ImageCompressor",
+                "✅ [이미지압축] 이미지 압축 완료: ${compressedFile.length() / 1024}KB"
+            )
             Uri.fromFile(compressedFile)
         } catch (e: Exception) {
+            android.util.Log.e("ImageCompressor", "❌ [이미지압축] 이미지 압축 실패", e)
             throw IllegalStateException("이미지 압축 실패: ${e.message}", e)
         }
     }
@@ -230,6 +239,46 @@ object ImageCompressor {
                     file.delete()
                 }
             }
+        }
+    }
+
+    /**
+     * URI에서 파일 확장자를 추출합니다.
+     *
+     * @param context Android Context
+     * @param uri 파일 URI
+     * @return 파일 확장자 (예: "jpg", "png") 또는 null
+     */
+    fun getExtension(context: Context, uri: Uri): String? {
+        return try {
+            when (uri.scheme) {
+                "content" -> {
+                    // ContentResolver를 통해 MIME 타입 확인
+                    val mimeType = context.contentResolver.getType(uri)
+                    when (mimeType) {
+                        "image/jpeg" -> "jpg"
+                        "image/png" -> "png"
+                        "image/webp" -> "webp"
+                        "image/gif" -> "gif"
+                        else -> "jpg" // 기본값
+                    }
+                }
+
+                "file" -> {
+                    // 파일 경로에서 확장자 추출
+                    val path = uri.path ?: return "jpg"
+                    val lastDot = path.lastIndexOf('.')
+                    if (lastDot != -1 && lastDot < path.length - 1) {
+                        path.substring(lastDot + 1).lowercase()
+                    } else {
+                        "jpg"
+                    }
+                }
+
+                else -> "jpg" // 기본값
+            }
+        } catch (e: Exception) {
+            "jpg" // 오류 시 기본값
         }
     }
 }

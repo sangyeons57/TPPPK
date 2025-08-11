@@ -1,5 +1,55 @@
 # Codex-1 Agent Guide
 
+# Repository Guidelines
+
+## Project Structure & Module Organization
+
+- Android app: `app` (entry/DI/navigation) and `app-api` (interfaces for features).
+- Core: `core/core_common`, `core/core_ui`, `core/core_navigation`, `core/websocket`.
+- Domain: `domain/domain` (models, VOs, events, use cases), `domain/domain_repository` (interfaces).
+- Data: `data/*` (repository impls, datasources, mappers, orchestrators, models).
+- Features: `feature/*` per screen/flow (Compose UI + ViewModels).
+- Firebase Functions: `functions/` (TypeScript; layered structure).
+- Tests: Kotlin in `src/test` and `src/androidTest`; Functions in `functions/__tests__` or
+  `*.test.ts`.
+
+## Build, Test, and Development Commands
+
+- Build app: `./gradlew :app:assembleDebug` (or target any module).
+- Lint + unit tests (targeted): `./gradlew :core:core_common:lintDebug :core:core_common:test`.
+- All JVM unit tests: `./gradlew test`. Android Lint: `./gradlew lintDebug`.
+- Install on device: `./gradlew :app:installDebug`.
+- Functions: `cd functions && npm run build`, `npm test`, `npm run serve` (emulators).
+
+## Coding Style & Naming Conventions
+
+- Kotlin 2.1, AGP 8.1, JDK 17; 4‑space indent, idiomatic Kotlin. Public APIs use explicit types.
+- Clean Architecture: UI → ViewModel → UseCaseProvider → UseCase → Repository → DataSource.
+- Always return `CustomResult<Success, Error>` from use cases/repos.
+- Navigation only via `NavigationManger` with type‑safe routes.
+- Time as UTC `Instant`. Value objects use clear names (e.g., `UserId`, `DocumentId`).
+- Feature modules: `feature_<area>`; use cases grouped under a `*UseCaseProvider`.
+
+## Testing Guidelines
+
+- Android: JUnit/AndroidX/Compose testing. Name tests `SomethingTest.kt` and keep them next to the
+  code.
+- Focus: use cases, repositories, and mappers. Mock datasources; avoid hitting Firebase in unit
+  tests.
+- Functions: Jest; name files `*.test.ts`. Run with `npm test` or `npm run test:watch`.
+
+## Commit & Pull Request Guidelines
+
+- Commit style: `Feat|Fix|Refactor|Chore|Docs|Test: concise summary` (optional scope:
+  `Feat(core_common): …`).
+- Body: bullet changes, rationale, and risks. Reference tasks/issues (e.g., `#123`).
+- PRs: clear description, linked issue, screenshots for UI changes, test plan, and affected modules.
+
+## Security & Configuration Tips
+
+- Do not commit secrets; use `.env` and Firebase config files locally.
+- Prefer interface abstractions; never access Firebase directly from UI.
+- Follow `PROVIDER_PATTERN_MIGRATION_GUIDE.md` and `NAVIGATION_GUIDE.md` for new features.
 This repository is a large multi-module Android project written in Kotlin and Jetpack Compose with a Firebase backend.  A TypeScript Firebase Functions project lives under `functions/`.  The code follows a Clean Architecture approach with a strict module hierarchy and the UseCase Provider pattern.
 
 ## Modules
@@ -56,4 +106,3 @@ Entities such as `User`, `Project`, `DMChannel`, `Category`, `Message` etc. resi
   - Because full builds are slow, target specific modules when possible, e.g.
     `./gradlew :core_common:lintDebug :core_common:test`.
 - Documentation or comment‑only changes do **not** require running tests.
-

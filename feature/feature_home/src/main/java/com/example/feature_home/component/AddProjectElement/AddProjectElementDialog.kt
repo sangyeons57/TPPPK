@@ -60,7 +60,7 @@ import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.base.Category
 import com.example.domain.model.enum.ProjectChannelType
 import com.example.feature_home.dialog.viewmodel.AddProjectElementDialogEvent
-import com.example.feature_home.dialog.viewmodel.AddProjectElementDialogViewModel
+import com.example.feature_home.component.AddProjectElement.AddProjectElementDialogViewModel
 import com.example.feature_home.dialog.viewmodel.CreateElementType
 import kotlinx.coroutines.flow.collectLatest
 
@@ -98,6 +98,8 @@ fun AddProjectElementDialog(
                 is AddProjectElementDialogEvent.DismissDialog -> {
                     keyboardController?.hide()
                     onDismissRequest()
+                    // 내부 상태 초기화 (재오픈 시 이전 입력값 제거)
+                    viewModel.resetFormState()
                 }
                 is AddProjectElementDialogEvent.CategoryCreated -> {
                     onCategoryCreated(event.category)
