@@ -1,4 +1,4 @@
-package com.example.core_common.constant
+package com.example.core_common.constants
 
 /**
  * 페이징 관련 상수들을 중앙화한 객체
