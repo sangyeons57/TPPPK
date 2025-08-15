@@ -19,7 +19,10 @@ import com.example.websocket.core.WebSocketConnectionState
 import com.example.websocket.core.WebSocketManager
 import com.example.websocket.core.WebSocketMessage
 import com.example.websocket.event.WebSocketDomainEvent
+import com.example.websocket.event.WebSocketDomainMapper
 import com.example.websocket.event.WebSocketEventFlow
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -53,7 +56,8 @@ import javax.inject.Singleton
 class WebSocketMessageService @Inject constructor(
     private val globalWebSocketService: GlobalWebSocketService,
     private val webSocketEventFlow: WebSocketEventFlow,
-    private val messageRepository: MessageRepository
+    private val messageRepository: MessageRepository,
+    private val webSocketDomainMapper: WebSocketDomainMapper
 ) {
 
     // GlobalWebSocketService에서 연결 상태와 WebSocketManager 위임
@@ -98,10 +102,26 @@ class WebSocketMessageService @Inject constructor(
                         return@onEach
                     }
 
-                    if (!isRoomJoined(roomId)) {
+                    // 저장 허용 기준:
+                    // - 이미 입장한 방이거나
+                    // - DM 방(dm_ 접두사)이거나
+                    // - 초대/시스템 멤버 초대 등 특수 시스템 메시지 타입
+                    val isJoined = isRoomJoined(roomId)
+                    val isDmRoom = roomId.startsWith("dm_")
+                    val isSpecialSystemType = when (event.messageTypeString) {
+                        WebSocketFieldConstants.MESSAGE_TYPE_PROJECT_INVITE,
+                        WebSocketFieldConstants.MESSAGE_TYPE_SYSTEM_MEMBER_INVITATION,
+                        WebSocketFieldConstants.MESSAGE_TYPE_SYSTEM_PROJECT_JOIN,
+                        WebSocketFieldConstants.MESSAGE_TYPE_SYSTEM_PROJECT_LEAVE,
+                        WebSocketFieldConstants.MESSAGE_TYPE_SYSTEM_USER_INVITE -> true
+
+                        else -> false
+                    }
+                    val shouldPersist = isJoined || isDmRoom || isSpecialSystemType
+                    if (!shouldPersist) {
                         Log.d(
                             TAG,
-                            "입장하지 않은 방의 메시지 스킵: roomId=$roomId, messageId=${event.messageId}"
+                            "입장하지 않은 방 일반 메시지 스킵: roomId=$roomId, messageId=${event.messageId}"
                         )
                         return@onEach
                     }
@@ -113,8 +133,8 @@ class WebSocketMessageService @Inject constructor(
                         Log.d(TAG, "메시지 이미 존재함, 저장 스킵: ${event.messageId}")
                         return@onEach
                     }
-                    
-                    val message = convertWebSocketEventToDomainMessage(event)
+
+                    val message = webSocketDomainMapper.messageReceivedToDomainMessage(event)
                     val result = messageRepository.save(message)
 
                     when (result) {
@@ -148,7 +168,15 @@ class WebSocketMessageService @Inject constructor(
                     Log.d(TAG, "메시지 수정 이벤트 처리(업서트): ${event.messageId}")
                     val existing = messageRepository.findById(event.messageId)
                     if (existing != null) {
-                        existing.updatePayload(MessagePayload.forText(event.newContent))
+                        // 기존 payload에서 content만 교체 + 낙관적 메타 제거
+                        val current = existing.payload
+                        val attachments = current.getAttachments()
+                        val updated = if (attachments.isNotEmpty()) {
+                            MessagePayload.forTextWithAttachments(event.newContent, attachments)
+                        } else {
+                            MessagePayload.forText(event.newContent)
+                        }.clearOptimisticMeta()
+                        existing.updatePayload(updated)
                         messageRepository.save(existing)
                     } else {
                         // 업서트: 없는 경우 새 메시지로 생성(isNew=true)
@@ -294,24 +322,6 @@ class WebSocketMessageService @Inject constructor(
             .launchIn(serviceScope)
     }
 
-    /**
-     * WebSocket 도메인 이벤트를 도메인 메시지 모델로 변환
-     */
-    private fun convertWebSocketEventToDomainMessage(event: WebSocketDomainEvent.MessageReceived): Message {
-        if (event.roomId == null) throw Exception("roomId is null")
-        return Message.fromDataSource(
-            id = DocumentId(event.messageId),
-            senderId = UserId(event.senderId),
-            messageType = MessageType.TEXT,
-            payload = MessagePayload.forText(event.content),
-            replyToMessageId = event.replyToMessageId?.let { DocumentId(it) },
-            createdAt = Instant.parse(event.timestamp),
-            updatedAt = Instant.parse(event.timestamp),
-            isDeleted = MessageIsDeleted.FALSE,
-            mentions = emptyList(), // TODO: WebSocketDomainEvent에 mentions 추가 후 활성화
-            channelId = ChannelId(event.roomId)
-        )
-    }
 
     // ================================
     // 이벤트 스트림 제공
@@ -617,9 +627,148 @@ class WebSocketMessageService @Inject constructor(
     // ================================
 
     /**
-     * 메시지 전송 - Room DB에 먼저 저장 후 WebSocket 전송
+     * 메시지 전송 - MessagePayload 기반
      */
     suspend fun sendMessage(
+        roomId: String,
+        senderId: UserId,
+        payload: MessagePayload,
+        messageId: DocumentId,
+        replyToMessageId: DocumentId? = null,
+        projectId: String? = null,
+        channelType: String? = null
+    ): Result<Unit> {
+        Log.i(TAG, "메시지 전송 시도 (payload): messageId=${messageId.value}, roomId=$roomId")
+
+        try {
+            // Room DB 저장은 ViewModel에서 이미 처리되므로 여기서는 스킵
+            Log.d(TAG, "Room DB 저장은 ViewModel에서 처리됨, WebSocket 전송만 진행: ${messageId.value}")
+
+            // 임시 입장 필요 여부 확인
+            val needTemporaryJoin = !isRoomJoined(roomId)
+            if (needTemporaryJoin) {
+                Log.i(TAG, "방 미입장 상태 감지 → 임시 입장 후 전송 진행: roomId=$roomId")
+                val joinResult = joinRoom(roomId, senderId)
+                if (joinResult.isFailure) {
+                    Log.e(TAG, "임시 방 입장 실패: ${joinResult.exceptionOrNull()?.message}")
+                    return joinResult
+                }
+            }
+
+            // 메시지 타입 자동 감지 (특수 메시지 식별 시 messageType 포함 전송)
+            val (typeString, wsMessage) = try {
+                val json = payload.asJsonObject()
+                val projectName =
+                    json[com.example.websocket.constant.WebSocketFieldConstants.FIELD_PROJECT_NAME]?.jsonPrimitive?.contentOrNull
+                val inviterName =
+                    json[com.example.websocket.constant.WebSocketFieldConstants.FIELD_INVITER_NAME]?.jsonPrimitive?.contentOrNull
+                val invitationId =
+                    json[com.example.websocket.constant.WebSocketFieldConstants.FIELD_INVITATION_ID]?.jsonPrimitive?.contentOrNull
+                val projectIdInPayload =
+                    json[com.example.websocket.constant.WebSocketFieldConstants.FIELD_PROJECT_ID]?.jsonPrimitive?.contentOrNull
+
+                // PROJECT_INVITE 체크
+                if (!projectName.isNullOrBlank() && !inviterName.isNullOrBlank() && !invitationId.isNullOrBlank()) {
+                    val msg = WebSocketMessage.createChatMessageWithType(
+                        roomId = roomId,
+                        senderId = senderId.value,
+                        messagePayload = payload,
+                        messageId = messageId.value,
+                        messageTypeString = com.example.websocket.constant.WebSocketFieldConstants.MESSAGE_TYPE_PROJECT_INVITE,
+                        replyToMessageId = replyToMessageId?.value,
+                        timestamp = Instant.now().epochSecond.toDouble(),
+                        projectId = projectId ?: projectIdInPayload
+                    )
+                    com.example.websocket.constant.WebSocketFieldConstants.MESSAGE_TYPE_PROJECT_INVITE to msg
+                } else {
+                    // SYSTEM_MEMBER_INVITATION 체크 (projectId, projectName, inviterName, targetUserId)
+                    val pid = json["projectId"]?.jsonPrimitive?.contentOrNull
+                    val pname = json["projectName"]?.jsonPrimitive?.contentOrNull
+                    val invName = json["inviterName"]?.jsonPrimitive?.contentOrNull
+                    val targetUserId = json["targetUserId"]?.jsonPrimitive?.contentOrNull
+                    if (!pid.isNullOrBlank() && !pname.isNullOrBlank() && !invName.isNullOrBlank() && !targetUserId.isNullOrBlank()) {
+                        val msg = WebSocketMessage.createChatMessageWithType(
+                            roomId = roomId,
+                            senderId = senderId.value,
+                            messagePayload = payload,
+                            messageId = messageId.value,
+                            messageTypeString = com.example.websocket.constant.WebSocketFieldConstants.MESSAGE_TYPE_SYSTEM_MEMBER_INVITATION,
+                            replyToMessageId = replyToMessageId?.value,
+                            timestamp = Instant.now().epochSecond.toDouble(),
+                            projectId = projectId ?: pid
+                        )
+                        com.example.websocket.constant.WebSocketFieldConstants.MESSAGE_TYPE_SYSTEM_MEMBER_INVITATION to msg
+                    } else {
+                        null to WebSocketMessage.createChatMessage(
+                            roomId = roomId,
+                            senderId = senderId.value,
+                            messagePayload = payload,
+                            messageId = messageId.value,
+                            replyToMessageId = replyToMessageId?.value,
+                            timestamp = Instant.now().epochSecond.toDouble(),
+                            projectId = projectId
+                        )
+                    }
+                }
+            } catch (_: Exception) {
+                null to WebSocketMessage.createChatMessage(
+                    roomId = roomId,
+                    senderId = senderId.value,
+                    messagePayload = payload,
+                    messageId = messageId.value,
+                    replyToMessageId = replyToMessageId?.value,
+                    timestamp = Instant.now().epochSecond.toDouble(),
+                    projectId = projectId
+                )
+            }
+
+            val sendResult = webSocketManager.sendMessage(wsMessage).also { result ->
+                val status =
+                    if (result.isSuccess) OperationStatus.SUCCESS else OperationStatus.FAILED
+                Log.i(
+                    TAG,
+                    "WebSocket 메시지 SEND $status: messageId=${messageId.value}${typeString?.let { ", type=$it" } ?: ""}"
+                )
+
+                if (result.isFailure) {
+                    Log.e(TAG, "메시지 전송 실패: ${result.exceptionOrNull()?.message}")
+                }
+            }
+
+            // 전송 성공 시 ACK 대기 후 임시 퇴장
+            if (sendResult.isSuccess && needTemporaryJoin) {
+                try {
+                    val ack = withTimeoutOrNull(10_000) {
+                        webSocketEventFlow.getAckEventsForMessage(messageId.value).first()
+                    }
+                    if (ack != null) {
+                        Log.i(TAG, "메시지 ACK 수신 후 임시 퇴장 진행: messageId=${messageId.value}")
+                    } else {
+                        Log.w(TAG, "ACK 대기 시간 초과, 그래도 임시 퇴장 진행: messageId=${messageId.value}")
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "ACK 대기 중 예외 발생, 임시 퇴장 진행: ${e.message}")
+                } finally {
+                    val leaveResult = leaveRoom(roomId)
+                    if (leaveResult.isSuccess) {
+                        Log.i(TAG, "임시 퇴장 완료: roomId=$roomId")
+                    } else {
+                        Log.w(TAG, "임시 퇴장 실패: ${leaveResult.exceptionOrNull()?.message}")
+                    }
+                }
+            }
+
+            return sendResult
+        } catch (e: Exception) {
+            Log.e(TAG, "메시지 전송 과정 중 예외: ${messageId.value}", e)
+            return Result.failure(e)
+        }
+    }
+
+    /**
+     * 메시지 전송 - 텍스트 content (하위 호환용)
+     */
+    suspend fun sendMessageWithContent(
         roomId: String,
         senderId: UserId,
         content: String,
@@ -628,64 +777,35 @@ class WebSocketMessageService @Inject constructor(
         projectId: String? = null,
         channelType: String? = null
     ): Result<Unit> {
-        Log.i(TAG, "메시지 전송 시도: messageId=${messageId.value}, roomId=$roomId")
-
-        try {
-            // 1️⃣ Room DB 저장은 ViewModel에서 이미 처리되므로 여기서는 스킵
-            // ViewModel이 SENDING 상태로 이미 저장했음
-            Log.d(TAG, "Room DB 저장은 ViewModel에서 처리됨, WebSocket 전송만 진행: ${messageId.value}")
-
-            // 2️⃣ WebSocket으로 메시지 전송
-            val message = WebSocketMessage(
-                type = WebSocketMessage.TYPE_MESSAGE,
-                roomId = roomId,
-                senderId = senderId.value,
-                messageType = MessageType.TEXT.name,
-                payload = mapOf(WebSocketFieldConstants.PAYLOAD_CONTENT to content), // New payload format
-                messageId = messageId.value,
-                replyToMessageId = replyToMessageId?.value,
-                timestamp = Instant.now().epochSecond.toDouble(),
-                projectId = projectId,
-                channelType = channelType
-            )
-
-            return webSocketManager.sendMessage(message).also { result ->
-                val status =
-                    if (result.isSuccess) OperationStatus.SUCCESS else OperationStatus.FAILED
-                Log.i(TAG, "WebSocket 메시지 SEND $status: messageId=${messageId.value}")
-
-                if (result.isFailure) {
-                    Log.e(TAG, "메시지 전송 실패: ${result.exceptionOrNull()?.message}")
-                    // TODO: 실패 시 Room DB의 메시지 상태를 FAILED로 업데이트
-                }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "메시지 전송 과정 중 예외: ${messageId.value}", e)
-            return Result.failure(e)
-        }
+        val payload = MessagePayload.forText(content)
+        return sendMessage(
+            roomId,
+            senderId,
+            payload,
+            messageId,
+            replyToMessageId,
+            projectId,
+            channelType
+        )
     }
 
     /**
-     * 메시지 수정
+     * 메시지 수정 - MessagePayload 기반
      */
     suspend fun editMessage(
         roomId: String,
         messageId: DocumentId,
-        newContent: String,
+        newPayload: MessagePayload,
         projectId: String? = null,
         channelType: String? = null
     ): Result<Unit> {
-        Log.i(TAG, "메시지 수정 시도: messageId=${messageId.value}, roomId=$roomId")
+        Log.i(TAG, "메시지 수정 시도 (payload): messageId=${messageId.value}, roomId=$roomId")
 
-        val message = WebSocketMessage(
-            type = WebSocketMessage.TYPE_EDIT_MESSAGE,
+        val message = WebSocketMessage.createEditMessage(
             roomId = roomId,
             messageId = messageId.value,
-            messageType = MessageType.TEXT.name,
-            payload = mapOf(WebSocketFieldConstants.PAYLOAD_CONTENT to newContent), // New payload format
-            timestamp = Instant.now().epochSecond.toDouble(),
-            projectId = projectId,
-            channelType = channelType
+            newPayload = newPayload,
+            projectId = projectId
         )
 
         return webSocketManager.sendMessage(message).also { result ->
@@ -699,6 +819,20 @@ class WebSocketMessageService @Inject constructor(
     }
 
     /**
+     * 메시지 수정 - 텍스트 content (하위 호환용)
+     */
+    suspend fun editMessageWithContent(
+        roomId: String,
+        messageId: DocumentId,
+        newContent: String,
+        projectId: String? = null,
+        channelType: String? = null
+    ): Result<Unit> {
+        val newPayload = MessagePayload.forText(newContent)
+        return editMessage(roomId, messageId, newPayload, projectId, channelType)
+    }
+
+    /**
      * 메시지 삭제
      */
     suspend fun deleteMessage(
@@ -709,15 +843,10 @@ class WebSocketMessageService @Inject constructor(
     ): Result<Unit> {
         Log.i(TAG, "메시지 삭제 시도: messageId=${messageId.value}, roomId=$roomId")
 
-        val message = WebSocketMessage(
-            type = WebSocketMessage.TYPE_DELETE_MESSAGE,
+        val message = WebSocketMessage.createDeleteMessage(
             roomId = roomId,
             messageId = messageId.value,
-            messageType = MessageType.TEXT.name,
-            payload = emptyMap(), // Empty payload for delete operation
-            timestamp = Instant.now().epochSecond.toDouble(),
-            projectId = projectId,
-            channelType = channelType
+            projectId = projectId
         )
 
         return webSocketManager.sendMessage(message).also { result ->

@@ -85,7 +85,7 @@ class MessageMapperTest {
             channelId = "channel-1",
             senderId = "user-1",
             messageType = "TEXT",
-            payload = "", // Empty payload
+            payload = emptyMap(), // Empty payload
             content = "Legacy content", // Legacy content field
             replyToMessageId = null,
             isDeleted = false,
@@ -112,7 +112,7 @@ class MessageMapperTest {
             channelId = "channel-1",
             senderId = "user-1",
             messageType = "TEXT",
-            payload = """{"content": "New payload content"}""",
+            payload = mapOf("content" to "New payload content"),
             content = "Legacy content",
             replyToMessageId = null,
             isDeleted = false,
@@ -130,12 +130,20 @@ class MessageMapperTest {
 
     @Test
     fun `domainToDto should create DTO with payload and empty content`() {
-        // Given
+        // Given - 직접 JSON 구성으로 시스템 메시지 페이로드 생성
+        val jsonString = """
+            {
+                "date": "2024-01-01",
+                "displayText": "2024년 1월 1일"
+            }
+        """.trimIndent()
+        val payload = MessagePayload(jsonString)
+        
         val message = Message.create(
             id = DocumentId("test-id"),
             senderId = UserId("user-1"),
             messageType = MessageType.SYSTEM_DATE,
-            payload = MessagePayload.forDateSystem("2024-01-01", "2024년 1월 1일"),
+            payload = payload,
             replyToMessageId = null,
             mentions = emptyList(),
             channelId = ChannelId("channel-1")
@@ -147,7 +155,10 @@ class MessageMapperTest {
         // Then
         assertEquals("test-id", result.id)
         assertEquals("SYSTEM_DATE", result.messageType)
-        assertEquals("""{"date": "2024-01-01", "displayText": "2024년 1월 1일"}""", result.payload)
+        @Suppress("UNCHECKED_CAST")
+        val payloadMap = result.payload as Map<String, Any?>
+        assertEquals("2024-01-01", payloadMap["date"])
+        assertEquals("2024년 1월 1일", payloadMap["displayText"])
         assertEquals("", result.content) // Empty for backward compatibility
     }
 }

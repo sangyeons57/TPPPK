@@ -37,8 +37,10 @@ public class ChatMessage {
     @JsonProperty(WebSocketEventConstants.FIELD_PROJECT_ID)
     private String projectId;
     
-    @JsonProperty(WebSocketEventConstants.FIELD_CHANNEL_TYPE)
-    private String channelType;
+
+    // Nested domain message wrapper (preferred new structure)
+    @JsonProperty(WebSocketEventConstants.FIELD_MESSAGE)
+    private MessageData message;
 
     public ChatMessage() {}
 
@@ -81,21 +83,6 @@ public class ChatMessage {
     public String getSenderId() { return senderId; }
     public void setSenderId(String senderId) { this.senderId = senderId; }
 
-    // Content getter/setter - extracts from payload
-    public String getContent() { 
-        if (payload != null && payload.containsKey(PayloadConstants.CONTENT)) {
-            Object contentObj = payload.get(PayloadConstants.CONTENT);
-            return contentObj != null ? contentObj.toString() : null;
-        }
-        return null;
-    }
-    
-    public void setContent(String content) { 
-        if (payload == null) {
-            payload = new HashMap<>();
-        }
-        payload.put(PayloadConstants.CONTENT, content);
-    }
 
     public String getMessageType() { return messageType; }
     public void setMessageType(String messageType) { this.messageType = messageType; }
@@ -125,25 +112,61 @@ public class ChatMessage {
     public String getProjectId() { return projectId; }
     public void setProjectId(String projectId) { this.projectId = projectId; }
 
-    public String getChannelType() { return channelType; }
-    public void setChannelType(String channelType) { this.channelType = channelType; }
+
+    public MessageData getMessage() { return message; }
+    public void setMessage(MessageData message) { this.message = message; }
+
+    // Effective getters (prefer nested message, fallback to envelope for legacy)
+    public String getEffectiveMessageId() {
+        if (message != null && message.getId() != null) return message.getId();
+        return messageId;
+    }
+
+    public String getEffectiveSenderId() {
+        if (message != null && message.getSenderId() != null) return message.getSenderId();
+        return senderId;
+    }
+
+    public String getEffectiveReplyToMessageId() {
+        if (message != null && message.getReplyToMessageId() != null) return message.getReplyToMessageId();
+        return replyToMessageId;
+    }
+
+    public Double getEffectiveTimestamp() {
+        if (message != null && message.getTimestamp() != null) return message.getTimestamp();
+        return timestamp;
+    }
+
+    public Instant getEffectiveTimestampAsInstant() {
+        Double ts = getEffectiveTimestamp();
+        return ts != null ? Instant.ofEpochSecond(ts.longValue()) : null;
+    }
+
+    public String getEffectiveMessageType() {
+        if (message != null && message.getMessageType() != null) return message.getMessageType();
+        return messageType;
+    }
+
+    public Map<String, Object> getEffectivePayload() {
+        if (message != null && message.getPayload() != null) return message.getPayload();
+        return payload;
+    }
 
     /**
      * Returns a one-line summary of all fields for logging/debugging.
      */
     public String toSummaryString() {
         return String.format(
-            "type='%s', roomId='%s', senderId='%s', messageType='%s', payload=%s, timestamp=%s, messageId='%s', replyToMessageId='%s', projectId='%s', channelType='%s'",
+            "type='%s', roomId='%s', senderId='%s', messageType='%s', payload=%s, timestamp=%s, messageId='%s', replyToMessageId='%s', projectId='%s'",
             String.valueOf(type),
             String.valueOf(roomId),
-            String.valueOf(senderId),
-            String.valueOf(messageType),
-            payload != null ? payload.toString() : "null",
-            String.valueOf(timestamp),
-            String.valueOf(messageId),
-            String.valueOf(replyToMessageId),
-            String.valueOf(projectId),
-            String.valueOf(channelType)
+            String.valueOf(getEffectiveSenderId()),
+            getEffectiveMessageType(),
+            getEffectivePayload() != null ? getEffectivePayload().toString() : "null",
+            String.valueOf(getEffectiveTimestamp()),
+            String.valueOf(getEffectiveMessageId()),
+            String.valueOf(getEffectiveReplyToMessageId()),
+            String.valueOf(projectId)
         );
     }
 
@@ -153,13 +176,12 @@ public class ChatMessage {
                 "type='" + type + '\'' +
                 ", roomId='" + roomId + '\'' +
                 ", senderId='" + senderId + '\'' +
-                ", messageType='" + messageType + '\'' +
-                ", payload=" + payload +
-                ", timestamp=" + timestamp +
-                ", messageId='" + messageId + '\'' +
-                ", replyToMessageId='" + replyToMessageId + '\'' +
+                ", messageType='" + getEffectiveMessageType() + '\'' +
+                ", payload=" + (getEffectivePayload() != null ? getEffectivePayload() : null) +
+                ", timestamp=" + getEffectiveTimestamp() +
+                ", messageId='" + getEffectiveMessageId() + '\'' +
+                ", replyToMessageId='" + getEffectiveReplyToMessageId() + '\'' +
                 ", projectId='" + projectId + '\'' +
-                ", channelType='" + channelType + '\'' +
                 '}';
     }
 }

@@ -50,7 +50,7 @@ class ChatUseCaseProvider @Inject constructor(
         messageRepository.setCollection(collectionPath)
 
         return ChatUseCases(
-            sendMessageUseCase = SendMessageUseCase(this.messageRepository),
+            sendMessageUseCase = SendMessageUseCase(this.messageRepository, this.authRepository),
             editMessageUseCase = EditMessageUseCase(this.messageRepository),
             deleteMessageUseCase = DeleteMessageUseCase(this.messageRepository),
             getMessagesStreamUseCase = GetMessagesStreamUseCase(this.messageRepository),
@@ -71,7 +71,7 @@ class ChatUseCaseProvider @Inject constructor(
         messageRepository.setCollection(collectionPath)
 
         return ChatUseCases(
-            sendMessageUseCase = SendMessageUseCase(this.messageRepository),
+            sendMessageUseCase = SendMessageUseCase(this.messageRepository, this.authRepository),
             editMessageUseCase = EditMessageUseCase(this.messageRepository),
             deleteMessageUseCase = DeleteMessageUseCase(this.messageRepository),
             getMessagesStreamUseCase = GetMessagesStreamUseCase(this.messageRepository),

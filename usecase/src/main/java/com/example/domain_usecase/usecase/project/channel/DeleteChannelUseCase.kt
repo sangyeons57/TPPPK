@@ -6,6 +6,7 @@ import com.example.domain.model.base.ProjectChannel
 import com.example.domain.vo.DocumentId
 import com.example.domain_repository.base.ProjectChannelRepository
 import javax.inject.Inject
+import java.time.Instant
 
 /**
  * 프로젝트 구조에서 채널을 삭제하는 유스케이스
@@ -31,30 +32,19 @@ class DeleteChannelUseCaseImpl @Inject constructor(
     
     override suspend operator fun invoke(channelId: DocumentId): CustomResult<Unit, Exception> {
         return try {
-            // 채널을 soft delete 처리 (DELETED 상태로 변경)
-            when (val getResult = projectChannelRepository.findById(channelId)) {
-                is CustomResult.Success -> {
-                    val channel = getResult.data as ProjectChannel
-                    
-                    // 채널을 DELETED 상태로 변경 (soft delete)
-                    val deletedChannel = channel.markDeleted()
-                    when (val saveResult = projectChannelRepository.save(deletedChannel)) {
-                        is CustomResult.Success -> {
-                            // soft delete 이벤트 발생
-                            EventDispatcher.publish(deletedChannel)
-                            CustomResult.Success(Unit)
-                        }
-                        is CustomResult.Failure -> CustomResult.Failure(saveResult.error)
-                        is CustomResult.Loading -> CustomResult.Loading
-                        is CustomResult.Initial -> CustomResult.Initial
-                        is CustomResult.Progress -> CustomResult.Progress(saveResult.progress)
-                    }
-                }
-                is CustomResult.Failure -> CustomResult.Failure(getResult.error)
-                is CustomResult.Loading -> CustomResult.Loading
-                is CustomResult.Initial -> CustomResult.Initial
-                is CustomResult.Progress -> CustomResult.Progress(getResult.progress)
+            // 직접 Firestore 필드 업데이트를 위한 맵 생성
+            val updateFields: Map<String, Any?> = mapOf(
+                "status" to "DELETED",
+                "updatedAt" to Instant.now()
+            )
+
+            // Repository를 통해 직접 필드 업데이트
+            when (val result = projectChannelRepository.updateFields(channelId, updateFields)) {
+                is CustomResult.Success -> CustomResult.Success(Unit)
+                is CustomResult.Failure -> CustomResult.Failure(result.error)
+                else -> CustomResult.Failure(Exception("Unexpected update result"))
             }
+
         } catch (e: Exception) {
             CustomResult.Failure(e)
         }

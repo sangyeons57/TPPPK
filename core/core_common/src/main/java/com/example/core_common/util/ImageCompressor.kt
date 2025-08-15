@@ -3,7 +3,6 @@ package com.example.core_common.util
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Matrix
 import android.net.Uri
 // ExifInterface 의존성 제거 - 간단한 압축만 사용
 import kotlinx.coroutines.Dispatchers
@@ -11,7 +10,6 @@ import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
-import java.io.InputStream
 import kotlin.math.max
 import kotlin.math.min
 
@@ -59,28 +57,10 @@ object ImageCompressor {
         try {
             android.util.Log.d(
                 "ImageCompressor",
-                "🔄 [이미지압축] 이미지 압축 시작: quality=${options.quality}%, maxSize=${options.maxWidth}x${options.maxHeight}"
+                "⏭️ [이미지압축] 압축 우회 모드: 원본 URI 그대로 사용 (quality=${options.quality}%, maxSize=${options.maxWidth}x${options.maxHeight})"
             )
-            val inputStream = context.contentResolver.openInputStream(imageUri)
-                ?: throw IllegalArgumentException("Cannot open input stream for URI: $imageUri")
-
-            // 1단계: 이미지 메타데이터 및 크기 정보 읽기
-            val originalBitmap = decodeAndRotateImage(inputStream, options)
-            inputStream.close()
-
-            // 2단계: 크기 조정
-            val resizedBitmap = resizeBitmap(originalBitmap, options)
-            originalBitmap.recycle() // 메모리 해제
-
-            // 3단계: 압축 및 파일 저장
-            val compressedFile = compressAndSave(context, resizedBitmap, options)
-            resizedBitmap.recycle() // 메모리 해제
-
-            android.util.Log.d(
-                "ImageCompressor",
-                "✅ [이미지압축] 이미지 압축 완료: ${compressedFile.length() / 1024}KB"
-            )
-            Uri.fromFile(compressedFile)
+            // 간단 모드: 압축/인코딩/디코딩 없이 원본 URI 반환
+            imageUri
         } catch (e: Exception) {
             android.util.Log.e("ImageCompressor", "❌ [이미지압축] 이미지 압축 실패", e)
             throw IllegalStateException("이미지 압축 실패: ${e.message}", e)
@@ -95,25 +75,27 @@ object ImageCompressor {
         imageUris: List<Uri>,
         options: CompressionOptions = CompressionOptions()
     ): List<Uri> = withContext(Dispatchers.IO) {
-        imageUris.map { uri ->
-            compressImage(context, uri, options)
-        }
+        // 간단 모드: 각 URI에 대해 압축 수행 없이 그대로 반환
+        imageUris
     }
 
     /**
      * 이미지 디코딩 (EXIF 회전 제외 - 간단한 압축만 사용)
      */
     private fun decodeAndRotateImage(
-        inputStream: InputStream,
+        context: Context,
+        imageUri: Uri,
         options: CompressionOptions
     ): Bitmap {
-        // 먼저 이미지 크기만 읽어서 샘플링 계산
+        // 1) 크기만 먼저 읽기 위해 스트림을 한 번 연다
         val boundsOptions = BitmapFactory.Options().apply {
             inJustDecodeBounds = true
         }
-        BitmapFactory.decodeStream(inputStream, null, boundsOptions)
+        context.contentResolver.openInputStream(imageUri)?.use { boundsStream ->
+            BitmapFactory.decodeStream(boundsStream, null, boundsOptions)
+        } ?: throw IllegalArgumentException("Cannot open input stream for URI: $imageUri")
 
-        // 샘플링 비율 계산
+        // 2) 샘플링 비율 계산
         val sampleSize = calculateInSampleSize(
             boundsOptions.outWidth,
             boundsOptions.outHeight,
@@ -121,15 +103,16 @@ object ImageCompressor {
             options.maxHeight
         )
 
-        // 실제 비트맵 디코딩
-        inputStream.reset() // 스트림을 처음으로 되돌림
+        // 3) 실제 비트맵 디코딩을 위해 스트림을 다시 연다
         val decodeOptions = BitmapFactory.Options().apply {
             inSampleSize = sampleSize
             inPreferredConfig = Bitmap.Config.RGB_565 // 메모리 절약
         }
 
-        return BitmapFactory.decodeStream(inputStream, null, decodeOptions)
-            ?: throw IllegalStateException("비트맵 디코딩 실패")
+        context.contentResolver.openInputStream(imageUri)?.use { decodeStream ->
+            return BitmapFactory.decodeStream(decodeStream, null, decodeOptions)
+                ?: throw IllegalStateException("비트맵 디코딩 실패")
+        } ?: throw IllegalArgumentException("Cannot open input stream for URI: $imageUri")
     }
 
 

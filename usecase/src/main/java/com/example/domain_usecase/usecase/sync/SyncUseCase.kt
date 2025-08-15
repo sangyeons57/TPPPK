@@ -125,4 +125,5 @@ class SyncUseCase @Inject constructor(
     suspend fun syncChannel(channelId: String): CustomResult<Unit, Exception> {
         return invoke("messages-$channelId")
     }
+
 }

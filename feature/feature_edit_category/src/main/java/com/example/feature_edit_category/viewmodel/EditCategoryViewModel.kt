@@ -330,6 +330,12 @@ class EditCategoryViewModel @Inject constructor(
         if (_uiState.value.isLoading) return // 로딩 중 중복 실행 방지
 
         viewModelScope.launch {
+            // 기본 NoCategory는 삭제 불가 처리
+            if (categoryId == com.example.domain.model.base.Category.NO_CATEGORY_ID) {
+                _eventFlow.emit(EditCategoryEvent.ShowSnackbar("기본 카테고리는 삭제할 수 없습니다."))
+                return@launch
+            }
+
             _uiState.update { it.copy(isLoading = true, error = null) }
 
             when (val result = structureUseCases.deleteCategoryUseCase(DocumentId(categoryId))) {

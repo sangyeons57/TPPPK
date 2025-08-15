@@ -2,8 +2,10 @@ package com.example.feature_chat.queue
 
 import com.example.domain.model.base.Message
 import com.example.domain.vo.DocumentId
+import com.example.domain.vo.message.MessagePayload
 import com.example.websocket.core.WebSocketConnectionState
 import com.example.websocket.usecase.WebSocketUseCaseProvider
+import com.example.websocket.usecase.SendMessageUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -47,7 +49,8 @@ sealed class QueuedMessageAction {
 
 @Singleton
 class OfflineMessageQueue @Inject constructor(
-    private val webSocketUseCaseProvider: WebSocketUseCaseProvider
+    private val webSocketUseCaseProvider: WebSocketUseCaseProvider,
+    private val sendMessageUseCase: SendMessageUseCase,
 ) {
     private val queue = ConcurrentLinkedQueue<QueuedMessageAction>()
     private val failedQueue = ConcurrentLinkedQueue<QueuedMessageAction>() // 실패한 작업들
@@ -117,14 +120,9 @@ class OfflineMessageQueue @Inject constructor(
     private suspend fun processAction(action: QueuedMessageAction): Boolean {
         return when (action) {
             is QueuedMessageAction.Send -> {
-                val roomUseCases = webSocketUseCaseProvider.createForRoom(action.roomId)
-                val result = roomUseCases.sendMessageUseCase(
-                    senderId = action.message.senderId,
-                    content = action.message.payload.getTextContent() ?: "",
-                    messageId = action.message.id,
-                    replyToMessageId = action.message.replyToMessageId
-                )
-                result.isSuccess
+                // Use unified use case; projectId unknown here → null
+                val result = sendMessageUseCase(action.message, projectId = null)
+                result is com.example.core_common.result.CustomResult.Success
             }
 
             is QueuedMessageAction.SendImage -> {
@@ -142,9 +140,10 @@ class OfflineMessageQueue @Inject constructor(
 
             is QueuedMessageAction.Edit -> {
                 val roomUseCases = webSocketUseCaseProvider.createForRoom(action.roomId)
+                val newPayload = MessagePayload.forText(action.newContent)
                 val result = roomUseCases.editMessageUseCase(
                     messageId = DocumentId(action.messageId),
-                    newContent = action.newContent
+                    newPayload = newPayload
                 )
                 result.isSuccess
             }

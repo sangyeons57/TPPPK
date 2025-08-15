@@ -1,4 +1,4 @@
-package com.example.feature_project_setting.viewmodel.viewmodel
+package com.example.feature_project_setting.viewmodel
 
 // Domain 계층에서 모델 및 리포지토리 인터페이스 임포트 (올바른 경로)
 // import com.example.domain.repository.ProjectSettingRepository // Remove Repo import
@@ -332,7 +332,6 @@ class ProjectSettingViewModel @Inject constructor(
     }
 
     fun confirmDeleteProject() {
-        dismiss() // 다이얼로그 닫기
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) } // Show loading
             Log.d("ProjectSettingViewModel", "Deleting Project $projectId (UseCase)")
@@ -343,6 +342,7 @@ class ProjectSettingViewModel @Inject constructor(
 
                 when (result) {
                     is CustomResult.Success -> {
+                        dismiss() // 다이얼로그 닫기
                         Log.d("ProjectSettingViewModel", "Project deletion successful")
                         _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트가 삭제되었습니다."))
                         navigationManger.navigateBack() // Navigate back on success

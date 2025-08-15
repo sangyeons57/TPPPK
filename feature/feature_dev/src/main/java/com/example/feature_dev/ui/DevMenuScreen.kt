@@ -95,6 +95,10 @@ fun DevMenuScreen(
     val isDbInspecting by viewModel.isDbInspecting.collectAsState()
     val dbInspectionResult by viewModel.dbInspectionResult.collectAsState()
 
+    // Room 전체 클리어 상태
+    val isRoomClearing by viewModel.isRoomClearing.collectAsState()
+    val roomClearResult by viewModel.roomClearResult.collectAsState()
+
     // 채널 ID 입력 상태 (동기화 및 DB 검사에서 공용 사용)
     var channelIdInput by remember { mutableStateOf("") }
 
@@ -509,6 +513,67 @@ fun DevMenuScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                         Button(
                             onClick = { viewModel.clearResult() },
+                            modifier = Modifier.align(Alignment.End)
+                        ) {
+                            Text("지우기")
+                        }
+                    }
+                }
+            }
+
+            /* ----------------------------------------- */
+            /* Room 전체 클리어                           */
+            /* ----------------------------------------- */
+            Text(
+                "--- Room 전체 클리어 ---",
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(top = 16.dp)
+            )
+
+            if (isRoomClearing) {
+                Button(
+                    onClick = { },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = false
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("삭제 중...")
+                }
+            } else {
+                DevMenuButton(text = "Room 데이터 전체 삭제") {
+                    viewModel.clearAllRoomData()
+                }
+            }
+
+            if (roomClearResult.isNotEmpty()) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (roomClearResult.startsWith("✅"))
+                            MaterialTheme.colorScheme.primaryContainer
+                        else if (roomClearResult.startsWith("❌") || roomClearResult.startsWith("💥"))
+                            MaterialTheme.colorScheme.errorContainer
+                        else
+                            MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp)
+                    ) {
+                        Text(
+                            text = "결과:",
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                        Text(
+                            text = roomClearResult,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = { viewModel.clearRoomClearResult() },
                             modifier = Modifier.align(Alignment.End)
                         ) {
                             Text("지우기")

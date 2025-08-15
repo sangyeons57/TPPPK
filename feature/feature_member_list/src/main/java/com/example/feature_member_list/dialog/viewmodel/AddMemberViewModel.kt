@@ -14,9 +14,14 @@ import com.example.domain_usecase.provider.friend.FriendUseCases
 import com.example.domain_usecase.provider.dm.DMUseCaseProvider
 import com.example.domain_usecase.provider.dm.DMUseCases
 import com.example.domain_usecase.usecase.user.SearchUsersByNameUseCaseImpl
-import com.example.domain_usecase.usecase.project.SendMemberInvitationDMUseCase
 import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectMemberUseCases
+import com.example.domain_usecase.provider.project.CoreProjectUseCaseProvider
+import com.example.websocket.usecase.SendMessageUseCase as WsSendMessageUseCase
+import com.example.domain.vo.message.MessagePayload
+import com.example.domain.model.base.Message
+import com.example.domain.vo.ChannelId
+import com.example.domain.vo.message.MessageType
 import com.example.feature_member_list.dialog.ui.FriendItem
 import com.example.feature_member_list.dialog.ui.SearchedUser
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,6 +30,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -53,7 +59,8 @@ class AddMemberViewModel @Inject constructor(
     private val friendUseCaseProvider: FriendUseCaseProvider,
     private val authSessionUseCaseProvider: AuthSessionUseCaseProvider,
     private val searchUsersByNameUseCase: SearchUsersByNameUseCaseImpl,
-    private val sendMemberInvitationDMUseCase: SendMemberInvitationDMUseCase
+    private val coreProjectUseCaseProvider: CoreProjectUseCaseProvider,
+    private val wsSendMessageUseCase: WsSendMessageUseCase,
 ) : ViewModel() {
 
     private var projectMemberUseCases: ProjectMemberUseCases? = null
@@ -239,36 +246,103 @@ class AddMemberViewModel @Inject constructor(
             var failureCount = 0
 
             try {
+                // 현재 사용자 세션과 사용자 ID/이름 확보
+                val sessionResult = authSessionUseCases?.getCurrentUserSessionUseCase?.invoke()
+                val currentUserId = when (sessionResult) {
+                    is CustomResult.Success -> sessionResult.data.userId
+                    is CustomResult.Failure -> {
+                        _eventFlow.emit(AddMemberDialogEvent.ShowSnackbar("세션 정보를 가져오지 못했습니다."))
+                        _uiState.update { it.copy(isLoadingFriends = false) }
+                        return@launch
+                    }
+
+                    else -> {
+                        _eventFlow.emit(AddMemberDialogEvent.ShowSnackbar("로그인이 필요합니다."))
+                        _uiState.update { it.copy(isLoadingFriends = false) }
+                        return@launch
+                    }
+                }
+
+                // 프로젝트 이름 확보
+                val coreProjectUseCases =
+                    coreProjectUseCaseProvider.createForProject(projectId, currentUserId)
+                val projectResult =
+                    coreProjectUseCases.getProjectDetailsStreamUseCase(projectId).firstOrNull()
+                val projectName = when (projectResult) {
+                    is CustomResult.Success -> projectResult.data.name.value
+                    else -> "프로젝트"
+                }
+
+                // DM UseCases 생성 (현재 사용자 기반)
+                if (dmUseCases == null) {
+                    dmUseCases = dmUseCaseProvider.createForUser(currentUserId)
+                }
+
                 for (memberId in selectedMemberIds) {
                     try {
                         // 대상 사용자 이름 찾기 (친구 목록에서 또는 검색 결과에서)
                         val targetUserName = findUserNameById(memberId)
                         if (targetUserName != null) {
-                            // SendMemberInvitationDMUseCase 사용하여 DM 초대 메시지 전송
-                            sendMemberInvitationDMUseCase(
-                                targetUserId = memberId,
-                                targetUserName = targetUserName,
-                                projectId = projectId
-                            )
-                                .collect { result ->
-                                    when (result) {
-                                        is CustomResult.Success -> {
-                                            successCount++
-                                        }
-
-                                        is CustomResult.Failure -> {
-                                            failureCount++
-                                        }
-
-                                        is CustomResult.Loading -> {
-                                            // 로딩 상태
-                                        }
-
-                                        else -> {
-                                            // 기타 상태
+                            // 1) DM 채널 생성 시도 → 이미 존재시 기존 채널 조회
+                            val dmCases = dmUseCases ?: continue
+                            val dmCreateFlow =
+                                dmCases.addDmChannelUseCase(UserName(targetUserName.value))
+                            var channelId: String? = null
+                            dmCreateFlow.collect { res ->
+                                when (res) {
+                                    is CustomResult.Success -> channelId = res.data.value
+                                    is CustomResult.Failure -> {
+                                        val msg = res.error.message ?: ""
+                                        if (msg.contains(
+                                                "already exists",
+                                                true
+                                            ) || msg.contains("dmChannel", true)
+                                        ) {
+                                            val existing =
+                                                dmCases.getDmChannelUseCase.findByOtherUserId(
+                                                    memberId
+                                                )
+                                            if (existing is CustomResult.Success) {
+                                                channelId = existing.data.id.value
+                                            }
                                         }
                                     }
+
+                                    else -> {}
                                 }
+                            }
+
+                            if (channelId == null) {
+                                failureCount++
+                                continue
+                            }
+
+                            // 2) Payload 구성 (Project 전용 고정 포맷)
+                            val inviterName =
+                                (sessionResult as CustomResult.Success).data.displayName?.value
+                                    ?: "사용자"
+                            val payload = MessagePayload.forProjectInviteBasic(
+                                projectId = projectId.value,
+                                projectName = projectName,
+                                inviterName = inviterName,
+                                targetUserId = memberId.value,
+                            )
+
+                            // 3) 도메인 Message 생성 후 WS 통합 UseCase로 전송
+                            val message = Message.create(
+                                id = DocumentId.generate(),
+                                senderId = currentUserId,
+                                messageType = MessageType.SYSTEM_MEMBER_INVITATION,
+                                payload = payload,
+                                replyToMessageId = null,
+                                mentions = emptyList(),
+                                channelId = ChannelId(channelId!!)
+                            )
+
+                            when (val sendRes = wsSendMessageUseCase(message, projectId = null)) {
+                                is CustomResult.Success -> successCount++
+                                else -> failureCount++
+                            }
                         } else {
                             failureCount++
                         }

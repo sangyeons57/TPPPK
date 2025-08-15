@@ -19,6 +19,7 @@ dependencies {
     implementation(project(":core:core_navigation"))
     implementation(project(":core:core_ui"))
     implementation(project(":data:data"))
+    implementation(project(":core:websocket"))
 
     // Module-specific dependencies
     implementation(libs.androidx.compose.navigation)

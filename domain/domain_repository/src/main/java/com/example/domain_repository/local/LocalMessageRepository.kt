@@ -15,16 +15,6 @@ import com.example.domain.vo.UserId
 interface LocalMessageRepository : BaseLocalRepository<Message> {
 
     // ================================
-    // Paging3 지원 메서드
-    // ================================
-
-    /**
-     * 메시지용 PagingSource 제공 (시간 역순)
-     * @return 타임스탬프 키를 사용하는 PagingSource
-     */
-    fun getMessagesPagingSource(): PagingSource<Long, Message>
-
-    // ================================
     // Message 도메인 특화 조회 작업
     // ================================
     

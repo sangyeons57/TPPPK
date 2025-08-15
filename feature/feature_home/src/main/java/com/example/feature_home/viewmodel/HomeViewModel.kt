@@ -592,10 +592,9 @@ class HomeViewModel @Inject constructor(
      * 프로젝트 추가 버튼 클릭 처리
      */
     fun onProjectAddButtonClick() {
-        Log.d("HomeViewModel", "Project add button clicked")
-        viewModelScope.launch {
-            _eventFlow.emit(HomeEvent.ShowAddProjectDialog)
-        }
+        Log.d("HomeViewModel", "Project add button clicked - navigating to AddProject")
+        // Navigate directly to the Add Project screen
+        navigationManger.navigateToAddProject()
     }
 
     /**

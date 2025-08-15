@@ -1,6 +1,14 @@
 package com.example.websocket.service;
 
 import com.example.websocket.auth.FirebaseAuthService;
+import com.example.websocket.fcm.FcmSender;
+import com.example.websocket.fcm.FirebaseFcmSender;
+import com.example.websocket.fcm.FcmTokenRepository;
+import com.example.websocket.fcm.FirestoreFcmTokenRepository;
+import com.example.websocket.fcm.MentionDataFactory;
+import com.example.websocket.fcm.MentionNotificationService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,6 +26,8 @@ public class ServiceProvider {
     // Service instances
     private final FirebaseAuthService authService;
     private final ChatRoomManager roomManager;
+    private final MentionNotificationService mentionNotificationService;
+    private final ExecutorService notifyExecutor;
     
     /**
      * Private constructor for Singleton pattern
@@ -42,6 +52,25 @@ public class ServiceProvider {
             logger.error("❌ Failed to create ChatRoomManager", e);
             throw new RuntimeException("ChatRoomManager creation failed", e);
         }
+
+        // FCM mention services (shared singleton instances)
+        MentionNotificationService tmpMentionSvc;
+        ExecutorService tmpExec;
+        try {
+            logger.info("🔧 Creating MentionNotificationService and shared executor...");
+            FcmSender sender = new FirebaseFcmSender();
+            FcmTokenRepository tokenRepo = new FirestoreFcmTokenRepository();
+            MentionDataFactory dataFactory = new MentionDataFactory("app://channel", 100);
+            tmpMentionSvc = new MentionNotificationService(sender, tokenRepo, dataFactory);
+            tmpExec = Executors.newFixedThreadPool(8);
+            logger.info("✅ MentionNotificationService created: {}", tmpMentionSvc.getClass().getName());
+        } catch (Exception e) {
+            logger.warn("⚠️ Failed to initialize MentionNotificationService; mention notifications disabled: {}", e.getMessage());
+            tmpMentionSvc = null;
+            tmpExec = Executors.newFixedThreadPool(2);
+        }
+        this.mentionNotificationService = tmpMentionSvc;
+        this.notifyExecutor = tmpExec;
         
         logger.info("✅ ServiceProvider constructor completed successfully");
     }
@@ -99,6 +128,16 @@ public class ServiceProvider {
             throw new IllegalStateException("roomManager is null - ServiceProvider not properly initialized");
         }
         return roomManager;
+    }
+
+    /** Shared MentionNotificationService */
+    public MentionNotificationService getMentionNotificationService() {
+        return mentionNotificationService; // can be null if init failed
+    }
+
+    /** Shared executor for async notifications */
+    public ExecutorService getNotifyExecutor() {
+        return notifyExecutor;
     }
     
     /**

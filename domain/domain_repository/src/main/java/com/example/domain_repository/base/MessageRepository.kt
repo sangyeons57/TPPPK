@@ -6,6 +6,7 @@ import com.example.domain.enum.OutBoxStatus
 import com.example.domain.model.base.Message
 import com.example.domain.vo.DocumentId
 import com.example.domain_repository.DefaultRepository
+import com.example.domain.vo.message.MessagePayload
 
 // 메시지 전송 시 사용할 첨부파일 모델 (도메인 모델 MessageAttachment와 구분)
 data class MessageAttachmentToSend(
@@ -30,10 +31,10 @@ interface MessageRepository : DefaultRepository<Message> {
      * WebSocket 전송은 상위 서비스 계층에서 처리한다.
      *
      * @param channelId 채널 ID
-     * @param payload 메시지 페이로드(Map 형태). JSON으로 직렬화되어 저장됨
+     * @param payload 메시지 페이로드(MessagePayload JSON)
      * @return 생성된 메시지 ID
      */
-    suspend fun sendMessage(channelId: String, payload: Map<String, Any?>): String
+    suspend fun sendMessage(channelId: String, payload: MessagePayload): String
     suspend fun deleteMessage(id: String)
 
     // ================================
@@ -41,11 +42,15 @@ interface MessageRepository : DefaultRepository<Message> {
     // ================================
 
     /**
-     * 특정 채널의 메시지용 PagingSource 제공 (시간 역순)
-     * @param channelId 채널 ID (빈 문자열/널 불가)
-     * @return 해당 채널의 메시지들만 포함하는 PagingSource
+     * 로우 레벨 PagingSource를 반환 (Room DAO 직접 호출)
+     * 도메인 변환은 상위 레이어에서 처리
      */
-    fun getMessagesPagingSource(channelId: String): PagingSource<Long, Message>
+    fun <T : Any> getMessageEntityPagingSource(channelId: String): PagingSource<Int, T>
+
+    /**
+     * 엔티티를 Message 도메인 모델로 변환
+     */
+    fun <T : Any> convertEntityToDomain(entity: T): Message
 
     // ================================
     // 시간 기반 메시지 조회 (Paging 지원)

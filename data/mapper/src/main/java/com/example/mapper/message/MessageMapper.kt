@@ -18,10 +18,12 @@ import com.example.mapper.Mapper
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
+import org.json.JSONArray
+import org.json.JSONObject
 
 /**
  * Message 관련 Entity, Domain, DTO 간의 매핑을 담당하는 Mapper
- * JSON 의존성 없이 순수한 객체 변환만 담당
+ * JSON 의존성 없이 순수한 객체 변환만 담당 (단, org.json으로 Map 변환만 사용)
  */
 @Singleton
 class MessageMapper @Inject constructor() : Mapper<MessageEntity, Message, MessageDTO>,
@@ -44,7 +46,7 @@ class MessageMapper @Inject constructor() : Mapper<MessageEntity, Message, Messa
             Log.d("MessageMapper", "📄 payload가 비어있음, 기본 TEXT 페이로드 생성")
             MessagePayload.forText("")
         }
-        
+
         return Message.fromDataSource(
             id = DocumentId(entity.id),
             senderId = UserId(entity.senderId),
@@ -71,7 +73,6 @@ class MessageMapper @Inject constructor() : Mapper<MessageEntity, Message, Messa
             mentions = "[]", // JSON 직렬화는 별도 처리
             createdAt = domain.createdAt.toEpochMilli(),
             updatedAt = domain.updatedAt.toEpochMilli()
-            // syncStatus 필드 제거
         )
     }
 
@@ -111,46 +112,55 @@ class MessageMapper @Inject constructor() : Mapper<MessageEntity, Message, Messa
             MessageType.TEXT
         }
 
-        // 하위 호환성: payload vs content 처리
-        val payload = when {
-            dto.payload.isNotEmpty() && dto.payload != "{}" -> {
-                Log.d("MessageMapper", "✅ 새로운 payload 필드 사용: ${dto.payload}")
-                MessagePayload(dto.payload)
+        // 강화된 payload 호환성 처리: String, Map, null 모두 지원 (전체 보존)
+        val payload = when (dto.payload) {
+            is Map<*, *> -> {
+                try {
+                    val json = mapToJson(dto.payload as Map<String, Any?>).toString()
+                    MessagePayload(json)
+                } catch (e: Exception) {
+                    Log.w("MessageMapper", "⚠️ Map -> JSON 변환 실패, 기본값 사용", e)
+                    MessagePayload.forText("")
+                }
             }
 
-            dto.content.isNotEmpty() -> {
-                Log.w("MessageMapper", "⚠️ 레거시 content 필드 감지, payload로 변환: ${dto.content}")
-                MessagePayload.forText(dto.content)
+            is String -> {
+                val payloadString = dto.payload as String
+                if (payloadString.isNotEmpty() && payloadString != "{}") {
+                    try {
+                        MessagePayload(payloadString)
+                    } catch (_: Exception) {
+                        MessagePayload.forText(payloadString)
+                    }
+                } else {
+                    MessagePayload.forText("")
+                }
             }
 
+            null -> {
+                if (dto.content.isNotEmpty()) MessagePayload.forText(dto.content) else MessagePayload.forText(
+                    ""
+                )
+            }
             else -> {
-                Log.w("MessageMapper", "⚠️ payload와 content 모두 비어있음, 기본 텍스트 페이로드 생성")
-                MessagePayload.forText("")
+                if (dto.content.isNotEmpty()) MessagePayload.forText(dto.content) else MessagePayload.forText(
+                    ""
+                )
             }
         }
 
-        return try {
-            val message = Message.fromDataSource(
-                id = DocumentId(dto.id),
-                senderId = UserId(dto.senderId),
-                messageType = messageType,
-                payload = payload,
-                createdAt = dto.createdAt?.toInstant() ?: Instant.now(),
-                updatedAt = dto.updatedAt?.toInstant() ?: Instant.now(),
-                replyToMessageId = dto.replyToMessageId?.let { DocumentId(it) },
-                isDeleted = MessageIsDeleted.fromBoolean(dto.isDeleted),
-                mentions = domainMentions,
-                channelId = ChannelId(channelId)
-            )
-            Log.d(
-                "MessageMapper",
-                "✅ 도메인 변환 성공: id=${message.id.value}, type=${message.messageType}, channelId=${message.channelId.value}"
-            )
-            message
-        } catch (e: Exception) {
-            Log.e("MessageMapper", "❌ 도메인 변환 실패: id=${dto.id}, channelId=$channelId", e)
-            throw e
-        }
+        return Message.fromDataSource(
+            id = DocumentId(dto.id),
+            senderId = UserId(dto.senderId),
+            messageType = messageType,
+            payload = payload,
+            createdAt = dto.createdAt?.toInstant() ?: Instant.now(),
+            updatedAt = dto.updatedAt?.toInstant() ?: Instant.now(),
+            replyToMessageId = dto.replyToMessageId?.let { DocumentId(it) },
+            isDeleted = MessageIsDeleted.fromBoolean(dto.isDeleted),
+            mentions = domainMentions,
+            channelId = ChannelId(channelId)
+        )
     }
 
     override fun domainToDto(domain: Message): MessageDTO {
@@ -162,18 +172,90 @@ class MessageMapper @Inject constructor() : Mapper<MessageEntity, Message, Messa
             )
         }
 
+        // Firestore에는 payload를 전체 객체(Map)로 저장한다 (모든 키 보존)
+        val payloadMap: Map<String, Any?> = try {
+            jsonToMap(JSONObject(domain.payload.value))
+        } catch (e: Exception) {
+            Log.w("MessageMapper", "⚠️ JSON -> Map 변환 실패, 최소 content만 저장", e)
+            val content = domain.payload.getTextContent() ?: ""
+            mapOf(MessagePayload.KEY_CONTENT to content)
+        }
+
         return MessageDTO(
             id = domain.id.value,
             channelId = domain.channelId.value,
             senderId = domain.senderId.value,
             messageType = domain.messageType.name,
-            payload = domain.payload.value,
-            createdAt = null, // ServerTimestamp가 처리
-            updatedAt = null, // ServerTimestamp가 처리
-            replyToMessageId = domain.replyToMessageId?.value,
-            isDeleted = domain.isDeleted.value,
-            mentions = dtoMentions,
-            content = "" // 하위 호환성을 위해 빈 값으로 설정 (읽기 전용)
+            payload = payloadMap,
+            createdAt = null,
+            updatedAt = null,
+            content = ""
         )
     }
+
+    // ================================
+    // JSON <-> Map 변환 헬퍼 (org.json 기반)
+    // ================================
+    private fun jsonToMap(jsonObject: JSONObject): Map<String, Any?> {
+        val result = mutableMapOf<String, Any?>()
+        val keys = jsonObject.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            val value = jsonObject.opt(key)
+            result[key] = when (value) {
+                is JSONObject -> jsonToMap(value)
+                is JSONArray -> jsonArrayToList(value)
+                JSONObject.NULL -> null
+                else -> value
+            }
+        }
+        return result
+    }
+
+    private fun jsonArrayToList(array: JSONArray): List<Any?> {
+        val list = mutableListOf<Any?>()
+        for (i in 0 until array.length()) {
+            val value = array.opt(i)
+            list.add(
+                when (value) {
+                    is JSONObject -> jsonToMap(value)
+                    is JSONArray -> jsonArrayToList(value)
+                    JSONObject.NULL -> null
+                    else -> value
+                }
+            )
+        }
+        return list
+    }
+
+    private fun mapToJson(map: Map<String, Any?>): JSONObject {
+        val obj = JSONObject()
+        map.forEach { (k, v) ->
+            obj.put(
+                k, when (v) {
+                    null -> JSONObject.NULL
+                    is Map<*, *> -> mapToJson(v as Map<String, Any?>)
+                    is List<*> -> listToJsonArray(v as List<Any?>)
+                    else -> v
+                }
+            )
+        }
+        return obj
+    }
+
+    private fun listToJsonArray(list: List<Any?>): JSONArray {
+        val arr = JSONArray()
+        list.forEach { v ->
+            arr.put(
+                when (v) {
+                    null -> JSONObject.NULL
+                    is Map<*, *> -> mapToJson(v as Map<String, Any?>)
+                    is List<*> -> listToJsonArray(v as List<Any?>)
+                    else -> v
+                }
+            )
+        }
+        return arr
+    }
 }
+

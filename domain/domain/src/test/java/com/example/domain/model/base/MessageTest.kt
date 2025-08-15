@@ -59,8 +59,14 @@ class MessageTest {
 
     @Test
     fun `createSystemMessage should create system message`() {
-        // Given
-        val payload = MessagePayload.forDateSystem("2024-01-01", "2024년 1월 1일")
+        // Given - 직접 JSON 구성으로 시스템 메시지 페이로드 생성
+        val jsonString = """
+            {
+                "date": "2024-01-01",
+                "displayText": "2024년 1월 1일"
+            }
+        """.trimIndent()
+        val payload = MessagePayload(jsonString)
 
         // When
         val message = Message.createSystemMessage(
@@ -114,11 +120,34 @@ class MessageTest {
 
     @Test
     fun `MessagePayload factory methods should create valid JSON`() {
-        // Given & When
+        // Given & When - 남은 factory 메서드와 직접 JSON 구성 테스트
         val textPayload = MessagePayload.forText("Hello")
-        val datePayload = MessagePayload.forDateSystem("2024-01-01", "Today")
-        val projectPayload = MessagePayload.forProjectJoin("proj-1", "My Project")
-        val chatStartPayload = MessagePayload.forChatStart("General")
+
+        // 직접 JSON 구성으로 시스템 메시지 페이로드들 생성
+        val datePayloadJson = """
+            {
+                "date": "2024-01-01",
+                "displayText": "Today"
+            }
+        """.trimIndent()
+        val datePayload = MessagePayload(datePayloadJson)
+
+        val projectPayloadJson = """
+            {
+                "projectId": "proj-1",
+                "projectName": "My Project",
+                "actionText": "참여하기"
+            }
+        """.trimIndent()
+        val projectPayload = MessagePayload(projectPayloadJson)
+
+        val chatStartPayloadJson = """
+            {
+                "channelName": "General",
+                "welcomeMessage": "채팅을 시작합니다"
+            }
+        """.trimIndent()
+        val chatStartPayload = MessagePayload(chatStartPayloadJson)
 
         // Then
         assertEquals("Hello", textPayload.getTextContent())

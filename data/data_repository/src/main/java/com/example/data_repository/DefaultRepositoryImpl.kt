@@ -49,6 +49,14 @@ abstract class DefaultRepositoryImpl<D : AggregateRoot, E : DTO>(
         return defaultDatasource.delete(id)
     }
 
+    override suspend fun updateFields(
+        id: DocumentId,
+        fields: Map<String, Any?>
+    ): CustomResult<DocumentId, Exception> {
+        ensureCollection()
+        return defaultDatasource.update(id, fields)
+    }
+
     override suspend fun findById(id: DocumentId, source: Source): CustomResult<D, Exception> {
         ensureCollection()
         Log.d("DefaultRepositoryImpl", "findById: documentId=${id.value}, source=$source")

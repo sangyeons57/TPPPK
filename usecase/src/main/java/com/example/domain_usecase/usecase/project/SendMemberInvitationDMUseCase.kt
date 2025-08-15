@@ -5,6 +5,7 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Message
 import com.example.domain.model.data.UserSession
 import com.example.domain.vo.ChannelId
+import com.example.domain.vo.CollectionPath
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.UserId
 import com.example.domain.vo.message.MessagePayload
@@ -14,6 +15,7 @@ import com.example.domain_repository.base.AuthRepository
 import com.example.domain_repository.base.DMChannelRepository
 import com.example.domain_repository.base.MessageRepository
 import com.example.domain_repository.base.ProjectRepository
+import com.example.domain_usecase.usecase.message.SendMessageUseCase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -29,11 +31,17 @@ import javax.inject.Inject
  * 3. SYSTEM_MEMBER_INVITATION 타입의 특수 메시지 생성
  * 4. DM 채널에 메시지 전송
  */
+@Deprecated(
+    message = "Orchestrate in ViewModel: use AddDmChannelUseCase/GetDmChannelUseCase + MessagePayload.forProjectInviteBasic + core/websocket SendMessageUseCase",
+    replaceWith = ReplaceWith("Use AddDmChannelUseCase, GetDmChannelUseCase, MessagePayload.forProjectInviteBasic, and core/websocket SendMessageUseCase from ViewModel")
+)
 class SendMemberInvitationDMUseCase @Inject constructor(
     private val dmChannelRepository: DMChannelRepository,
     private val messageRepository: MessageRepository,
     private val authRepository: AuthRepository,
-    private val projectRepository: ProjectRepository
+    private val projectRepository: ProjectRepository,
+    // Domain-layer send (local save); WS send should be triggered at feature/app layer to avoid module cycle
+    private val sendMessageUseCase: SendMessageUseCase
 ) {
 
     /**
@@ -66,60 +74,114 @@ class SendMemberInvitationDMUseCase @Inject constructor(
                             val project = projectResult.data
                             val projectName = project.name.value
 
-                            // 3. DM 채널 생성 또는 가져오기
+                            // 3. DM 채널 생성 또는 가져오기 (2단계 접근법)
+                            var channelId: String? = null
+
+                            // 3-1. DM 채널 생성 시도
                             val dmChannelResult =
                                 dmChannelRepository.createDMChannel(targetUserName.value)
                             when (dmChannelResult) {
                                 is CustomResult.Success -> {
                                     val resultData = dmChannelResult.data
                                     val dataObject = resultData["data"] as? Map<String, Any?>
-                                    val channelId = dataObject?.get("channelId") as? String
-
+                                    channelId = dataObject?.get("channelId") as? String
+                                    
                                     if (channelId != null) {
-                                        // 4. 멤버 초대 메시지 생성
-                                        val invitationMessage = createMemberInvitationMessage(
-                                            senderId = inviterSession.userId,
-                                            channelId = ChannelId(channelId),
-                                            projectId = projectId.value,
-                                            projectName = projectName,
-                                            inviterName = inviterName,
-                                            targetUserId = targetUserId.value
-                                        )
-
-                                        // 5. 메시지 저장 (Room DB에 저장되어 UI에 표시됨)
-                                        val saveResult = messageRepository.save(invitationMessage)
-                                        when (saveResult) {
-                                            is CustomResult.Success -> {
-                                                Log.d(
-                                                    TAG,
-                                                    "멤버 초대 DM 메시지 전송 성공: ${invitationMessage.id.value}"
-                                                )
-                                                emit(CustomResult.Success(invitationMessage.id))
-                                            }
-
-                                            is CustomResult.Failure -> {
-                                                Log.e(TAG, "멤버 초대 메시지 저장 실패", saveResult.error)
-                                                emit(CustomResult.Failure(Exception("초대 메시지 저장 실패: ${saveResult.error.message}")))
-                                            }
-
-                                            else -> {
-                                                // Loading이나 다른 상태는 여기서 처리하지 않음
-                                            }
-                                        }
-                                    } else {
-                                        Log.e(TAG, "DM 채널 ID를 가져올 수 없음")
-                                        emit(CustomResult.Failure(Exception("DM 채널 생성 실패")))
+                                        Log.d(TAG, "DM 채널 생성 성공: $channelId")
                                     }
                                 }
 
                                 is CustomResult.Failure -> {
-                                    Log.e(TAG, "DM 채널 생성/조회 실패", dmChannelResult.error)
-                                    emit(CustomResult.Failure(Exception("DM 채널 처리 실패: ${dmChannelResult.error.message}")))
+                                    // 3-2. 생성 실패 시 기존 채널이 있는지 확인
+                                    val errorMessage = dmChannelResult.error.message ?: ""
+                                    if (errorMessage.contains(
+                                            "already exists",
+                                            ignoreCase = true
+                                        ) ||
+                                        errorMessage.contains(
+                                            "dmChannel with exists",
+                                            ignoreCase = true
+                                        )
+                                    ) {
+                                        Log.d(TAG, "DM 채널이 이미 존재함. 기존 채널 조회 중...")
+
+                                        // 기존 채널 조회 시도 (상대 사용자 ID 기반)
+                                        when (val existing =
+                                            dmChannelRepository.findByOtherUserId(targetUserId.value)) {
+                                            is CustomResult.Success -> {
+                                                channelId = existing.data.id.value
+                                                Log.d(TAG, "기존 DM 채널 확인됨: $channelId")
+                                            }
+
+                                            is CustomResult.Failure -> {
+                                                Log.e(TAG, "기존 DM 채널 조회 실패", existing.error)
+                                            }
+
+                                            else -> {
+                                                // ignore Loading/Initial/Progress
+                                            }
+                                        }
+                                    }
+
+                                    if (channelId == null) {
+                                        Log.e(TAG, "DM 채널 처리 실패: $errorMessage")
+                                        emit(CustomResult.Failure(Exception("DM 채널 처리 실패: $errorMessage")))
+                                        return@flow
+                                    }
                                 }
 
                                 else -> {
                                     // Loading 상태는 계속 대기
+                                    return@flow
                                 }
+                            }
+
+                            // 3-3. 채널 ID가 확보된 경우에만 진행
+                            if (channelId != null) {
+                                // 4. 멤버 초대 메시지 페이로드 생성 (Project 전용 고정 포맷, 초대ID 없이)
+                                val invitationPayload = MessagePayload.forProjectInviteBasic(
+                                    projectId = projectId.value,
+                                    projectName = projectName,
+                                    inviterName = inviterName,
+                                    targetUserId = targetUserId.value
+                                )
+
+                                // 5. Repository 컬렉션 설정 (DM 채널 메시지)
+                                messageRepository.setCollection(
+                                    CollectionPath.dmChannelMessages(
+                                        channelId
+                                    )
+                                )
+
+                                // 6. 도메인 SendMessageUseCase 사용 (로컬 저장) - WS 전송은 상위 레이어에서 호출
+                                val sendResult = sendMessageUseCase(
+                                    channelId = ChannelId(channelId),
+                                    messageType = MessageType.SYSTEM_MEMBER_INVITATION,
+                                    payload = invitationPayload
+                                )
+
+                                when (sendResult) {
+                                    is CustomResult.Success -> {
+                                        val messageId = sendResult.data.id
+                                        Log.d(
+                                            TAG,
+                                            "멤버 초대 DM 메시지 전송 성공(로컬 저장): ${messageId.value}"
+                                        )
+                                        emit(CustomResult.Success(messageId))
+                                    }
+
+                                    is CustomResult.Failure -> {
+                                        Log.e(TAG, "멤버 초대 메시지 전송 실패", sendResult.error)
+                                        emit(CustomResult.Failure(Exception("초대 메시지 전송 실패: ${sendResult.error.message}")))
+                                    }
+
+                                    else -> {
+                                        // Loading이나 다른 상태는 여기서 처리하지 않음
+                                    }
+                                }
+                            } else {
+                                Log.e(TAG, "DM 채널 ID를 최종적으로 확보할 수 없음")
+                                emit(CustomResult.Failure(Exception("DM 채널 처리 실패: 채널 ID를 확보할 수 없습니다")))
                             }
                         }
 
@@ -150,37 +212,28 @@ class SendMemberInvitationDMUseCase @Inject constructor(
     }
 
     /**
-     * 멤버 초대 시스템 메시지를 생성합니다.
+     * 멤버 초대 시스템 메시지 페이로드를 생성합니다.
+     * 통합 SendMessageUseCase가 자동으로 MessageType을 감지하고 현재 사용자를 설정합니다.
      */
-    private fun createMemberInvitationMessage(
-        senderId: UserId,
-        channelId: ChannelId,
+    private fun createMemberInvitationPayload(
         projectId: String,
         projectName: String,
         inviterName: String,
         targetUserId: String
-    ): Message {
-        val messageId = DocumentId.generate()
-        val currentTime = Instant.now()
+    ): MessagePayload {
+        // SYSTEM_MEMBER_INVITATION 타입의 페이로드 생성 (JSON 문자열로 직접 구성)
+        val jsonString = """
+            {
+                "${MessagePayload.KEY_CONTENT}": "$inviterName 님이 $projectName 프로젝트에 초대했습니다",
+                "projectId": "$projectId",
+                "projectName": "$projectName",
+                "inviterName": "$inviterName",
+                "targetUserId": "$targetUserId",
+                "actionText": "참여하기"
+            }
+        """.trimIndent()
 
-        // SYSTEM_MEMBER_INVITATION 타입의 페이로드 생성
-        val payload = MessagePayload.forMemberInvitation(
-            projectId = projectId,
-            projectName = projectName,
-            inviterName = inviterName,
-            targetUserId = targetUserId,
-            actionText = "참여하기"
-        )
-
-        return Message.create(
-            id = messageId,
-            senderId = senderId,
-            messageType = MessageType.SYSTEM_MEMBER_INVITATION,
-            payload = payload,
-            replyToMessageId = null,
-            mentions = emptyList(),
-            channelId = channelId
-        )
+        return MessagePayload(jsonString)
     }
 
     companion object {

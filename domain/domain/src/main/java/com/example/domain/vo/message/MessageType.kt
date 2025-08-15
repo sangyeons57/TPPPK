@@ -5,7 +5,6 @@ package com.example.domain.vo.message
  *
  * 각 타입별 payload 구조:
  * - TEXT: {"content": "실제 메시지 내용"} (일반 텍스트)
- * - IMAGE: {"imageUrl": "...", "content": "선택적 텍스트"} (이미지 메시지)
  * - SYSTEM: {"content": "시스템 메시지", "systemType": "..."} (일반 시스템 메시지)
  * - SYSTEM_PROJECT_JOIN: {"projectId": "...", "projectName": "...", "actionText": "참여하기"}
  * - SYSTEM_PROJECT_LEAVE: {"projectId": "...", "projectName": "...", "actionText": "떠나기"}
@@ -13,19 +12,15 @@ package com.example.domain.vo.message
  * - SYSTEM_CHAT_START: {"channelName": "...", "welcomeText": "채팅이 시작되었습니다"}
  * - SYSTEM_MEMBER_INVITATION: {"projectId": "...", "projectName": "...", "inviterName": "...", "targetUserId": "...", "actionText": "멤버로 추가"}
  * - SYSTEM_USER_INVITE: {"inviterName": "...", "projectName": "...", "actionText": "초대됨"}
+ * - PROJECT_INVITE: {"projectId": "...", "projectName": "...", "inviterName": "...", "invitationId": "...", "actionText": "참여하기"}
  */
 enum class MessageType {
     /**
      * 일반 텍스트 메시지
-     * Payload: {"content": "메시지 내용"}
+     * 이미지도 attachment에 추가해서 사용가능
+     * Payload: {"content": "메시지 내용", "attachments": [...]}
      */
     TEXT,
-
-    /**
-     * 이미지 메시지
-     * Payload: {"imageUrl": "...", "content": "선택적 텍스트"}
-     */
-    IMAGE,
 
     /**
      * 일반 시스템 메시지
@@ -67,5 +62,11 @@ enum class MessageType {
      * 사용자 초대 시스템 메시지
      * Payload: {"inviterName": "...", "projectName": "...", "actionText": "초대됨"}
      */
-    SYSTEM_USER_INVITE
+    SYSTEM_USER_INVITE,
+
+    /**
+     * 프로젝트 초대 메시지
+     * Payload: {"projectId": "...", "projectName": "...", "inviterName": "...", "invitationId": "...", "actionText": "참여하기"}
+     */
+    PROJECT_INVITE
 }

@@ -222,11 +222,7 @@ fun MessageInput(
                     keyboardActions = KeyboardActions(
                         onSend = {
                             if (!canSend) return@KeyboardActions
-                            if (isEditing) {
-                                onCancelEdit()
-                            } else {
-                                onSendClick()
-                            }
+                            onSendClick()
                             // 전송 후 포커스 해제 및 키보드 숨김
                             focusManager.clearFocus()
                             keyboardController?.hide()
@@ -242,7 +238,7 @@ fun MessageInput(
                 Button(
                     onClick = {
                         if (!canSend) return@Button
-                        if (isEditing) onCancelEdit() else onSendClick()
+                        onSendClick()
                         // 전송 후 포커스 해제 및 키보드 숨김
                         focusManager.clearFocus()
                         keyboardController?.hide()

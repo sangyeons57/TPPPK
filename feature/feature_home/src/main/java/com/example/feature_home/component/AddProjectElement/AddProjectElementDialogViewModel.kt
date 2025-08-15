@@ -13,6 +13,8 @@ import com.example.domain.vo.category.CategoryOrder
 import com.example.domain.vo.category.IsCategoryFlag
 import com.example.domain_usecase.provider.project.ProjectChannelUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectStructureUseCaseProvider
+import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
+import com.example.domain.vo.user.UserName
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,7 +37,8 @@ import java.time.Instant
 @HiltViewModel
 class AddProjectElementDialogViewModel @Inject constructor(
     private val projectStructureUseCaseProvider: ProjectStructureUseCaseProvider,
-    private val projectChannelUseCaseProvider: ProjectChannelUseCaseProvider
+    private val projectChannelUseCaseProvider: ProjectChannelUseCaseProvider,
+    private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddProjectElementDialogUiState())
@@ -72,13 +75,14 @@ class AddProjectElementDialogViewModel @Inject constructor(
 
     /**
      * 탭 변경 처리
-     * 
-     * @param selectedTab 선택된 탭 (0: 카테고리, 1: 채널)
+     *
+     * @param selectedTab 선택된 탭 (0: 카테고리, 1: 채널, 2: 멤버 초대)
      */
     fun onTabChanged(selectedTab: Int) {
         val tabType = when (selectedTab) {
             0 -> CreateElementType.CATEGORY
             1 -> CreateElementType.CHANNEL
+            2 -> CreateElementType.MEMBER_INVITE
             else -> CreateElementType.CATEGORY
         }
         
@@ -90,7 +94,10 @@ class AddProjectElementDialogViewModel @Inject constructor(
             selectedCategoryId = null,
             selectedChannelType = ProjectChannelType.MESSAGES,
             categoryNameError = null,
-            channelNameError = null
+            channelNameError = null,
+            memberInviteUserName = "",
+            memberInviteUserNameError = null,
+            isSendingInvite = false
         )
     }
 
@@ -349,6 +356,78 @@ class AddProjectElementDialogViewModel @Inject constructor(
                         availableCategories = listOf(noCategory)
                     )
                 }
+            }
+        }
+    }
+
+    /**
+     * 멤버 초대 사용자 이름 변경 처리
+     */
+    fun onMemberInviteUserNameChanged(userName: String) {
+        _uiState.value = _uiState.value.copy(
+            memberInviteUserName = userName,
+            memberInviteUserNameError = if (userName.isNotBlank()) null else _uiState.value.memberInviteUserNameError
+        )
+    }
+
+    /**
+     * 멤버 초대 전송
+     */
+    fun onSendMemberInvite() {
+        val projectId = this.projectId ?: return
+        val userName = _uiState.value.memberInviteUserName.trim()
+
+        if (userName.isBlank()) {
+            _uiState.value = _uiState.value.copy(
+                memberInviteUserNameError = "사용자 이름을 입력해주세요."
+            )
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isSendingInvite = true,
+                memberInviteUserNameError = null
+            )
+
+            try {
+                val memberUseCases = projectMemberUseCaseProvider.createForProject(projectId)
+                val userNameVO = UserName(userName)
+
+                memberUseCases.sendProjectInviteMessageUseCase(userNameVO, projectId.value)
+                    .collect { result ->
+                        when (result) {
+                            is CustomResult.Loading -> {
+                                // 이미 로딩 상태 설정됨
+                            }
+
+                            is CustomResult.Success -> {
+                                _uiState.value = _uiState.value.copy(
+                                    isSendingInvite = false,
+                                    memberInviteUserName = "",
+                                    memberInviteUserNameError = null
+                                )
+                                _eventFlow.emit(AddProjectElementDialogEvent.MemberInvited(userName))
+                            }
+
+                            is CustomResult.Failure -> {
+                                _uiState.value = _uiState.value.copy(
+                                    isSendingInvite = false,
+                                    memberInviteUserNameError = result.error.message
+                                        ?: "초대 전송 중 오류가 발생했습니다."
+                                )
+                            }
+
+                            else -> {
+                                // Other states - continue loading
+                            }
+                        }
+                    }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isSendingInvite = false,
+                    memberInviteUserNameError = e.message ?: "초대 전송 중 오류가 발생했습니다."
+                )
             }
         }
     }

@@ -45,57 +45,61 @@ class MessageSyncPort @Inject constructor(
     // ================================
 
     /**
-     * Firestore에서 커서 이후의 변경된 메시지들을 가져옵니다.
+     * Firestore에서 lastSyncTime 이후의 변경된 메시지들을 가져옵니다.
      *
-     * @param cursor 마지막 동기화 커서 (null이면 처음부터)
+     * SyncMetadata의 cursor 필드에는 실제로 lastSyncTime(epochMilli)이 저장됩니다.
+     *
+     * @param cursor 마지막 동기화 시간 (epochMilli string, null이면 처음부터)
      * @param limit 한 번에 가져올 메시지 수
      * @return 원격 배치 데이터
      */
     override suspend fun pullSince(cursor: String?, limit: Int): RemoteBatch<Message> {
-        Log.d(TAG, "📥 Pulling messages since cursor: $cursor, limit: $limit")
+        val lastSyncTime = cursor?.toLongOrNull()?.let { Instant.ofEpochMilli(it) } ?: Instant.EPOCH
+        Log.d(
+            TAG,
+            "📥 Pulling messages since lastSyncTime: $lastSyncTime (cursor: $cursor), limit: $limit"
+        )
 
         return try {
-            // Firestore에서 메시지 가져오기
-            val timestamp =
-                cursor?.toLongOrNull()?.let { Instant.ofEpochMilli(it) } ?: Instant.EPOCH
             val result = messageRemoteDataSource.getMessagesAfterTimestamp(
                 collectionPath = CollectionPath.dmChannelMessages(channelId),
-                timestamp = timestamp
+                timestamp = lastSyncTime
             )
 
             when (result) {
                 is CustomResult.Success -> {
                     val messages = result.data
-                    val nextCursor = if (messages.isNotEmpty()) {
-                        messages.maxOfOrNull { it.updatedAt.toEpochMilli() }?.toString() ?: cursor
+
+                    // 다음 동기화를 위한 시간 계산 (가장 최근 updatedAt 사용)
+                    val nextSyncTime = if (messages.isNotEmpty()) {
+                        messages.maxOfOrNull { it.updatedAt } ?: lastSyncTime
                     } else {
-                        cursor
+                        lastSyncTime
                     }
 
                     Log.d(TAG, "✅ Pulled ${messages.size} messages from Firestore")
-                    Log.d(TAG, "📊 Next cursor: $nextCursor")
+                    Log.d(TAG, "📊 Next syncTime: $nextSyncTime (${nextSyncTime.toEpochMilli()})")
 
                     RemoteBatch(
                         items = messages,
-                        tombstones = emptyList(),
-                        nextCursor = nextCursor,
+                        tombstones = emptyList(), // 소프트 삭제는 isDeleted 필드로 처리
+                        nextCursor = nextSyncTime.toEpochMilli().toString(),
                         hasMore = messages.size >= limit
                     )
                 }
 
                 is CustomResult.Failure -> {
                     Log.e(TAG, "❌ Failed to pull messages from Firestore", result.error)
-                    // 빈 배치 반환 (실패 시에도 동기화 프로세스는 계속됨)
                     RemoteBatch(
                         items = emptyList(),
                         tombstones = emptyList(),
-                        nextCursor = cursor, // 커서 유지
+                        nextCursor = cursor, // 실패 시 커서 유지하여 재시도 가능
                         hasMore = false
                     )
                 }
 
-                else -> {
-                    Log.e(TAG, "❌ Unexpected result type")
+                is CustomResult.Initial, is CustomResult.Loading, is CustomResult.Progress -> {
+                    Log.w(TAG, "⚠️ Unexpected result state: $result")
                     RemoteBatch(
                         items = emptyList(),
                         tombstones = emptyList(),

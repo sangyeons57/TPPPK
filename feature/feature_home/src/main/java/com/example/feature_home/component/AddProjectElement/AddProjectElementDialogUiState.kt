@@ -21,15 +21,21 @@ data class AddProjectElementDialogUiState(
     val channelNameError: String? = null,
     val selectedCategoryId: String? = null,
     val selectedChannelType: ProjectChannelType = ProjectChannelType.MESSAGES,
-    val availableCategories: List<Category> = emptyList()
+    val availableCategories: List<Category> = emptyList(),
+
+    // 멤버 초대 관련
+    val memberInviteUserName: String = "",
+    val memberInviteUserNameError: String? = null,
+    val isSendingInvite: Boolean = false
 )
 
 /**
  * 생성할 요소 타입
  */
 enum class CreateElementType {
-    CATEGORY, // 카테고리
-    CHANNEL   // 채널
+    CATEGORY,      // 카테고리
+    CHANNEL,       // 채널
+    MEMBER_INVITE  // 멤버 초대
 }
 
 /**
@@ -50,4 +56,9 @@ sealed interface AddProjectElementDialogEvent {
      * 채널 생성 완료
      */
     data class ChannelCreated(val channel: ProjectChannel) : AddProjectElementDialogEvent
+
+    /**
+     * 멤버 초대 완료
+     */
+    data class MemberInvited(val userName: String) : AddProjectElementDialogEvent
 }

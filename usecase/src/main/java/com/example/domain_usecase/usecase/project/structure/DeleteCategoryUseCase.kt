@@ -1,11 +1,9 @@
 package com.example.domain_usecase.usecase.project.structure
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.base.ProjectChannel
 import com.example.domain.vo.DocumentId
 import com.example.domain_repository.base.CategoryRepository
 import com.example.domain_repository.base.ProjectChannelRepository
-import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 /**
@@ -36,12 +34,12 @@ class DeleteCategoryUseCaseImpl @Inject constructor(
     override suspend operator fun invoke(categoryId: DocumentId): CustomResult<Unit, Exception> {
         return try {
             // 1. 해당 카테고리에 속한 모든 채널을 찾아서 soft delete 처리
-            when (val channelsResult = projectChannelRepository.observeAll().first()) {
+            when (val channelsResult = projectChannelRepository.findAll()) {
                 is CustomResult.Success -> {
                     val channelsInCategory = channelsResult.data.filter { channel ->
-                        (channel is ProjectChannel) && channel.categoryId == categoryId
-                    }.map{ it as ProjectChannel }
-                    
+                        channel.categoryId == categoryId
+                    }
+
                     // 각 채널을 DELETED 상태로 변경
                     for (channel in channelsInCategory) {
                         val deletedChannel = channel.markDeleted()
@@ -54,9 +52,13 @@ class DeleteCategoryUseCaseImpl @Inject constructor(
                             else -> { /* Continue */ }
                         }
                     }
-                    
+
                     // 2. 카테고리 실제 삭제 (hard delete)
-                    categoryRepository.delete(categoryId)
+                    when (val deleteResult = categoryRepository.delete(categoryId)) {
+                        is CustomResult.Success -> CustomResult.Success(Unit)
+                        is CustomResult.Failure -> CustomResult.Failure(deleteResult.error)
+                        else -> CustomResult.Failure(Exception("Unexpected delete result"))
+                    }
                 }
                 is CustomResult.Failure -> {
                     CustomResult.Failure(

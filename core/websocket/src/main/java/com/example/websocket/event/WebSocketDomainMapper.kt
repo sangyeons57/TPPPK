@@ -11,6 +11,13 @@ import com.example.domain.vo.message.MessageType
 import com.example.websocket.constant.WebSocketEventTypes
 import com.example.websocket.constant.WebSocketFieldConstants
 import com.example.websocket.core.WebSocketMessage
+import com.example.websocket.core.NestedMessage
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -38,25 +45,29 @@ class WebSocketDomainMapper @Inject constructor() {
         return when (message.type) {
             WebSocketMessage.TYPE_MESSAGE -> {
                 WebSocketDomainEvent.MessageReceived(
-                    messageId = message.messageId ?: "",
-                    senderId = message.senderId ?: "",
+                    messageId = message.message?.id ?: "",
+                    senderId = message.message?.senderId ?: message.senderId ?: "",
                     content = message.getTextContent() ?: "",
-                    timestamp = message.timestamp?.let {
+                    timestamp = (message.message?.timestamp ?: message.timestamp)?.let {
                         Instant.ofEpochSecond(it.toLong()).toString()
                     } ?: Instant.now().toString(),
-                    replyToMessageId = message.replyToMessageId,
+                    replyToMessageId = message.message?.replyToMessageId
+                        ?: message.replyToMessageId,
                     roomId = roomId ?: message.roomId,
                     projectId = message.projectId,
-                    channelType = message.channelType
+                    channelType = null,
+                    originalPayload = message.message?.payload?.toString()
+                        ?: message.payload?.toString(),  // 중첩 payload 우선
+                    messageTypeString = message.message?.messageType
                 )
             }
 
             WebSocketMessage.TYPE_EDIT_MESSAGE -> {
                 WebSocketDomainEvent.MessageEdited(
-                    messageId = message.messageId ?: "",
-                    senderId = message.senderId ?: "",
+                    messageId = message.message?.id ?: "",
+                    senderId = message.message?.senderId ?: message.senderId ?: "",
                     newContent = message.getTextContent() ?: "",
-                    timestamp = message.timestamp?.let {
+                    timestamp = (message.message?.timestamp ?: message.timestamp)?.let {
                         Instant.ofEpochSecond(it.toLong()).toString()
                     } ?: Instant.now().toString(),
                     roomId = roomId ?: message.roomId
@@ -65,9 +76,9 @@ class WebSocketDomainMapper @Inject constructor() {
 
             WebSocketMessage.TYPE_DELETE_MESSAGE -> {
                 WebSocketDomainEvent.MessageDeleted(
-                    messageId = message.messageId ?: "",
-                    senderId = message.senderId ?: "",
-                    timestamp = message.timestamp?.let {
+                    messageId = message.message?.id ?: "",
+                    senderId = message.message?.senderId ?: message.senderId ?: "",
+                    timestamp = (message.message?.timestamp ?: message.timestamp)?.let {
                         Instant.ofEpochSecond(it.toLong()).toString()
                     } ?: Instant.now().toString(),
                     roomId = roomId ?: message.roomId
@@ -77,7 +88,7 @@ class WebSocketDomainMapper @Inject constructor() {
             WebSocketMessage.TYPE_ACK -> {
                 // 서버에서 보내는 일반 ACK - replyToMessageId로 메시지 ACK임을 판단
                 WebSocketDomainEvent.MessageAck(
-                    messageId = message.replyToMessageId
+                    messageId = (message.message?.replyToMessageId ?: message.replyToMessageId)
                         ?: "", // ACK의 경우 replyToMessageId가 원본 메시지 ID
                     ackType = WebSocketMessage.TYPE_MESSAGE_ACK, // 일반 메시지 ACK로 처리
                     roomId = roomId ?: message.roomId
@@ -88,7 +99,7 @@ class WebSocketDomainMapper @Inject constructor() {
             WebSocketMessage.TYPE_EDIT_MESSAGE_ACK,
             WebSocketMessage.TYPE_DELETE_MESSAGE_ACK -> {
                 WebSocketDomainEvent.MessageAck(
-                    messageId = message.messageId ?: "",
+                    messageId = message.message?.id ?: "",
                     ackType = message.type,
                     roomId = roomId ?: message.roomId
                 )
@@ -98,7 +109,7 @@ class WebSocketDomainMapper @Inject constructor() {
             WebSocketEventTypes.EDIT_MESSAGE_FAILED,
             WebSocketEventTypes.DELETE_MESSAGE_FAILED -> {
                 WebSocketDomainEvent.MessageFailed(
-                    messageId = message.messageId ?: "",
+                    messageId = message.message?.id ?: "",
                     failureType = message.type,
                     errorMessage = message.getTextContent(),
                     roomId = roomId ?: message.roomId
@@ -166,14 +177,73 @@ class WebSocketDomainMapper @Inject constructor() {
 
     /**
      * WebSocketDomainEvent.MessageReceived를 도메인 Message로 변환
+     *
+     * 중요: WebSocket 메시지의 전체 payload를 그대로 사용하여 attachment 정보 보존
      */
     fun messageReceivedToDomainMessage(event: WebSocketDomainEvent.MessageReceived): Message {
         if (event.roomId == null) throw Exception("roomId is null")
+
+        // WebSocket에서 받은 전체 payload를 사용 (attachment 정보 보존)
+        val payload = if (!event.originalPayload.isNullOrBlank()) {
+            try {
+                MessagePayload(event.originalPayload!!)
+            } catch (e: Exception) {
+                // payload 파싱 실패 시 content만으로 fallback
+                MessagePayload.forText(event.content)
+            }
+        } else {
+            MessagePayload.forText(event.content)
+        }
+
+        // MessageType 결정
+        val messageType = try {
+            // 1) 신뢰 가능한 messageTypeString 우선 사용
+            val rawType = event.messageTypeString
+            if (!rawType.isNullOrBlank()) {
+                when (rawType) {
+                    com.example.websocket.constant.WebSocketFieldConstants.MESSAGE_TYPE_PROJECT_INVITE -> MessageType.PROJECT_INVITE
+                    com.example.websocket.constant.WebSocketFieldConstants.MESSAGE_TYPE_SYSTEM_PROJECT_JOIN -> MessageType.SYSTEM_PROJECT_JOIN
+                    com.example.websocket.constant.WebSocketFieldConstants.MESSAGE_TYPE_SYSTEM_PROJECT_LEAVE -> MessageType.SYSTEM_PROJECT_LEAVE
+                    com.example.websocket.constant.WebSocketFieldConstants.MESSAGE_TYPE_SYSTEM_USER_INVITE -> MessageType.SYSTEM_USER_INVITE
+                    com.example.websocket.constant.WebSocketFieldConstants.MESSAGE_TYPE_SYSTEM_MEMBER_INVITATION -> MessageType.SYSTEM_MEMBER_INVITATION
+                    com.example.websocket.constant.WebSocketFieldConstants.MESSAGE_TYPE_SYSTEM,
+                    com.example.websocket.constant.WebSocketFieldConstants.MESSAGE_TYPE_TEXT -> {
+                        // TEXT 또는 일반 SYSTEM은 아래 휴리스틱으로 세분화
+                        null
+                    }
+
+                    else -> null
+                }
+            } else null
+        } catch (_: Exception) {
+            null
+        } ?: run {
+            // 2) 휴리스틱: payload 시그니처 기반 판별
+            val payloadJson = try {
+                Json.parseToJsonElement(event.originalPayload ?: "{}") as JsonObject
+            } catch (_: Exception) {
+                JsonObject(mapOf())
+            }
+            when {
+                // 프로젝트 초대
+                payloadJson.containsKey(com.example.websocket.constant.WebSocketFieldConstants.FIELD_PROJECT_NAME) &&
+                        payloadJson.containsKey(com.example.websocket.constant.WebSocketFieldConstants.FIELD_INVITER_NAME) &&
+                        payloadJson.containsKey(com.example.websocket.constant.WebSocketFieldConstants.FIELD_INVITATION_ID) -> MessageType.PROJECT_INVITE
+                // 멤버 초대 (프로젝트 멤버 추가 안내)
+                payloadJson.containsKey("projectId") &&
+                        payloadJson.containsKey("projectName") &&
+                        payloadJson.containsKey("inviterName") &&
+                        payloadJson.containsKey("targetUserId") -> MessageType.SYSTEM_MEMBER_INVITATION
+
+                else -> MessageType.TEXT
+            }
+        }
+        
         return Message.fromDataSource(
             id = DocumentId(event.messageId),
             senderId = UserId(event.senderId),
-            messageType = MessageType.TEXT,
-            payload = MessagePayload.forText(event.content),
+            messageType = messageType,
+            payload = payload,
             replyToMessageId = event.replyToMessageId?.let { DocumentId(it) },
             createdAt = parseTimestamp(event.timestamp),
             updatedAt = parseTimestamp(event.timestamp),
@@ -238,20 +308,31 @@ class WebSocketDomainMapper @Inject constructor() {
         message: Message,
         roomId: String,
         messageType: String = WebSocketMessage.TYPE_MESSAGE,
-        projectId: String? = null,
-        channelType: String? = null
+        projectId: String? = null
     ): WebSocketMessage {
-        val payload = mapOf(WebSocketFieldConstants.PAYLOAD_CONTENT to (message.payload.getTextContent() ?: ""))
+        val payload = try {
+            message.payload.asJsonObject()
+        } catch (_: Exception) {
+            buildJsonObject {
+                put(
+                    com.example.domain.vo.message.MessagePayload.KEY_CONTENT,
+                    message.payload.getTextContent() ?: ""
+                )
+            }
+        }
         return WebSocketMessage(
             type = messageType,
             roomId = roomId,
-            senderId = message.senderId.value,
-            payload = payload,
-            messageId = message.id.value,
-            replyToMessageId = message.replyToMessageId?.value,
-            timestamp = message.createdAt.epochSecond.toDouble(),
-            projectId = projectId,
-            channelType = channelType
+            senderId = message.senderId.value, // kept for compatibility/logs; nested owns domain fields
+            message = NestedMessage(
+                id = message.id.value,
+                messageType = message.messageType.name,
+                payload = payload,
+                senderId = message.senderId.value,
+                replyToMessageId = message.replyToMessageId?.value,
+                timestamp = message.createdAt.epochSecond.toDouble()
+            ),
+            projectId = projectId
         )
     }
 

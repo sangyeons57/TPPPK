@@ -7,7 +7,7 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.map
-import com.example.core_common.constant.PagingConstants
+import com.example.core_common.constants.PagingConstants
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.CustomResult.Success
 import com.example.core_common.result.CustomResult.Failure
@@ -16,7 +16,6 @@ import com.example.core_common.util.DateTimeUtil
 import com.example.core_common.util.ImageCompressor
 import com.example.core_common.util.LogThrottler
 import com.example.websocket.util.MessageTypeDetector
-import com.example.websocket.core.WebSocketMessage
 import com.example.websocket.constant.WebSocketFieldConstants
 import com.example.domain.enum.OutBoxStatus
 import com.example.domain.model.base.Message
@@ -41,7 +40,9 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 import com.example.websocket.usecase.WebSocketUseCaseProvider
+import com.example.websocket.usecase.SendMessageUseCase
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -74,20 +75,13 @@ class MessageService @Inject constructor(
     private val userProfileService: UserProfileService,
     private val fileUseCases: FileManagementUseCases,
     private val dmUseCaseProvider: DMUseCaseProvider,
+    private val sendMessageUseCase: SendMessageUseCase,
     private val roomId: String,
-    private val projectId: String? = null,
-    private val channelType: String = "chat"
+    private val projectId: String? = null
 ) {
 
     companion object {
         private const val TAG = "MessageService"
-
-        // 낙관적 처리 메타 키
-        private const val META_KEY = "_meta"
-        private const val META_PENDING_OP = "pendingOp"
-        private const val META_BACKUP_PAYLOAD = "backupPayload"
-        private const val OP_EDIT = "edit"
-        private const val OP_DELETE = "delete"
     }
 
     // OutBox 상태 캐시 (메시지 ID -> OutBox 상태)
@@ -99,6 +93,24 @@ class MessageService @Inject constructor(
     // 로그 샘플링을 위한 카운터
     private var statusCheckLogCounter = 0
     private val loggedMessageIds = mutableSetOf<String>()
+
+    init {
+        // Repository 컬렉션 컨텍스트 설정 누락으로 인한 오류 방지
+        try {
+            if (!projectId.isNullOrBlank()) {
+                // 프로젝트 채널: projects/{projectId}/channels/{channelId}/messages
+                messageRepository.setCollection(
+                    CollectionPath.projectChannelMessages(projectId, roomId)
+                )
+            } else {
+                // DM 채널: dm_channels/{channelId}/messages
+                messageRepository.setCollection(CollectionPath.dmChannelMessages(roomId))
+            }
+            Log.d(TAG, "Repository 컬렉션 설정 완료: roomId=$roomId, projectId=$projectId")
+        } catch (e: Exception) {
+            Log.e(TAG, "Repository 컬렉션 설정 실패", e)
+        }
+    }
 
     /**
      * OutBox 상태를 캐시에 업데이트
@@ -136,26 +148,26 @@ class MessageService @Inject constructor(
     ): Flow<PagingData<ChatMessageUiModel>> {
         Log.d(TAG, "UI 메시지 Paging Flow 제공 - initialMessageId=$initialMessageId, useFallbackAnchor=$useFallbackAnchor")
         return flow {
-            val initialKey: Long? = try {
+            val initialKey: Int? = try {
                 if (initialMessageId.isNullOrBlank()) {
                     if (useFallbackAnchor) {
-                        System.currentTimeMillis()
+                        System.currentTimeMillis().toInt()
                     } else {
                         null
                     }
                 } else {
                     val anchor = messageRepository.findById(initialMessageId)
                     if (anchor != null) {
-                        anchor.createdAt?.toEpochMilli()
+                        anchor.createdAt?.toEpochMilli()?.toInt()
                     } else if (useFallbackAnchor) {
                         Log.d(TAG, "앵커 메시지 미존재, fallback 사용: $initialMessageId")
-                        System.currentTimeMillis()
+                        System.currentTimeMillis().toInt()
                     } else {
                         null
                     }
                 }
-            } catch (_: Exception) { 
-                if (useFallbackAnchor) System.currentTimeMillis() else null
+            } catch (_: Exception) {
+                if (useFallbackAnchor) System.currentTimeMillis().toInt() else null
             }
 
             val pager = Pager(
@@ -167,12 +179,17 @@ class MessageService @Inject constructor(
                     enablePlaceholders = false
                 ),
                 initialKey = initialKey,
-                pagingSourceFactory = { messageRepository.getMessagesPagingSource(roomId) }
+                pagingSourceFactory = {
+                    messageRepository.getMessageEntityPagingSource(roomId)
+                }
             )
 
             emitAll(
                 pager.flow.map { pagingData ->
-                    pagingData.map { message -> convertDomainMessageToUiModel(message) }
+                    pagingData.map { entity ->
+                        val message = messageRepository.convertEntityToDomain(entity)
+                        convertDomainMessageToUiModel(message)
+                    }
                 }
             )
         }
@@ -212,42 +229,32 @@ class MessageService @Inject constructor(
         val sendFailed = outboxStatus == OutBoxStatus.FAILED
         val isDispatched = outboxStatus == OutBoxStatus.DISPATCHED
 
-        // 로그 샘플링: 10개마다 1번만 출력하거나 새로운 메시지 ID인 경우만
-        statusCheckLogCounter++
-        val messageId = message.id.value
-        val shouldLog = (statusCheckLogCounter % 10 == 0) ||
-                !loggedMessageIds.contains(messageId) ||
-                sendFailed // 실패한 경우는 항상 로그
-
-        if (shouldLog) {
-            loggedMessageIds.add(messageId)
-            if (loggedMessageIds.size > 100) {
-                // 메모리 절약을 위해 100개 초과 시 오래된 것들 제거
-                loggedMessageIds.clear()
-            }
-
-            // LogThrottler를 사용한 최적화된 로그 출력
-            LogThrottler.d(
-                TAG,
-                "메시지 상태 확인 (#${statusCheckLogCounter}): messageId=$messageId, outboxStatus=$outboxStatus, isSending=$isSending, sendFailed=$sendFailed, isDispatched=$isDispatched",
-                "message_status_check",
-                500L // 500ms 간격
-            )
-        }
-
         // 이미지 URL 추출
         val imageUrls = extractImageUrlsFromPayload(message.payload.value)
         val hasImages = imageUrls.isNotEmpty()
 
+        // 로그는 extractImageUrlsFromPayload 내에서만 처리하여 중복 방지
+
         // 낙관적 편집/삭제 인디케이터 계산 (payload 메타 기반)
-        val payloadJson = try {
-            Json.parseToJsonElement(message.payload.value).jsonObject
-        } catch (e: Exception) {
-            JsonObject(mapOf())
+        val pendingOp = message.payload.getOptimisticOp()
+        val hasPendingOptimisticOp =
+            pendingOp == MessagePayload.OP_EDIT || pendingOp == MessagePayload.OP_DELETE
+
+        // 메시지 수정 여부 확인 (createdAt != updatedAt 또는 낙관적 편집 중)
+        val isModified = pendingOp == MessagePayload.OP_EDIT
+
+        // 디버깅 로그 추가 - 타임스탬프 차이 계산
+        val timestampDiff =
+            kotlin.math.abs(message.updatedAt.toEpochMilli() - message.createdAt.toEpochMilli())
+
+        if (isModified) {
+            Log.d(TAG, "🔧 수정된 메시지 감지: ${message.id.value}")
+            Log.d(TAG, "   createdAt: ${message.createdAt}")
+            Log.d(TAG, "   updatedAt: ${message.updatedAt}")
+            Log.d(TAG, "   timestampDiff: ${timestampDiff}ms")
+            Log.d(TAG, "   pendingOp: $pendingOp")
+            Log.d(TAG, "   timesDifferent: ${message.createdAt != message.updatedAt}")
         }
-        val metaObj = payloadJson[META_KEY] as? JsonObject
-        val pendingOp = metaObj?.get(META_PENDING_OP)?.jsonPrimitive?.content
-        val hasPendingOptimisticOp = pendingOp == OP_EDIT || pendingOp == OP_DELETE
 
         return ChatMessageUiModel(
             messageId = message.id.value,
@@ -256,10 +263,11 @@ class MessageService @Inject constructor(
             userProfileUrl = userProfileService.getCachedProfileUrl(senderId),
             messageType = message.messageType,
             message = message.payload.getTextContent() ?: "",
-            payload = message.payload.toString(),
+            // UI 모델은 JSON 문자열을 기대하므로 value를 전달 (toString()은 'MessagePayload(value=...)' 형식이라 파싱 실패)
+            payload = message.payload.value,
             formattedTimestamp = DateTimeUtil.formatChatTime(message.createdAt),
             actualTimestamp = message.createdAt,
-            isModified = false, // TODO: 수정 여부 확인
+            isModified = isModified,
             attachmentImageUrls = emptyList(), // 레거시 - 하위 호환용
             imageUrls = imageUrls, // 새로운 이미지 URL 목록
             hasImages = hasImages, // 이미지 포함 여부
@@ -299,33 +307,25 @@ class MessageService @Inject constructor(
 
     /**
      * 메시지 payload에서 이미지 URL들을 추출하는 유틸리티 메서드
+     * MessagePayload 클래스의 메서드를 활용하여 정확한 구조 파싱
      */
     private fun extractImageUrlsFromPayload(payload: String): List<String> {
         return try {
-            // JSON 파싱을 시도하여 이미지 정보 추출
-            val urls = when {
-                // 단일 이미지 처리
-                payload.contains("\"imageUrl\"") -> {
-                    val regex = "\"imageUrl\"\\s*:\\s*\"([^\"]+)\"".toRegex()
-                    val match = regex.find(payload)
-                    if (match != null) listOf(match.groupValues[1]) else emptyList()
-                }
-                // 다중 이미지 처리
-                payload.contains("\"images\"") -> {
-                    val regex = "\"url\"\\s*:\\s*\"([^\"]+)\"".toRegex()
-                    regex.findAll(payload).map { it.groupValues[1] }.toList()
-                }
+            val messagePayload = MessagePayload(payload)
+            val attachments = messagePayload.getAttachments()
+            val imageUrls = attachments
+                .filter { (it[MessagePayload.KEY_KIND] as? String) == "image" }
+                .mapNotNull { it[MessagePayload.KEY_URL] as? String }
 
-                else -> emptyList()
+            // 로그 최소화: 이미지가 있는 경우에만 payload만 출력하고, 개수/세부 정보는 생략
+            if (imageUrls.isNotEmpty()) {
+                Log.d(TAG, "🖼️ payload=$payload")
             }
 
-            if (urls.isNotEmpty()) {
-                Log.d(TAG, "🖼️ [UI표시] Payload에서 이미지 URL 추출 완료: ${urls.size}개 URL")
-            }
-
-            urls
+            imageUrls
         } catch (e: Exception) {
-            Log.w(TAG, "이미지 URL 추출 중 오류: ${e.message}")
+            Log.e(TAG, "❌ [이미지 URL 파싱 실패] ${e.message}", e)
+            Log.e(TAG, "❌ 실패한 payload: $payload")
             emptyList()
         }
     }
@@ -370,14 +370,10 @@ class MessageService @Inject constructor(
         _anchorTargetMessageId.value = messageId
 
         try {
-            // 1) 메시지 타임스탬프 조회
-            val anchorResult = messageRepository.findById(DocumentId(messageId))
-            val anchorTsMs = if (anchorResult is CustomResult.Success) {
-                anchorResult.data.createdAt.toEpochMilli()
-            } else {
-                // 메시지가 로컬에 없으면 현재 시간 기준으로만 프리페치 시도
-                System.currentTimeMillis()
-            }
+            // 1) 메시지 타임스탬프 조회 (로컬 전용 findById 사용)
+            val anchor = messageRepository.findById(messageId)
+            val anchorTsMs = anchor?.createdAt?.toEpochMilli()
+                ?: System.currentTimeMillis()
 
             // 2) 앵커 주변 범위 프리페치 (로컬 캐시 기준)
             runCatching {
@@ -413,13 +409,6 @@ class MessageService @Inject constructor(
         }
     }
 
-    /**
-     * 최신 메시지 ID 업데이트 (새 메시지 수신 시 호출)
-     */
-    fun updateLatestMessageId(messageId: String) {
-        latestMessageId = messageId
-        Log.d(TAG, "최신 메시지 ID 업데이트: $messageId")
-    }
 
     // ================================
     // 통합 메시지 전송 (단일 진입점)
@@ -467,37 +456,40 @@ class MessageService @Inject constructor(
                 )
             }
 
-            // 일반 텍스트/시스템 메시지 처리
-            val payload = MessageTypeDetector.createBasicPayload(
-                textContent = textContent,
-                images = emptyList(),
-                additionalData = buildMap {
-                    putAll(additionalMetadata)
-                    if (isSystemMessage && systemType != null) {
-                        put(WebSocketFieldConstants.PAYLOAD_SYSTEM_TYPE, systemType)
+            // 일반 텍스트/시스템 메시지 처리 - 도메인 Message 구성 후 통합 UseCase 호출
+            val messagePayload = if (isSystemMessage && systemType != null) {
+                val jsonObject = buildJsonObject {
+                    put(MessagePayload.KEY_CONTENT, JsonPrimitive(textContent))
+                    additionalMetadata.forEach { (key, value) ->
+                        put(key, JsonPrimitive(value))
                     }
                 }
-            )
-
-            val messageId = DocumentId(messageRepository.sendMessage(roomId, payload))
-            updateOutBoxStatusCache(messageId.value, OutBoxStatus.PENDING)
-
-            val sendResult = roomWebSocketUseCases.sendMessageUseCase(
-                senderId = senderId,
-                content = textContent,
-                messageId = messageId,
-                replyToMessageId = replyToMessageId,
-                projectId = projectId,
-                channelType = channelType
-            )
-
-            if (sendResult.isSuccess) {
-                Log.d(TAG, "✅ 텍스트 메시지 전송 성공: ${messageId.value}")
+                MessagePayload(jsonObject.toString())
             } else {
-                Log.e(TAG, "❌ WebSocket 전송 실패")
+                MessagePayload.forText(textContent)
             }
 
-            CustomResult.Success(messageId)
+            val newMessageId = DocumentId(java.util.UUID.randomUUID().toString())
+            val domainMessage = Message.create(
+                id = newMessageId,
+                senderId = senderId,
+                messageType = MessageType.TEXT,
+                payload = messagePayload,
+                replyToMessageId = replyToMessageId,
+                mentions = emptyList(),
+                channelId = ChannelId(roomId)
+            )
+
+            val result = sendMessageUseCase(
+                message = domainMessage,
+                projectId = projectId?.let { com.example.domain.vo.ProjectId(it) }
+            )
+
+            if (result is CustomResult.Success) {
+                updateOutBoxStatusCache(result.data.value, OutBoxStatus.PENDING)
+            }
+
+            result
 
         } catch (e: Exception) {
             Log.e(TAG, "메시지 전송 중 예외", e)
@@ -538,7 +530,7 @@ class MessageService @Inject constructor(
                 "📂 [이미지전송] Storage 경로 매핑 완료: ${uriToPathMapping.size}개 URI → Firebase Storage 경로"
             )
 
-            // 2단계: Placeholder payload 생성 (uploading 상태)
+            // 2단계: 로컬 DB에 placeholder 저장 (UI 즉시 표시용, uploading true + progress 0)
             val placeholderPayload = if (imageUris.size == 1) {
                 MessagePayload.forImagePlaceholder(
                     content = textContent,
@@ -551,11 +543,11 @@ class MessageService @Inject constructor(
                 )
             }
 
-            // 3단계: 로컬 DB에 저장
+            // 로컬 DB에 저장
             val placeholderMessage = Message.create(
                 id = messageId,
                 senderId = senderId,
-                messageType = MessageType.IMAGE,
+                messageType = MessageType.TEXT,
                 payload = placeholderPayload,
                 replyToMessageId = replyToMessageId,
                 mentions = emptyList(),
@@ -569,27 +561,65 @@ class MessageService @Inject constructor(
 
             updateOutBoxStatusCache(messageId.value, OutBoxStatus.PENDING)
 
-            // 4단계: WebSocket으로 전송
-            val websocketResult = roomWebSocketUseCases.sendMessageUseCase(
-                senderId = senderId,
-                content = textContent,
-                messageId = messageId,
-                replyToMessageId = replyToMessageId,
-                projectId = projectId,
-                channelType = channelType
-            )
-
-            if (websocketResult.isSuccess) {
-                Log.d(TAG, "✅ Placeholder 메시지 WebSocket 전송 성공")
-                Log.d(TAG, "🔄 [이미지전송] 백그라운드 Firebase Storage 업로드 시작")
-                // 5단계: 백그라운드에서 Firebase Storage 업로드 시작
-                startBackgroundImageUpload(messageId, imageUris, uriToPathMapping, textContent)
-            } else {
-                Log.w(TAG, "⚠️ WebSocket 전송 실패, 오프라인 큐에 추가 예정")
-                // TODO: 오프라인 큐 처리
+            // 3단계: 업로드 선행(Option A) - 모든 이미지를 Firebase Storage에 업로드하여 안정 URL 획득
+            Log.d(TAG, "🔄 [이미지전송] Firebase Storage 업로드(선행) 시작")
+            val uploadedImages = mutableListOf<Map<String, Any?>>()
+            imageUris.forEachIndexed { index, uri ->
+                val storagePath = uriToPathMapping[uri.toString()] ?: return@forEachIndexed
+                val uploadResult = fileUseCases.uploadFileUseCase(uri, storagePath)
+                if (uploadResult is CustomResult.Success) {
+                    val ext = ImageCompressor.getExtension(context, uri) ?: "jpg"
+                    val mime = if (ext == "jpg") "image/jpeg" else "image/$ext"
+                    uploadedImages.add(
+                        mapOf(
+                            "kind" to "image",
+                            "index" to index,
+                            "url" to uploadResult.data,
+                            "filename" to (uri.lastPathSegment ?: "image.$ext"),
+                            "mime" to mime
+                        )
+                    )
+                } else {
+                    Log.e(TAG, "❌ 업로드 실패(선행): ${index + 1}/${imageUris.size}")
+                }
             }
 
-            CustomResult.Success(messageId)
+            if (uploadedImages.isEmpty()) {
+                Log.e(TAG, "❌ 모든 이미지 업로드 실패(선행)")
+                markMessageAsFailed(messageId)
+                return CustomResult.Failure(Exception("모든 이미지 업로드 실패"))
+            }
+
+            // 4단계: 첨부 포함 payload 구성
+            val finalPayload = MessagePayload.forImages(
+                content = textContent,
+                images = uploadedImages
+            )
+
+            // 5단계: 통합 UseCase로 메시지 전송 (로컬 업서트 + OutBox + WebSocket)
+            val domainMessage = Message.create(
+                id = messageId,
+                senderId = senderId,
+                messageType = MessageType.TEXT,
+                payload = finalPayload,
+                replyToMessageId = replyToMessageId,
+                mentions = emptyList(),
+                channelId = ChannelId(roomId)
+            )
+
+            val result = sendMessageUseCase(
+                message = domainMessage,
+                projectId = projectId?.let { com.example.domain.vo.ProjectId(it) }
+            )
+
+            if (result is CustomResult.Failure) {
+                Log.e(TAG, "❌ 첨부 포함 메시지 전송 실패", result.error)
+                markMessageAsFailed(messageId)
+            } else {
+                Log.d(TAG, "✅ 첨부 포함 메시지 전송 완료: ${messageId.value}")
+            }
+
+            result
 
         } catch (e: Exception) {
             Log.e(TAG, "❌ 이미지 메시지 전송 중 예외", e)
@@ -647,6 +677,7 @@ class MessageService @Inject constructor(
 
                             uploadedImages.add(
                                 mapOf(
+                                    "kind" to "image",
                                     "index" to index,
                                     "url" to uploadResult.data,
                                     "filename" to (uri.lastPathSegment ?: "image.$ext"),
@@ -708,45 +739,29 @@ class MessageService @Inject constructor(
                 images = uploadedImages
             )
 
-            // 로컬 DB의 메시지 payload 업데이트
-            val messageResult = messageRepository.findById(messageId)
-            when (messageResult) {
-                is CustomResult.Success -> {
-                    val message = messageResult.data
-                    message.updatePayload(finalPayload)
+            // 로컬 DB의 메시지 payload 업데이트 (로컬 전용 findById 사용)
+            val message = messageRepository.findById(messageId.value)
+            if (message != null) {
+                message.updatePayload(finalPayload)
 
-                    val saveResult = messageRepository.save(message)
-                    if (saveResult.isSuccess) {
-                        Log.d(
-                            TAG,
-                            "✅ [이미지전송완료] 메시지 payload를 실제 Firebase URL로 업데이트 완료: ${messageId.value}"
-                        )
+                val saveResult = messageRepository.save(message)
+                if (saveResult.isSuccess) {
+                    Log.d(
+                        TAG,
+                        "✅ [이미지전송완료] 메시지 payload를 실제 Firebase URL로 업데이트 완료: ${messageId.value}"
+                    )
 
-                        // OutBox 상태를 DISPATCHED로 변경 (업로드 완료)
-                        updateOutBoxStatusCache(messageId.value, OutBoxStatus.DISPATCHED)
+                    // OutBox 상태를 DISPATCHED로 변경 (업로드 완료)
+                    updateOutBoxStatusCache(messageId.value, OutBoxStatus.DISPATCHED)
 
-                        // UI 강제 갱신을 위한 PagingSource invalidate
-                        try {
-                            val repoImplClass =
-                                Class.forName("com.example.data_repository.base.MessageRepositoryImpl")
-                            val method = repoImplClass.getMethod("invalidateCurrentPagingSource")
-                            if (repoImplClass.isInstance(messageRepository)) {
-                                method.invoke(messageRepository)
-                                Log.d(TAG, "✅ PagingSource invalidate 완료")
-                            }
-                        } catch (e: Exception) {
-                            Log.d(TAG, "⚠️ PagingSource invalidate 실패 (무시 가능): ${e.message}")
-                        }
-                        
-                    } else {
-                        Log.e(TAG, "❌ 메시지 payload 업데이트 저장 실패")
-                        markMessageAsFailed(messageId)
-                    }
-                }
-                else -> {
-                    Log.e(TAG, "❌ 업데이트할 메시지를 찾을 수 없음: ${messageId.value}")
+                    // Room이 자동으로 invalidation을 처리하므로 수동 invalidation 불필요
+                } else {
+                    Log.e(TAG, "❌ 메시지 payload 업데이트 저장 실패")
                     markMessageAsFailed(messageId)
                 }
+            } else {
+                Log.e(TAG, "❌ 업데이트할 메시지를 찾을 수 없음: ${messageId.value}")
+                markMessageAsFailed(messageId)
             }
 
         } catch (e: Exception) {
@@ -754,18 +769,6 @@ class MessageService @Inject constructor(
             markMessageAsFailed(messageId)
         }
     }
-
-    // ================================
-    // 헬퍼 메서드들 (내부 사용)
-    // ================================
-
-
-
-
-
-
-
-
     /**
      * 메시지 ACK 처리 (WebSocket ACK 수신 시)
      */
@@ -775,18 +778,7 @@ class MessageService @Inject constructor(
             if (result is CustomResult.Success) {
                 updateOutBoxStatusCache(messageId, OutBoxStatus.DISPATCHED)
 
-                // 🔄 UI 즉시 갱신을 위한 강제 invalidate
-                // MessageRepositoryImpl의 invalidateCurrentPagingSource() 메서드 호출
-                try {
-                    val repoImplClass =
-                        Class.forName("com.example.data_repository.base.MessageRepositoryImpl")
-                    val method = repoImplClass.getMethod("invalidateCurrentPagingSource")
-                    if (repoImplClass.isInstance(messageRepository)) {
-                        method.invoke(messageRepository)
-                    }
-                } catch (e: Exception) {
-                    Log.d(TAG, "⚠️ PagingSource invalidate 호출 실패 (무시 가능): ${e.message}")
-                }
+                // Room이 자동으로 invalidation을 처리하므로 수동 invalidation 불필요
 
                 Log.d(TAG, "✅ 메시지 ACK 처리 완료 + UI 갱신: $messageId")
             } else {
@@ -806,17 +798,7 @@ class MessageService @Inject constructor(
             if (result is CustomResult.Success) {
                 updateOutBoxStatusCache(messageId, OutBoxStatus.FAILED)
 
-                // 🔄 UI 즉시 갱신을 위한 강제 invalidate (실패 상태도 즉시 반영)
-                try {
-                    val repoImplClass =
-                        Class.forName("com.example.data_repository.base.MessageRepositoryImpl")
-                    val method = repoImplClass.getMethod("invalidateCurrentPagingSource")
-                    if (repoImplClass.isInstance(messageRepository)) {
-                        method.invoke(messageRepository)
-                    }
-                } catch (e: Exception) {
-                    Log.d(TAG, "⚠️ PagingSource invalidate 호출 실패 (무시 가능): ${e.message}")
-                }
+                // Room이 자동으로 invalidation을 처리하므로 수동 invalidation 불필요
 
                 Log.d(TAG, "✅ 메시지 실패 처리 완료 + UI 갱신: $messageId")
             } else {
@@ -827,43 +809,9 @@ class MessageService @Inject constructor(
         }
     }
 
-    /**
-     * 로컬 Room DB에서 최신 메시지 일부를 조회하여 로그로 출력 (디버그용)
-     */
-    suspend fun debugLogRecentMessages(limit: Int = 10) {
-        try {
-            Log.d(TAG, "===== 🗂️ Room DB 최신 메시지 조회 (channel=$roomId, limit=$limit) =====")
-            when (val result = messageRepository.getRecentMessages(roomId, limit)) {
-                is CustomResult.Success -> {
-                    val messages = result.data
-                    if (messages.isEmpty()) {
-                        Log.d(TAG, "(빈 목록)")
-                    } else {
-                        messages.forEachIndexed { index, m ->
-                            val text = m.payload.getTextContent() ?: ""
-                            val raw = m.payload.value.take(160).replace('\n', ' ')
-                            Log.d(
-                                TAG,
-                                "#${index + 1} id=${m.id.value}, channel=${m.channelId.value}, at=${m.createdAt}, type=${m.messageType}, deleted=${m.isDeleted.value}, text=$text, raw=$raw"
-                            )
-                        }
-                    }
-                }
-                is CustomResult.Failure -> {
-                    Log.e(TAG, "Room DB 최신 메시지 조회 실패", result.error)
-                }
-                else -> {
-                    Log.d(TAG, "Room DB 최신 메시지 조회 - 상태: $result")
-                }
-            }
-            Log.d(TAG, "===== 🗂️ Room DB 최신 메시지 조회 끝 =====")
-        } catch (e: Exception) {
-            Log.e(TAG, "Room DB 최신 메시지 로그 출력 중 예외", e)
-        }
-    }
 
     /**
-     * 내부 메시지 전송 로직
+     * 내부 메시지 전송 로직 (payload 기반)
      */
     private suspend fun sendMessageInternal(
         senderId: UserId,
@@ -871,14 +819,32 @@ class MessageService @Inject constructor(
         payload: MessagePayload,
         replyToMessageId: DocumentId?
     ): CustomResult<DocumentId, Exception> {
-        // 기존 경로 유지: 복합/이미지 페이로드 등 레거시 경로에서 사용
-        val payloadMap = mutableMapOf<String, Any?>()
-        payload.getTextContent()?.let { payloadMap["content"] = it }
-        if (payloadMap.isEmpty()) {
-            // content 키가 없으면 전체 JSON 문자열을 content로 전송
-            payloadMap["content"] = payload.value
+        return try {
+            val newId = DocumentId.generate()
+            val domainMessage = Message.create(
+                id = newId,
+                senderId = senderId,
+                messageType = messageType,
+                payload = payload,
+                replyToMessageId = replyToMessageId,
+                mentions = emptyList(),
+                channelId = ChannelId(roomId)
+            )
+
+            val result = sendMessageUseCase(
+                message = domainMessage,
+                projectId = projectId?.let { com.example.domain.vo.ProjectId(it) }
+            )
+
+            if (result is CustomResult.Success) {
+                updateOutBoxStatusCache(result.data.value, OutBoxStatus.PENDING)
+            }
+
+            result
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ sendMessageInternal 중 예외", e)
+            CustomResult.Failure(e)
         }
-        return sendMessageWithPayloadMap(senderId, payloadMap, replyToMessageId)
     }
 
     /**
@@ -892,44 +858,30 @@ class MessageService @Inject constructor(
         replyToMessageId: DocumentId? = null
     ): CustomResult<DocumentId, Exception> {
         return try {
-            // 1) 로컬 저장 + OutBox 생성 (메시지 ID 발급)
-            val createdId = messageRepository.sendMessage(roomId, payloadMap)
-            val messageId = DocumentId(createdId)
+            val payloadJson = mapToJsonString(payloadMap)
+            val messagePayload = MessagePayload(payloadJson)
 
-            // OutBox 상태 캐시 업데이트 (PENDING)
-            updateOutBoxStatusCache(messageId.value, OutBoxStatus.PENDING)
-
-            // 2) WebSocket 전송
-            val contentForWebSocket = (payloadMap["content"] as? String)
-                ?: mapToJsonString(payloadMap)
-
-            val sendResult = roomWebSocketUseCases.sendMessageUseCase(
+            val newId = DocumentId.generate()
+            val domainMessage = Message.create(
+                id = newId,
                 senderId = senderId,
-                content = contentForWebSocket,
-                messageId = messageId,
+                messageType = MessageType.TEXT,
+                payload = messagePayload,
                 replyToMessageId = replyToMessageId,
-                projectId = projectId,
-                channelType = channelType
+                mentions = emptyList(),
+                channelId = ChannelId(roomId)
             )
 
-            if (sendResult.isSuccess) {
-                Log.d(TAG, "✅ WebSocket 메시지 전송 성공: ${messageId.value}")
-                CustomResult.Success(messageId)
-            } else {
-                Log.e(TAG, "❌ WebSocket 메시지 전송 실패: ${sendResult.exceptionOrNull()?.message}")
+            val result = sendMessageUseCase(
+                message = domainMessage,
+                projectId = projectId?.let { com.example.domain.vo.ProjectId(it) }
+            )
 
-                // 오프라인 큐에 추가 (재전송용)
-                messageRepository.findById(messageId.value)?.let { msg ->
-                    offlineMessageQueue.queueMessage(
-                        com.example.feature_chat.queue.QueuedMessageAction.Send(
-                            message = msg,
-                            roomId = roomId
-                        )
-                    )
-                }
-
-                CustomResult.Success(messageId)
+            if (result is CustomResult.Success) {
+                updateOutBoxStatusCache(result.data.value, OutBoxStatus.PENDING)
             }
+
+            result
         } catch (e: Exception) {
             Log.e(TAG, "메시지 전송(Map) 중 예외", e)
             CustomResult.Failure(e)
@@ -973,11 +925,12 @@ class MessageService @Inject constructor(
 
         // 2) WebSocket 전송
         return try {
+            // 기존 메시지에서 attachments 보존하면서 content만 업데이트
+            val newPayload = createUpdatedPayloadWithPreservedAttachments(messageId, newContent)
             val editResult = roomWebSocketUseCases.editMessageUseCase(
                 messageId = messageId,
-                newContent = newContent,
-                projectId = projectId,
-                channelType = channelType
+                newPayload = newPayload,
+                projectId = projectId
             )
 
             if (editResult.isSuccess) {
@@ -1010,8 +963,7 @@ class MessageService @Inject constructor(
         return try {
             val deleteResult = roomWebSocketUseCases.deleteMessageUseCase(
                 messageId = messageId,
-                projectId = projectId,
-                channelType = channelType
+                projectId = projectId
             )
 
             if (deleteResult.isSuccess) {
@@ -1061,22 +1013,28 @@ class MessageService @Inject constructor(
     /** 로컬에 낙관적 편집 적용 (없으면 업서트) */
     suspend fun applyOptimisticEdit(messageId: DocumentId, newContent: String) {
         try {
-            val existing = messageRepository.findById(messageId)
-            if (existing is CustomResult.Success) {
-                val cur = existing.data
-                val optimisticPayload = buildOptimisticEditedPayload(
-                    newContent = newContent,
-                    backupPayloadJson = cur.payload.value
-                )
-                cur.updatePayload(optimisticPayload)
-                messageRepository.save(cur)
+            val existing = messageRepository.findById(messageId.value)
+            if (existing != null) {
+                val currentPayload = existing.payload
+                // 기존 attachments 보존 + content 교체
+                val preservedAttachments = currentPayload.getAttachments()
+                val updatedPayload = if (preservedAttachments.isNotEmpty()) {
+                    MessagePayload.forTextWithAttachments(newContent, preservedAttachments)
+                } else {
+                    MessagePayload.forText(newContent)
+                }
+                // 낙관적 메타 추가
+                val optimisticPayload = MessagePayload(updatedPayload.value)
+                    .addOptimisticEdit(currentPayload.value)
+                existing.updatePayload(optimisticPayload)
+                messageRepository.save(existing)
             } else {
                 // 업서트: 없는 경우 임시 메시지 생성
                 val temp = Message.create(
                     id = messageId,
-                    senderId = UserId(AuthUtil.getCurrentUserId() ?: ""),
+                    senderId = UserId(AuthUtil.getCurrentUserId()),
                     messageType = MessageType.TEXT,
-                    payload = buildOptimisticEditedPayload(newContent, backupPayloadJson = "{}"),
+                    payload = MessagePayload.forText(newContent).addOptimisticEdit("{}"),
                     replyToMessageId = null,
                     mentions = emptyList(),
                     channelId = ChannelId(roomId)
@@ -1091,12 +1049,11 @@ class MessageService @Inject constructor(
     /** 로컬에 낙관적 삭제 적용 (없으면 업서트) */
     suspend fun applyOptimisticDelete(messageId: DocumentId) {
         try {
-            val existing = messageRepository.findById(messageId)
-            if (existing is CustomResult.Success) {
-                val cur = existing.data
-                val newPayload =
-                    addMetaToPayload(cur.payload.value, OP_DELETE, backup = cur.payload.value)
-                cur.updatePayload(MessagePayload(newPayload))
+            val existing = messageRepository.findById(messageId.value)
+            if (existing != null) {
+                val cur = existing
+                val newPayload = cur.payload.addOptimisticDelete(cur.payload.value)
+                cur.updatePayload(newPayload)
                 cur.delete()
                 messageRepository.save(cur)
             } else {
@@ -1105,13 +1062,7 @@ class MessageService @Inject constructor(
                     id = messageId,
                     senderId = UserId(AuthUtil.getCurrentUserId() ?: ""),
                     messageType = MessageType.TEXT,
-                    payload = MessagePayload(
-                        addMetaToPayload(
-                            MessagePayload.forText("").value,
-                            OP_DELETE,
-                            backup = "{}"
-                        )
-                    ),
+                    payload = MessagePayload.forText("").addOptimisticDelete("{}"),
                     replyToMessageId = null,
                     mentions = emptyList(),
                     channelId = ChannelId(roomId)
@@ -1127,12 +1078,13 @@ class MessageService @Inject constructor(
     /** ACK 수신 시 낙관적 메타 정리(편집/삭제 공통) */
     suspend fun handleOptimisticAck(messageId: String) {
         try {
-            val result = messageRepository.findById(DocumentId(messageId))
-            if (result is CustomResult.Success) {
-                val cur = result.data
-                val cleaned = removeMetaFromPayload(cur.payload.value)
-                cur.updatePayload(MessagePayload(cleaned))
+            val cur = messageRepository.findById(messageId)
+            if (cur != null) {
+                val cleaned = MessagePayload(cur.payload.value).clearOptimisticMeta()
+                cur.updatePayload(cleaned)
                 messageRepository.save(cur)
+
+                // Room이 자동으로 invalidation을 처리하므로 수동 invalidation 불필요
             }
         } catch (e: Exception) {
             Log.e(TAG, "handleOptimisticAck 실패: $messageId", e)
@@ -1142,13 +1094,15 @@ class MessageService @Inject constructor(
     /** FAILED 처리 시 낙관적 롤백(편집/삭제 공통) */
     suspend fun handleOptimisticFailure(messageId: String) {
         try {
-            val result = messageRepository.findById(DocumentId(messageId))
-            if (result is CustomResult.Success) {
-                val cur = result.data
-                val (pendingOp, _) = extractPendingOpAndBackup(cur.payload.value)
+            val cur = messageRepository.findById(messageId)
+            if (cur != null) {
+                val (pendingOp, _) = Pair(
+                    MessagePayload(cur.payload.value).getOptimisticOp(),
+                    MessagePayload(cur.payload.value).getOptimisticBackup()
+                )
                 when (pendingOp) {
-                    OP_EDIT -> revertOptimisticEdit(messageId)
-                    OP_DELETE -> revertOptimisticDelete(messageId)
+                    MessagePayload.OP_EDIT -> revertOptimisticEdit(messageId)
+                    MessagePayload.OP_DELETE -> revertOptimisticDelete(messageId)
                 }
             }
         } catch (e: Exception) {
@@ -1156,15 +1110,14 @@ class MessageService @Inject constructor(
         }
     }
 
-    suspend fun finalizeOptimisticEdit(messageId: String) = handleOptimisticAck(messageId)
-    suspend fun finalizeOptimisticDelete(messageId: String) = handleOptimisticAck(messageId)
-
     suspend fun revertOptimisticEdit(messageId: String) {
         try {
-            val result = messageRepository.findById(DocumentId(messageId))
-            if (result is CustomResult.Success) {
-                val cur = result.data
-                val (_, backupJson) = extractPendingOpAndBackup(cur.payload.value)
+            val cur = messageRepository.findById(messageId)
+            if (cur != null) {
+                val (_, backupJson) = Pair(
+                    MessagePayload(cur.payload.value).getOptimisticOp(),
+                    MessagePayload(cur.payload.value).getOptimisticBackup()
+                )
                 val backup = backupJson ?: return
                 // 백업으로 복원하고 메타 제거
                 val restoredPayload = try {
@@ -1174,7 +1127,7 @@ class MessageService @Inject constructor(
                     // 텍스트만 있는 경우
                     MessagePayload.forText(backup).value
                 }
-                val cleaned = removeMetaFromPayload(restoredPayload)
+                val cleaned = MessagePayload(restoredPayload).clearOptimisticMeta().value
                 cur.updatePayload(MessagePayload(cleaned))
                 messageRepository.save(cur)
             } else {
@@ -1188,10 +1141,12 @@ class MessageService @Inject constructor(
 
     suspend fun revertOptimisticDelete(messageId: String) {
         try {
-            val result = messageRepository.findById(DocumentId(messageId))
-            if (result is CustomResult.Success) {
-                val cur = result.data
-                val (_, backupJson) = extractPendingOpAndBackup(cur.payload.value)
+            val cur = messageRepository.findById(messageId)
+            if (cur != null) {
+                val (_, backupJson) = Pair(
+                    MessagePayload(cur.payload.value).getOptimisticOp(),
+                    MessagePayload(cur.payload.value).getOptimisticBackup()
+                )
                 val restoredPayload = when {
                     backupJson == null -> cur.payload.value
                     else -> try {
@@ -1205,7 +1160,7 @@ class MessageService @Inject constructor(
                     id = cur.id,
                     senderId = cur.senderId,
                     messageType = cur.messageType,
-                    payload = MessagePayload(removeMetaFromPayload(restoredPayload)),
+                    payload = MessagePayload(restoredPayload).clearOptimisticMeta(),
                     replyToMessageId = cur.replyToMessageId,
                     createdAt = cur.createdAt,
                     updatedAt = cur.updatedAt,
@@ -1223,79 +1178,55 @@ class MessageService @Inject constructor(
     }
 
     // ================================
+    // 🔧 메시지 수정 유틸리티
+    // ================================
+
+    /**
+     * 기존 payload JSON에서 content 필드만 교체한 새로운 payload 생성 (간단한 방식)
+     */
+    private suspend fun createUpdatedPayloadWithPreservedAttachments(
+        messageId: DocumentId,
+        newContent: String
+    ): MessagePayload {
+        return try {
+            // 기존 메시지 조회
+            val existingMessage = messageRepository.findById(messageId.value)
+
+            if (existingMessage != null) {
+                // 기존 payload JSON을 파싱해서 content만 교체
+                val originalJson = existingMessage.payload.asJsonObject()
+                val updatedJson = buildJsonObject {
+                    // 기존 모든 필드 복사
+                    originalJson.forEach { (key, value) ->
+                        if (key == MessagePayload.KEY_CONTENT) {
+                            put(key, JsonPrimitive(newContent))  // content만 새 값으로 교체
+                        } else {
+                            put(key, value)  // 나머지는 그대로 유지 (attachments 포함)
+                        }
+                    }
+                    // content 키가 없었다면 추가
+                    if (!originalJson.containsKey(MessagePayload.KEY_CONTENT)) {
+                        put(MessagePayload.KEY_CONTENT, JsonPrimitive(newContent))
+                    }
+                }
+
+                Log.d(TAG, "✏️ 메시지 수정: content만 교체, 기존 구조 보존")
+                MessagePayload(updatedJson.toString())
+            } else {
+                // 메시지를 찾을 수 없으면 단순 텍스트로 fallback
+                Log.w(TAG, "⚠️ 메시지 수정: 기존 메시지 찾을 수 없음, 단순 텍스트로 처리")
+                MessagePayload.forText(newContent)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ 메시지 수정: payload 생성 실패, 단순 텍스트로 fallback", e)
+            MessagePayload.forText(newContent)
+        }
+    }
+
+    // ================================
     // 🔧 JSON 유틸리티
     // ================================
-    private fun buildOptimisticEditedPayload(
-        newContent: String,
-        backupPayloadJson: String
-    ): MessagePayload {
-        val backupElement: JsonElement = try {
-            Json.parseToJsonElement(backupPayloadJson)
-        } catch (_: Exception) {
-            JsonPrimitive(backupPayloadJson)
-        }
-        val meta = buildJsonObject {
-            put(META_PENDING_OP, JsonPrimitive(OP_EDIT))
-            put(META_BACKUP_PAYLOAD, backupElement)
-        }
-        val obj = buildJsonObject {
-            put("content", JsonPrimitive(newContent))
-            put(META_KEY, meta)
-        }
-        return MessagePayload(obj.toString())
-    }
-
-    private fun addMetaToPayload(currentPayloadJson: String, op: String, backup: String): String {
-        val baseObj: JsonObject = try {
-            Json.parseToJsonElement(currentPayloadJson).jsonObject
-        } catch (_: Exception) {
-            JsonObject(mapOf("content" to JsonPrimitive("")))
-        }
-        val backupElement: JsonElement = try {
-            Json.parseToJsonElement(backup)
-        } catch (_: Exception) {
-            JsonPrimitive(backup)
-        }
-        val meta = buildJsonObject {
-            put(META_PENDING_OP, JsonPrimitive(op))
-            put(META_BACKUP_PAYLOAD, backupElement)
-        }
-        val merged = buildJsonObject {
-            baseObj.forEach { (k, v) -> put(k, v) }
-            put(META_KEY, meta)
-        }
-        return merged.toString()
-    }
-
-    private fun removeMetaFromPayload(payloadJson: String): String {
-        return try {
-            val obj = Json.parseToJsonElement(payloadJson).jsonObject
-            val cleaned = buildJsonObject {
-                obj.forEach { (k, v) -> if (k != META_KEY) put(k, v) }
-            }
-            cleaned.toString()
-        } catch (_: Exception) {
-            payloadJson
-        }
-    }
-
-    private fun extractPendingOpAndBackup(payloadJson: String): Pair<String?, String?> {
-        return try {
-            val obj = Json.parseToJsonElement(payloadJson).jsonObject
-            val meta = obj[META_KEY] as? JsonObject
-            val op = meta?.get(META_PENDING_OP)?.jsonPrimitive?.content
-            val backupEl = meta?.get(META_BACKUP_PAYLOAD)
-            val backup = when (backupEl) {
-                is JsonObject -> backupEl.toString()
-                is JsonPrimitive -> backupEl.content
-                is JsonNull -> null
-                else -> backupEl?.toString()
-            }
-            Pair(op, backup)
-        } catch (_: Exception) {
-            Pair(null, null)
-        }
-    }
+    // MessagePayload 유틸 사용으로 대체됨
 
     /**
      * 이미지 업로드 재시도 로직 포함
@@ -1319,82 +1250,6 @@ class MessageService @Inject constructor(
         }
     }
 
-    /**
-     * 배치 업로드에서 개별 이미지 업로드 재시도 로직
-     */
-    /*private suspend fun uploadImageWithRetryForBatch(
-        compressedUri: Uri,
-        index: Int,
-        originalUri: Uri,
-        batchRetryCount: Int
-    ): Map<String, Any>? {
-        return try {
-            val uploadPath =
-                "chat_images/${roomId}/${System.currentTimeMillis()}_${index}_r${batchRetryCount}.jpg"
-            val uploadResult = uploadImageWithRetry(compressedUri, uploadPath, 0)
-
-            when (uploadResult) {
-                is CustomResult.Success -> {
-                    Log.d(TAG, "✅ 배치 이미지 ${index + 1} 업로드 성공")
-                    mapOf(
-                        "url" to uploadResult.data,
-                        "filename" to (originalUri.lastPathSegment ?: "image.jpg"),
-                        "mime" to "image/jpeg",
-                        "compressed" to true,
-                        "retryCount" to batchRetryCount
-                    )
-                }
-
-                is CustomResult.Failure -> {
-                    Log.e(TAG, "❌ 배치 이미지 ${index + 1} 업로드 실패", uploadResult.error)
-                    null
-                }
-
-                else -> {
-                    Log.e(TAG, "❌ 배치 이미지 ${index + 1} 업로드 알 수 없는 상태")
-                    null
-                }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ 배치 이미지 ${index + 1} 업로드 예외", e)
-            null
-        }
-    }*/
-
-    /**
-     * 실패한 단일 이미지 메시지를 오프라인 큐에 추가
-     */
-    /*private fun queueFailedImageMessage(
-        senderId: UserId,
-        imageUri: Uri,
-        content: String,
-        replyToMessageId: DocumentId?
-    ) {
-        try {
-            Log.d(TAG, "📋 실패한 이미지 메시지 큐에 추가: $imageUri")
-            // TODO: 이미지 메시지 전용 큐잉 시스템 구현
-            // 현재는 기본 메시지 큐를 사용하되, 추후 이미지 전용 처리 필요
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ 실패한 이미지 메시지 큐잉 실패", e)
-        }
-    }*/
-
-    /**
-     * 실패한 다중 이미지 메시지를 오프라인 큐에 추가
-     */
-    /*private fun queueFailedImagesMessage(
-        senderId: UserId,
-        imageUris: List<Uri>,
-        content: String,
-        replyToMessageId: DocumentId?
-    ) {
-        try {
-            Log.d(TAG, "📋 실패한 다중 이미지 메시지 큐에 추가: ${imageUris.size}개")
-            // TODO: 다중 이미지 메시지 전용 큐잉 시스템 구현
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ 실패한 다중 이미지 메시지 큐잉 실패", e)
-        }
-    }*/
 
     /**
      * 메시지 재전송 기능
@@ -1403,73 +1258,62 @@ class MessageService @Inject constructor(
         Log.d(TAG, "🔄 실패한 메시지 재전송 시도: $messageId")
 
         return try {
-            // Room DB에서 실패한 메시지 조회
-            val messageResult = messageRepository.findById(DocumentId(messageId))
+            // Room DB에서 실패한 메시지 조회 (로컬 전용 findById)
+            val message = messageRepository.findById(messageId)
+            if (message != null) {
+                val payload = message.payload
 
-            when (messageResult) {
-                is CustomResult.Success -> {
-                    val message = messageResult.data
-                    val payload = message.payload
+                // 이미지 메시지인지 확인
+                val imageUrls = extractImageUrlsFromPayload(payload.value)
 
-                    // 이미지 메시지인지 확인
-                    val imageUrls = extractImageUrlsFromPayload(payload.value)
+                if (imageUrls.isNotEmpty()) {
+                    // 이미지 메시지 재전송 - 이미 업로드된 URL로 바로 전송
+                    val result = sendMessageInternal(
+                        senderId = message.senderId,
+                        messageType = message.messageType,
+                        payload = payload,
+                        replyToMessageId = message.replyToMessageId
+                    )
 
-                    if (imageUrls.isNotEmpty()) {
-                        // 이미지 메시지 재전송 - 이미 업로드된 URL로 바로 전송
-                        val result = sendMessageInternal(
-                            senderId = message.senderId,
-                            messageType = message.messageType,
-                            payload = payload,
-                            replyToMessageId = message.replyToMessageId
-                        )
+                    if (result is CustomResult.Success) {
+                        // 기존 실패한 메시지 삭제
+                        messageRepository.delete(DocumentId(messageId))
+                        updateOutBoxStatusCache(messageId, OutBoxStatus.DISPATCHED)
+                    }
 
-                        if (result is CustomResult.Success) {
-                            // 기존 실패한 메시지 삭제
-                            messageRepository.delete(DocumentId(messageId))
-                            updateOutBoxStatusCache(messageId, OutBoxStatus.DISPATCHED)
-                        }
+                    when (result) {
+                        is CustomResult.Success -> Success(Unit)
+                        is CustomResult.Failure -> result
+                        is CustomResult.Loading -> result
+                        is CustomResult.Initial -> result
+                        is CustomResult.Progress -> result
+                    }
+                } else {
+                    // 일반 텍스트 메시지 재전송
+                    val result = sendMessageInternal(
+                        senderId = message.senderId,
+                        messageType = message.messageType,
+                        payload = payload,
+                        replyToMessageId = message.replyToMessageId
+                    )
 
-                        when (result) {
-                            is CustomResult.Success -> Success(Unit)
-                            is CustomResult.Failure -> result
-                            is CustomResult.Loading -> result
-                            is CustomResult.Initial -> result
-                            is CustomResult.Progress -> result
-                        }
-                    } else {
-                        // 일반 텍스트 메시지 재전송
-                        val result = sendMessageInternal(
-                            senderId = message.senderId,
-                            messageType = message.messageType,
-                            payload = payload,
-                            replyToMessageId = message.replyToMessageId
-                        )
+                    if (result is CustomResult.Success) {
+                        // 기존 실패한 메시지 삭제
+                        messageRepository.delete(DocumentId(messageId))
+                        updateOutBoxStatusCache(messageId, OutBoxStatus.DISPATCHED)
+                    }
 
-                        if (result is CustomResult.Success) {
-                            // 기존 실패한 메시지 삭제
-                            messageRepository.delete(DocumentId(messageId))
-                            updateOutBoxStatusCache(messageId, OutBoxStatus.DISPATCHED)
-                        }
-
-                        when (result) {
-                            is CustomResult.Success -> CustomResult.Success(Unit)
-                            is CustomResult.Failure -> result
-                            is CustomResult.Progress -> result
-                            is CustomResult.Initial -> result
-                            is CustomResult.Loading -> result
-                        }
+                    when (result) {
+                        is CustomResult.Success -> CustomResult.Success(Unit)
+                        is CustomResult.Failure -> result
+                        is CustomResult.Progress -> result
+                        is CustomResult.Initial -> result
+                        is CustomResult.Loading -> result
                     }
                 }
-
-                is CustomResult.Failure -> {
-                    Log.e(TAG, "❌ 재전송할 메시지 조회 실패", messageResult.error)
-                    CustomResult.Failure(Exception("재전송할 메시지를 찾을 수 없습니다"))
-                }
-
-                else -> {
-                    Log.e(TAG, "❌ 재전송할 메시지 조회 알 수 없는 상태")
-                    CustomResult.Failure(Exception("메시지 조회 실패"))
-                }
+            } else {
+                Log.e(TAG, "❌ 재전송할 메시지 조회 실패: $messageId")
+                CustomResult.Failure(Exception("재전송할 메시지를 찾을 수 없습니다"))
             }
         } catch (e: Exception) {
             Log.e(TAG, "❌ 메시지 재전송 중 예외", e)
@@ -1480,158 +1324,6 @@ class MessageService @Inject constructor(
     // ================================
     // 🎯 이미지 캐싱 및 성능 최적화
     // ================================
-
-    /**
-     * 채팅방 최근 이미지들을 프리로드하여 캐시에 저장
-     */
-    suspend fun preloadRecentImages() {
-        try {
-            Log.d(TAG, "🚀 최근 이미지 프리로드 시작")
-
-            // 최근 50개 메시지에서 이미지 URL 추출
-            val recentMessagesResult = messageRepository.getRecentMessages(roomId, 50)
-
-            when (recentMessagesResult) {
-                is CustomResult.Success -> {
-                    val imageUrls = recentMessagesResult.data
-                        .asSequence()
-                        .mapNotNull { message ->
-                            extractImageUrlsFromPayload(message.payload.value)
-                        }
-                        .flatten()
-                        .distinct()
-                        .take(20) // 최대 20개 이미지만 프리로드
-                        .toList()
-
-                    if (imageUrls.isNotEmpty()) {
-                        // Coil 내부 캐시에 맡깁니다 (명시적 프리로딩 생략)
-                        Log.d(TAG, "ℹ️ 최근 이미지 URL 수집: ${imageUrls.size}개 (Coil 캐시 사용)")
-                    } else {
-                        Log.d(TAG, "📭 프리로드할 이미지 없음")
-                    }
-                }
-
-                is CustomResult.Failure -> {
-                    Log.e(TAG, "❌ 최근 메시지 조회 실패", recentMessagesResult.error)
-                }
-
-                else -> {
-                    Log.w(TAG, "⚠️ 최근 메시지 조회 알 수 없는 상태")
-                }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ 이미지 프리로드 중 예외", e)
-        }
-    }
-
-    /**
-     * 이미지 썸네일 생성 (UI 성능 최적화용)
-     */
-    suspend fun generateImageThumbnails(imageUrls: List<String>) {
-        try {
-            Log.d(TAG, "🖼️ 이미지 썸네일 생성 시작: ${imageUrls.size}개")
-
-            // Coil 변환/리사이즈를 사용하여 각 화면에서 처리. 전역 썸네일 생성은 생략
-
-            Log.d(TAG, "✅ 이미지 썸네일 생성 완료")
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ 썸네일 생성 중 예외", e)
-        }
-    }
-
-    /**
-     * 캐시 정리 (용량 최적화)
-     */
-    suspend fun cleanupCache() {
-        try {
-            Log.d(TAG, "🧹 캐시 정리 시작")
-            // Coil 디스크 캐시는 ImageLoader 설정에 따름. 별도 정리 생략
-            Log.d(TAG, "✅ 캐시 정리 완료")
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ 캐시 정리 중 예외", e)
-        }
-    }
-
-    /**
-     * 캐시 상태 정보 조회
-     */
-    fun getCacheInfo(): String {
-        return buildString {
-            appendLine("=== MessageService Cache Info ===")
-            appendLine("Room ID: $roomId")
-            appendLine("OutBox Cache: ${outboxStatusCache.size} entries")
-            appendLine("Status Check Count: $statusCheckLogCounter")
-            appendLine("Logged Message IDs: ${loggedMessageIds.size}")
-            appendLine("ChatImageCache: removed; using Coil caches")
-        }
-    }
-
-    /**
-     * 성능 및 로그 통계 정보 조회
-     */
-    fun getPerformanceStats(): String {
-        return buildString {
-            appendLine("=== MessageService Performance Stats ===")
-            appendLine("Room ID: $roomId")
-            appendLine("Status Check Total: $statusCheckLogCounter")
-            appendLine("Unique Messages Logged: ${loggedMessageIds.size}")
-            appendLine("OutBox Cache Size: ${outboxStatusCache.size}")
-            appendLine()
-            append(LogThrottler.getLogStats())
-        }
-    }
-
-    /**
-     * 성능 최적화를 위한 정리 작업
-     */
-    fun performMaintenance() {
-        try {
-            // LogThrottler 정리
-            LogThrottler.cleanup()
-
-            // 메시지 ID 캐시 정리 (메모리 절약)
-            if (loggedMessageIds.size > 200) {
-                val keepSize = 50
-                val toRemove = loggedMessageIds.size - keepSize
-                val iterator = loggedMessageIds.iterator()
-                var removed = 0
-
-                while (iterator.hasNext() && removed < toRemove) {
-                    iterator.next()
-                    iterator.remove()
-                    removed++
-                }
-
-                LogThrottler.d(TAG, "메시지 ID 캐시 정리 완료: ${removed}개 제거", "maintenance", 60000L)
-            }
-
-            // OutBox 상태 캐시 정리 (너무 많아지면)
-            if (outboxStatusCache.size > 1000) {
-                val currentSize = outboxStatusCache.size
-                outboxStatusCache.clear()
-
-                LogThrottler.d(TAG, "OutBox 캐시 초기화: ${currentSize}개 항목 제거", "maintenance", 60000L)
-            }
-
-        } catch (e: Exception) {
-            LogThrottler.e(TAG, "유지보수 작업 중 오류 발생", "maintenance_error", throwable = e)
-        }
-    }
-
-    /**
-     * 성능 최적화를 위한 이미지 처리 파이프라인
-     */
-    suspend fun optimizeImagePerformance(imageUrls: List<String>) {
-        try {
-            Log.d(TAG, "⚡ 이미지 성능 최적화 시작")
-
-            // Coil의 메모리/디스크 캐시에 일임. 명시적 프리로딩/썸네일 생성 생략
-
-            Log.d(TAG, "✅ 이미지 성능 최적화 완료")
-        } catch (e: Exception) {
-            Log.e(TAG, "❌ 이미지 성능 최적화 중 예외", e)
-        }
-    }
 
 
     /**
@@ -1653,10 +1345,10 @@ class MessageService @Inject constructor(
         return try {
             Log.d(TAG, "🔄 실패한 이미지 메시지 재전송 시작: ${messageId.value}")
 
-            val messageResult = messageRepository.findById(messageId)
-            when (messageResult) {
-                is CustomResult.Success -> {
-                    val message = messageResult.data
+            val message = messageRepository.findById(messageId.value)
+            when (message) {
+                null -> CustomResult.Failure(Exception("재전송할 메시지를 찾을 수 없습니다"))
+                else -> {
                     val payload = message.payload
 
                     // 업로드 중인 첨부파일이 있는지 확인
@@ -1715,13 +1407,6 @@ class MessageService @Inject constructor(
                         }
                     }
                 }
-
-                is CustomResult.Failure -> {
-                    Log.e(TAG, "❌ 재전송할 메시지 조회 실패", messageResult.error)
-                    messageResult
-                }
-
-                else -> CustomResult.Failure(Exception("메시지 조회 알 수 없는 상태"))
             }
 
         } catch (e: Exception) {
@@ -1731,11 +1416,3 @@ class MessageService @Inject constructor(
     }
 
 }
-
-/**
- * 이미지 업로드 전용 예외 클래스
- */
-class ImageUploadException(
-    message: String,
-    cause: Throwable? = null
-) : Exception(message, cause)

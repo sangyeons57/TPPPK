@@ -18,10 +18,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.zIndex
 import com.example.core_ui.components.bottom_sheet_dialog.BottomSheetDialog
+import com.example.feature_home.component.HomeScreenDialogs
 import com.example.feature_home.component.MainHomeFloatingButton
 import com.example.feature_home.viewmodel.HomeUiState
 import com.example.feature_home.viewmodel.HomeViewModel
-import com.example.feature_home.viewmodel.TopSection
 
 // 오버레이 투명도 상수
 private const val OVERLAY_ALPHA = 0.7f

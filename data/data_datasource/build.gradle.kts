@@ -68,4 +68,8 @@ dependencies {
     implementation(libs.androidx.room.ktx)      // 또는 implementation "androidx.room:room-ktx:2.6.1"
     ksp(libs.androidx.room.compiler)            // 또는 ksp "androidx.room:room-compiler:2.6.1"
     androidTestImplementation(libs.androidx.room.testing) // Room 테스트 의존성 추가
+
+    // Paging 의존성 추가 (MessageDao의 PagingSource 타입 인식을 위해)
+    implementation(libs.androidx.paging.runtime)
+    implementation(libs.androidx.room.paging) // Room-Paging 통합을 위해 필요
 }

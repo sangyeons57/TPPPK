@@ -113,12 +113,13 @@ public final class WebSocketEventConstants {
     
     /** 페이로드 필드 (@JsonProperty) */
     public static final String FIELD_PAYLOAD = "payload";
+
+    /** 중첩 메시지 필드 (@JsonProperty) */
+    public static final String FIELD_MESSAGE = "message";
     
     /** 프로젝트 ID 필드 (@JsonProperty) */
     public static final String FIELD_PROJECT_ID = "projectId";
     
-    /** 채널 타입 필드 (@JsonProperty) */
-    public static final String FIELD_CHANNEL_TYPE = "channelType";
     
     /** 인증 토큰 필드 (@JsonProperty) */
     public static final String FIELD_AUTH_TOKEN = "authToken";
@@ -139,12 +140,6 @@ public final class WebSocketEventConstants {
     /** 시스템 메시지 */
     public static final String MESSAGE_TYPE_SYSTEM = "SYSTEM";
     
-    /** 이미지 메시지 */
-    public static final String MESSAGE_TYPE_IMAGE = "IMAGE";
-    
-    /** 파일 메시지 */
-    public static final String MESSAGE_TYPE_FILE = "FILE";
-    
     /** 시스템 날짜 메시지 */
     public static final String MESSAGE_TYPE_SYSTEM_DATE = "SYSTEM_DATE";
     
@@ -157,15 +152,7 @@ public final class WebSocketEventConstants {
     /** 시스템 사용자 초대 메시지 */
     public static final String MESSAGE_TYPE_SYSTEM_USER_INVITE = "SYSTEM_USER_INVITE";
 
-    // ================================
-    // 채널 타입 상수
-    // ================================
-    
-    /** DM (Direct Message) 채널 */
-    public static final String CHANNEL_TYPE_DM = "DM";
-    
-    /** 프로젝트 채널 */
-    public static final String CHANNEL_TYPE_PROJECT = "PROJECT";
+    // 채널 타입 관련 상수 제거: projectId 존재 여부로 구분
     
     // ================================
     // 유틸리티 메서드

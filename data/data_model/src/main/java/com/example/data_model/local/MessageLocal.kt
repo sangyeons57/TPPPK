@@ -1,5 +1,6 @@
 package com.example.data_model.local
 
+import androidx.paging.PagingSource
 import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Entity
@@ -44,7 +45,6 @@ data class MessageEntity(
     @ColumnInfo(name = "updatedAt")
     val updatedAt: Long, // Epoch milliseconds
 
-    // syncStatus 필드 제거 - OutBox에서만 동기화 상태 관리
 )
 
 
@@ -53,10 +53,23 @@ interface MessageDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(e: MessageEntity)
 
+    /**
+     * Room DAO에서 직접 PagingSource를 반환하는 정석 패턴
+     * Room이 자동으로 무효화(invalidation)를 처리합니다.
+     */
+    @Query(
+        """
+        SELECT * FROM messages
+        WHERE (:channelId = '' OR channelId = :channelId) AND isDeleted = 0
+        ORDER BY createdAt DESC, id DESC
+    """
+    )
+    fun pagingSource(channelId: String): PagingSource<Int, MessageEntity>
+
     @Query(
         """
         SELECT * FROM messages 
-        WHERE channelId = :channelId AND createdAt < :beforeTimestamp 
+        WHERE channelId = :channelId AND createdAt < :beforeTimestamp AND isDeleted = 0
         ORDER BY createdAt DESC 
         LIMIT :limit
     """
@@ -70,7 +83,7 @@ interface MessageDao {
     @Query(
         """
         SELECT * FROM messages 
-        WHERE channelId = :channelId AND createdAt > :afterTimestamp 
+        WHERE channelId = :channelId AND createdAt > :afterTimestamp AND isDeleted = 0
         ORDER BY createdAt ASC 
         LIMIT :limit
     """
@@ -119,9 +132,9 @@ interface MessageDao {
     // ================================
 
     /**
-     * 특정 채널의 메시지 개수 조회
+     * 특정 채널의 메시지 개수 조회 (삭제되지 않은 메시지만)
      */
-    @Query("SELECT COUNT(*) FROM messages WHERE channelId = :channelId")
+    @Query("SELECT COUNT(*) FROM messages WHERE channelId = :channelId AND isDeleted = 0")
     suspend fun getMessageCountByChannel(channelId: String): Int
 
     /**
@@ -130,12 +143,13 @@ interface MessageDao {
     @Query(
         """
         SELECT * FROM messages 
-        WHERE channelId = :channelId 
+        WHERE channelId = :channelId AND isDeleted = 0
         ORDER BY createdAt DESC 
         LIMIT :limit
     """
     )
     suspend fun getRecentMessagesByChannel(channelId: String, limit: Int): List<MessageEntity>
+
 }
 
 /**

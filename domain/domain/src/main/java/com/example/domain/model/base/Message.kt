@@ -110,10 +110,10 @@ class Message private constructor(
     }
 
     /**
-     * 메시지가 이미지 메시지인지 확인
+     * 메시지가 이미지 메시지인지 확인 (attachment 기반)
      */
     fun isImageMessage(): Boolean {
-        return messageType == MessageType.IMAGE || hasImages()
+        return hasImages()
     }
 
     /**
@@ -317,13 +317,14 @@ class Message private constructor(
             mentions: List<MentionInfo>,
             channelId: ChannelId
         ): Message {
+            val now = DateTimeUtil.nowInstant()
             val message = Message(
                 initialSenderId = senderId,
                 initialMessageType = messageType,
                 initialPayload = payload,
                 initialReplyToMessageId = replyToMessageId,
-                createdAt = DateTimeUtil.nowInstant(),
-                updatedAt = DateTimeUtil.nowInstant(),
+                createdAt = now,
+                updatedAt = now,
                 initialIsDeleted = MessageIsDeleted.FALSE,
                 initialMentions = mentions,
                 initialChannelId = channelId,
@@ -348,13 +349,14 @@ class Message private constructor(
             mentions: List<MentionInfo>,
             channelId: ChannelId
         ): Message {
+            val now = DateTimeUtil.nowInstant()
             return Message(
                 initialSenderId = senderId,
                 initialMessageType = messageType,
                 initialPayload = payload,
                 initialReplyToMessageId = replyToMessageId,
-                createdAt = createdAt ?: DateTimeUtil.nowInstant(),
-                updatedAt = updatedAt ?: DateTimeUtil.nowInstant(),
+                createdAt = createdAt ?: now,
+                updatedAt = updatedAt ?: now,
                 initialIsDeleted = isDeleted,
                 initialMentions = mentions,
                 initialChannelId = channelId,

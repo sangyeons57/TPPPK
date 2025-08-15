@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import com.example.core_common.constant.PagingConstants
+import com.example.core_common.constants.PagingConstants
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -175,7 +175,7 @@ fun ChatMessagesList(
                     lastRefreshState = currentState
                 }
                 // Show skeleton UI instead of simple progress indicator
-                items(5) { // Show 5 skeleton items
+                items(7) { // Show 5 skeleton items
                     MessageSkeletonItem()
                     Spacer(modifier = Modifier.height(16.dp))
                 }
@@ -209,69 +209,6 @@ fun ChatMessagesList(
             }
         }
 
-        // Append 로딩 인디케이터 비표시 (화면 하단 이중 스피너 방지)
-        // if (debouncedAppendLoading) { /* no-op */ }
-        
-        // Append Error 처리
-        when (val appendState = lazyPagingItems.loadState.append) {
-            is androidx.paging.LoadState.Loading -> {
-                // 로딩 상태는 디바운싱된 상태로 처리됨
-            }
-
-            is androidx.paging.LoadState.Error -> {
-                android.util.Log.e("ChatMessagesList", "❌ append Error: ${appendState.error}")
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp), 
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("과거 메시지 로딩 실패")
-                    }
-                }
-            }
-
-            is androidx.paging.LoadState.NotLoading -> {
-                val currentState =
-                    "append_notloading_${lazyPagingItems.itemCount}_${appendState.endOfPaginationReached}"
-                if (currentState != lastAppendState) {
-                    android.util.Log.d(
-                        "ChatMessagesList",
-                        "✅ append NotLoading (과거 메시지 로딩 완료): items=${lazyPagingItems.itemCount}, endReached=${appendState.endOfPaginationReached}"
-                    )
-                    lastAppendState = currentState
-                }
-            }
-        }
-
-        // Prepend 로딩 인디케이터 비표시 (reverseLayout에서 하단 중복 방지)
-        // if (debouncedPrependLoading) { /* no-op */ }
-        
-        // Prepend Error 처리
-        when (val prependState = lazyPagingItems.loadState.prepend) {
-
-            is androidx.paging.LoadState.Error -> {
-                android.util.Log.e("ChatMessagesList", "❌ prepend Error: ${prependState.error}")
-            }
-            
-            is androidx.paging.LoadState.Loading -> {
-                // 로딩 상태는 디바운싱된 상태로 처리
-            }
-
-            is androidx.paging.LoadState.NotLoading -> {
-                val currentState =
-                    "prepend_notloading_${lazyPagingItems.itemCount}_${prependState.endOfPaginationReached}"
-                if (currentState != lastPrependState) {
-                    android.util.Log.d(
-                        "ChatMessagesList",
-                        "✅ prepend NotLoading (최신 메시지 로딩 완료): items=${lazyPagingItems.itemCount}, endReached=${prependState.endOfPaginationReached}"
-                    )
-                    lastPrependState = currentState
-                }
-            }
-        }
-
         items(
             count = lazyPagingItems.itemCount,
             key = { index ->
@@ -280,9 +217,10 @@ fun ChatMessagesList(
                 when {
                     message == null -> "loading_$index" // 로딩 중 null에 대해 인덱스 기반 고유 키
                     message.isOptimistic -> {
-                        // 임시 메시지: clientSentAt 타임스탬프와 함께 키 생성하여 안정성 향상
-                        val timestamp = message.clientSentAt?.toEpochMilli() ?: System.currentTimeMillis()
-                        "temp_${message.messageId}_$timestamp"
+                        // 임시 메시지: clientSentAt가 없으면 actualTimestamp로 고정 키 생성
+                        val ts = message.clientSentAt?.toEpochMilli()
+                            ?: message.actualTimestamp.toEpochMilli()
+                        "temp_${message.messageId}_$ts"
                     }
                     else -> {
                         // 실제 메시지: 서버 타임스탬프와 함께 키 생성하여 중복 방지

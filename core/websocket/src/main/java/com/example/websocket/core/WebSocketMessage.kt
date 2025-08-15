@@ -4,6 +4,13 @@ import com.example.websocket.constant.WebSocketFieldConstants
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+ 
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
 
@@ -52,26 +59,12 @@ data class WebSocketMessage(
 
 
     /**
-     * 메시지 타입 (옵션)
-     *
-     * 메시지의 종류를 나타냄 (TEXT, SYSTEM_DATE, SYSTEM_PROJECT_JOIN 등)
-     */
-    val messageType: String? = WebSocketFieldConstants.MESSAGE_TYPE_TEXT,
-
-    /**
      * 메시지 페이로드 (옵션)
      *
      * JSON 형태의 메시지 내용 - content 필드를 대체하는 새로운 형식
      * JSON 직렬화/역직렬화에 포함됨
      */
-    val payload: Map<String, String>? = null,
-
-    /**
-     * 메시지 ID (옵션)
-     *
-     * 개별 메시지의 고유 식별자 (수정/삭제 시 사용)
-     */
-    val messageId: String? = null,
+    val payload: JsonObject? = null,
 
     /**
      * 답장 대상 메시지 ID (옵션)
@@ -94,12 +87,7 @@ data class WebSocketMessage(
      */
     val projectId: String? = null,
 
-    /**
-     * 채널 타입 (옵션)
-     *
-     * 메시지가 전송된 채널의 타입 (예: TEXT, VOICE, etc.)
-     */
-    val channelType: String? = null,
+    // channelType 제거: projectId 존재 여부로 라우팅 구분 (DM/PROJECT)
 
     /**
      * 인증 토큰 (옵션)
@@ -120,7 +108,10 @@ data class WebSocketMessage(
      *
      * 기타 필요한 정보를 담는 키-값 맵
      */
-    val metadata: Map<String, String>? = null
+    val metadata: Map<String, String>? = null,
+
+    // 신규: 도메인 Message를 래핑하는 중첩 객체 (메시지 관련 이벤트에서 사용)
+    val message: NestedMessage? = null
 ) {
 
     companion object {
@@ -156,16 +147,92 @@ data class WebSocketMessage(
                 type = map[WebSocketFieldConstants.FIELD_TYPE] as String,
                 roomId = map[WebSocketFieldConstants.FIELD_ROOM_ID] as? String,
                 senderId = map[WebSocketFieldConstants.FIELD_SENDER_ID] as? String,
-                messageType = map[WebSocketFieldConstants.FIELD_MESSAGE_TYPE] as? String,
-                payload = convertToStringMap(map[WebSocketFieldConstants.FIELD_PAYLOAD]),
-                messageId = map[WebSocketFieldConstants.FIELD_MESSAGE_ID] as? String,
+                payload = when (val p = map[WebSocketFieldConstants.FIELD_PAYLOAD]) {
+                    is String -> try {
+                        Json.parseToJsonElement(p).jsonObject
+                    } catch (_: Exception) {
+                        null
+                    }
+
+                    is Map<*, *> -> buildJsonObject {
+                        p.forEach { (k, v) ->
+                            val key = k?.toString() ?: return@forEach
+                            when (v) {
+                                null -> put(key, JsonPrimitive(""))
+                                is String -> put(key, JsonPrimitive(v))
+                                is Number, is Boolean -> put(key, JsonPrimitive(v.toString()))
+                                else -> put(key, JsonPrimitive(v.toString()))
+                            }
+                        }
+                    }
+
+                    else -> null
+                },
                 replyToMessageId = map[WebSocketFieldConstants.FIELD_REPLY_TO_MESSAGE_ID] as? String,
                 timestamp = (map[WebSocketFieldConstants.FIELD_TIMESTAMP] as? Number)?.toDouble(),
                 projectId = map[WebSocketFieldConstants.FIELD_PROJECT_ID] as? String,
-                channelType = map[WebSocketFieldConstants.FIELD_CHANNEL_TYPE] as? String,
                 authToken = map[WebSocketFieldConstants.FIELD_AUTH_TOKEN] as? String,
                 errorCode = map[WebSocketFieldConstants.FIELD_ERROR_CODE] as? String,
-                metadata = convertToStringMap(map[WebSocketFieldConstants.FIELD_METADATA])
+                metadata = convertToStringMap(map[WebSocketFieldConstants.FIELD_METADATA]),
+                message = when (val m = map[WebSocketFieldConstants.FIELD_MESSAGE]) {
+                    is String -> try {
+                        val obj = Json.parseToJsonElement(m).jsonObject
+                        NestedMessage(
+                            id = obj[WebSocketFieldConstants.FIELD_MESSAGE_ID]?.jsonPrimitive?.contentOrNull,
+                            messageType = obj[WebSocketFieldConstants.FIELD_MESSAGE_TYPE]?.jsonPrimitive?.contentOrNull,
+                            payload = obj[WebSocketFieldConstants.FIELD_PAYLOAD]?.jsonObject,
+                            senderId = obj[WebSocketFieldConstants.FIELD_SENDER_ID]?.jsonPrimitive?.contentOrNull,
+                            replyToMessageId = obj[WebSocketFieldConstants.FIELD_REPLY_TO_MESSAGE_ID]?.jsonPrimitive?.contentOrNull,
+                            timestamp = obj[WebSocketFieldConstants.FIELD_TIMESTAMP]?.jsonPrimitive?.contentOrNull?.toDoubleOrNull()
+                        )
+                    } catch (_: Exception) {
+                        null
+                    }
+
+                    is Map<*, *> -> {
+                        val id = m[WebSocketFieldConstants.FIELD_MESSAGE_ID]?.toString()
+                        val type = m[WebSocketFieldConstants.FIELD_MESSAGE_TYPE]?.toString()
+                        val payloadMap = m[WebSocketFieldConstants.FIELD_PAYLOAD]
+                        val sender = m[WebSocketFieldConstants.FIELD_SENDER_ID]?.toString()
+                        val reply = m[WebSocketFieldConstants.FIELD_REPLY_TO_MESSAGE_ID]?.toString()
+                        val ts = (m[WebSocketFieldConstants.FIELD_TIMESTAMP] as? Number)?.toDouble()
+                        val payloadJson = when (payloadMap) {
+                            is String -> try {
+                                Json.parseToJsonElement(payloadMap).jsonObject
+                            } catch (_: Exception) {
+                                null
+                            }
+
+                            is Map<*, *> -> buildJsonObject {
+                                payloadMap.forEach { (k, v) ->
+                                    val key = k?.toString() ?: return@forEach
+                                    when (v) {
+                                        null -> put(key, JsonPrimitive(""))
+                                        is String -> put(key, JsonPrimitive(v))
+                                        is Number, is Boolean -> put(
+                                            key,
+                                            JsonPrimitive(v.toString())
+                                        )
+
+                                        else -> put(key, JsonPrimitive(v.toString()))
+                                    }
+                                }
+                            }
+
+                            else -> null
+                        }
+                        NestedMessage(
+                            id = id,
+                            messageType = type,
+                            payload = payloadJson,
+                            senderId = sender,
+                            replyToMessageId = reply,
+                            timestamp = ts
+                        )
+                    }
+
+                    else -> null
+                }
             )
         }
 
@@ -177,9 +244,7 @@ data class WebSocketMessage(
                 put(WebSocketFieldConstants.FIELD_TYPE, message.type)
                 message.roomId?.let { put(WebSocketFieldConstants.FIELD_ROOM_ID, it) }
                 message.senderId?.let { put(WebSocketFieldConstants.FIELD_SENDER_ID, it) }
-                message.messageType?.let { put(WebSocketFieldConstants.FIELD_MESSAGE_TYPE, it) }
-                message.payload?.let { put(WebSocketFieldConstants.FIELD_PAYLOAD, it) }
-                message.messageId?.let { put(WebSocketFieldConstants.FIELD_MESSAGE_ID, it) }
+                message.payload?.let { put(WebSocketFieldConstants.FIELD_PAYLOAD, it.toString()) }
                 message.replyToMessageId?.let {
                     put(
                         WebSocketFieldConstants.FIELD_REPLY_TO_MESSAGE_ID,
@@ -188,10 +253,35 @@ data class WebSocketMessage(
                 }
                 message.timestamp?.let { put(WebSocketFieldConstants.FIELD_TIMESTAMP, it) }
                 message.projectId?.let { put(WebSocketFieldConstants.FIELD_PROJECT_ID, it) }
-                message.channelType?.let { put(WebSocketFieldConstants.FIELD_CHANNEL_TYPE, it) }
                 message.authToken?.let { put(WebSocketFieldConstants.FIELD_AUTH_TOKEN, it) }
                 message.errorCode?.let { put(WebSocketFieldConstants.FIELD_ERROR_CODE, it) }
                 message.metadata?.let { put(WebSocketFieldConstants.FIELD_METADATA, it) }
+                message.message?.let { nested ->
+                    val nestedMap = buildMap<String, Any?> {
+                        nested.id?.let { put(WebSocketFieldConstants.FIELD_MESSAGE_ID, it) }
+                        nested.messageType?.let {
+                            put(
+                                WebSocketFieldConstants.FIELD_MESSAGE_TYPE,
+                                it
+                            )
+                        }
+                        nested.payload?.let {
+                            put(
+                                WebSocketFieldConstants.FIELD_PAYLOAD,
+                                it.toString()
+                            )
+                        }
+                        nested.senderId?.let { put(WebSocketFieldConstants.FIELD_SENDER_ID, it) }
+                        nested.replyToMessageId?.let {
+                            put(
+                                WebSocketFieldConstants.FIELD_REPLY_TO_MESSAGE_ID,
+                                it
+                            )
+                        }
+                        nested.timestamp?.let { put(WebSocketFieldConstants.FIELD_TIMESTAMP, it) }
+                    }
+                    put(WebSocketFieldConstants.FIELD_MESSAGE, nestedMap)
+                }
             }
         }
 
@@ -244,18 +334,94 @@ data class WebSocketMessage(
         const val TYPE_SYSTEM = WebSocketFieldConstants.MESSAGE_TYPE_SYSTEM
 
 
-        // 채널 타입 상수
-        const val CHANNEL_TYPE_PROJECT = "PROJECT"
-        const val CHANNEL_TYPE_DM = "DM"
+        // 채널 타입 상수 제거: projectId 존재 여부로 구분
 
         // ================================
         // 메시지 생성 헬퍼 메서드
         // ================================
 
         /**
-         * 채팅 메시지 생성 (payload 기반)
+         * 채팅 메시지 생성 (MessagePayload 기반)
          */
         fun createChatMessage(
+            roomId: String,
+            senderId: String,
+            messagePayload: com.example.domain.vo.message.MessagePayload,
+            messageId: String,
+            replyToMessageId: String? = null,
+            timestamp: Double? = null,
+            projectId: String? = null
+        ): WebSocketMessage {
+            val payload = try {
+                messagePayload.asJsonObject()
+            } catch (e: Exception) {
+                // fallback: content로 감싸기
+                buildJsonObject {
+                    put(
+                        com.example.domain.vo.message.MessagePayload.KEY_CONTENT,
+                        JsonPrimitive(messagePayload.value)
+                    )
+                }
+            }
+            return WebSocketMessage(
+                type = TYPE_MESSAGE,
+                roomId = roomId,
+                senderId = senderId,
+                message = NestedMessage(
+                    id = messageId,
+                    messageType = null,
+                    payload = payload,
+                    senderId = senderId,
+                    replyToMessageId = replyToMessageId,
+                    timestamp = timestamp
+                ),
+                projectId = projectId
+            )
+        }
+
+        /**
+         * 채팅 메시지 생성 (MessagePayload 기반, messageType 명시)
+         */
+        fun createChatMessageWithType(
+            roomId: String,
+            senderId: String,
+            messagePayload: com.example.domain.vo.message.MessagePayload,
+            messageId: String,
+            messageTypeString: String?,
+            replyToMessageId: String? = null,
+            timestamp: Double? = null,
+            projectId: String? = null
+        ): WebSocketMessage {
+            val payload = try {
+                messagePayload.asJsonObject()
+            } catch (e: Exception) {
+                buildJsonObject {
+                    put(
+                        com.example.domain.vo.message.MessagePayload.KEY_CONTENT,
+                        JsonPrimitive(messagePayload.value)
+                    )
+                }
+            }
+            return WebSocketMessage(
+                type = TYPE_MESSAGE,
+                roomId = roomId,
+                senderId = senderId,
+                message = NestedMessage(
+                    id = messageId,
+                    messageType = messageTypeString,
+                    payload = payload,
+                    senderId = senderId,
+                    replyToMessageId = replyToMessageId,
+                    timestamp = timestamp
+                ),
+                projectId = projectId
+            )
+        }
+
+        /**
+         * 채팅 메시지 생성 (텍스트 content - 하위 호환용)
+         */
+        fun createChatMessageFromText(
             roomId: String,
             senderId: String,
             textContent: String,
@@ -263,15 +429,14 @@ data class WebSocketMessage(
             replyToMessageId: String? = null,
             timestamp: Double? = null
         ): WebSocketMessage {
-            val payload = mapOf(WebSocketFieldConstants.PAYLOAD_CONTENT to textContent)
-            return WebSocketMessage(
-                type = TYPE_MESSAGE,
-                roomId = roomId,
-                senderId = senderId,
-                payload = payload,
-                messageId = messageId,
-                replyToMessageId = replyToMessageId,
-                timestamp = timestamp
+            val messagePayload = com.example.domain.vo.message.MessagePayload.forText(textContent)
+            return createChatMessage(
+                roomId,
+                senderId,
+                messagePayload,
+                messageId,
+                replyToMessageId,
+                timestamp
             )
         }
 
@@ -318,14 +483,24 @@ data class WebSocketMessage(
         }
 
         /**
-         * 에러 메시지 생성 (payload 기반)
+         * 에러 메시지 생성 (MessagePayload 기반)
          */
         fun createErrorMessage(
             message: String,
             errorCode: String? = null,
             roomId: String? = null
         ): WebSocketMessage {
-            val payload = mapOf(WebSocketFieldConstants.PAYLOAD_CONTENT to message)
+            val messagePayload = com.example.domain.vo.message.MessagePayload.forText(message)
+            val payload = try {
+                messagePayload.asJsonObject()
+            } catch (e: Exception) {
+                buildJsonObject {
+                    put(
+                        com.example.domain.vo.message.MessagePayload.KEY_CONTENT,
+                        JsonPrimitive(message)
+                    )
+                }
+            }
             return WebSocketMessage(
                 type = TYPE_ERROR,
                 payload = payload,
@@ -334,6 +509,92 @@ data class WebSocketMessage(
             )
         }
 
+        /**
+         * 메시지 수정 WebSocket 메시지 생성
+         */
+        fun createEditMessage(
+            roomId: String,
+            messageId: String,
+            newPayload: com.example.domain.vo.message.MessagePayload,
+            projectId: String? = null
+        ): WebSocketMessage {
+            val payload = try {
+                newPayload.asJsonObject()
+            } catch (e: Exception) {
+                buildJsonObject {
+                    put(
+                        com.example.domain.vo.message.MessagePayload.KEY_CONTENT,
+                        JsonPrimitive(newPayload.value)
+                    )
+                }
+            }
+            return WebSocketMessage(
+                type = TYPE_EDIT_MESSAGE,
+                roomId = roomId,
+                message = NestedMessage(id = messageId, payload = payload),
+                projectId = projectId
+            )
+        }
+
+        /**
+         * 메시지 삭제 WebSocket 메시지 생성
+         */
+        fun createDeleteMessage(
+            roomId: String,
+            messageId: String,
+            projectId: String? = null
+        ): WebSocketMessage {
+            return WebSocketMessage(
+                type = TYPE_DELETE_MESSAGE,
+                roomId = roomId,
+                message = NestedMessage(id = messageId),
+                projectId = projectId
+            )
+        }
+
+        /**
+         * 프로젝트 초대 WebSocket 메시지 생성
+         */
+        fun createProjectInviteMessage(
+            roomId: String,
+            senderId: String,
+            projectId: String,
+            projectName: String,
+            inviterName: String,
+            invitationId: String,
+            messageId: String,
+            timestamp: Double? = null
+        ): WebSocketMessage {
+            val payload = buildJsonObject {
+                put(com.example.domain.vo.message.MessagePayload.KEY_CONTENT, JsonPrimitive(""))
+                put(
+                    com.example.websocket.constant.WebSocketFieldConstants.FIELD_PROJECT_NAME,
+                    JsonPrimitive(projectName)
+                )
+                put(
+                    com.example.websocket.constant.WebSocketFieldConstants.FIELD_INVITER_NAME,
+                    JsonPrimitive(inviterName)
+                )
+                put(
+                    com.example.websocket.constant.WebSocketFieldConstants.FIELD_INVITATION_ID,
+                    JsonPrimitive(invitationId)
+                )
+            }
+
+            return WebSocketMessage(
+                type = TYPE_MESSAGE,
+                roomId = roomId,
+                senderId = senderId,
+                message = NestedMessage(
+                    id = messageId,
+                    messageType = com.example.websocket.constant.WebSocketFieldConstants.MESSAGE_TYPE_PROJECT_INVITE,
+                    payload = payload,
+                    senderId = senderId,
+                    timestamp = timestamp
+                ),
+                projectId = projectId
+            )
+        }
 
     }
 
@@ -398,7 +659,13 @@ data class WebSocketMessage(
      * 페이로드에서 텍스트 콘텐츠 추출
      */
     fun getTextContent(): String? {
-        return payload?.get(WebSocketFieldConstants.PAYLOAD_CONTENT)
+        try {
+            message?.payload?.let { json ->
+                return json[com.example.domain.vo.message.MessagePayload.KEY_CONTENT]?.jsonPrimitive?.contentOrNull
+            }
+        } catch (_: Exception) {
+        }
+        return payload?.get(com.example.domain.vo.message.MessagePayload.KEY_CONTENT)?.jsonPrimitive?.contentOrNull
     }
 
     /**
@@ -415,6 +682,19 @@ data class WebSocketMessage(
      * 메시지의 간단한 문자열 표현
      */
     override fun toString(): String {
-        return "WebSocketMessage(type=$type, roomId=$roomId, senderId=$senderId, messageId=$messageId)"
+        return "WebSocketMessage(type=$type, roomId=$roomId, senderId=$senderId, nestedId=${message?.id})"
     }
 }
+
+/**
+ * 중첩 도메인 메시지 표현 (WebSocket 전송 전용)
+ */
+@Serializable
+data class NestedMessage(
+    val id: String? = null,
+    val messageType: String? = null,
+    val payload: JsonObject? = null,
+    val senderId: String? = null,
+    val replyToMessageId: String? = null,
+    val timestamp: Double? = null
+)

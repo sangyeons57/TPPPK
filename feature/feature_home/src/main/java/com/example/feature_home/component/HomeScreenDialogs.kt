@@ -1,4 +1,4 @@
-package com.example.feature_home.ui.component
+package com.example.feature_home.component
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -7,9 +7,12 @@ import com.example.domain.model.enum.ProjectChannelType
 import com.example.domain.vo.DocumentId
 import com.example.feature_home.dialog.ui.AddProjectElementDialog
 import com.example.feature_home.model.ChannelUiModel
+import com.example.feature_home.model.ProjectStructureItem
 import com.example.feature_home.model.ProjectStructureUiState
 import com.example.feature_home.model.toProjectStructureItems
 import com.example.feature_home.model.toUnifiedDialogItems
+import com.example.feature_home.ui.component.DialogStates
+import com.example.feature_home.viewmodel.HomeUiState
 import com.example.feature_home.viewmodel.HomeViewModel
 
 /**
@@ -19,7 +22,7 @@ import com.example.feature_home.viewmodel.HomeViewModel
 fun HomeScreenDialogs(
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel,
-    uiState: com.example.feature_home.viewmodel.HomeUiState,
+    uiState: HomeUiState,
     dialogStates: DialogStates,
     onDialogStateChange: (DialogStates) -> Unit
 ) {
@@ -101,7 +104,7 @@ fun HomeScreenDialogs(
 private fun ReorderUnifiedProjectStructureDialog(
     projectStructure: ProjectStructureUiState,
     onDismiss: () -> Unit,
-    onReorderComplete: (List<com.example.feature_home.model.ProjectStructureItem>) -> Unit
+    onReorderComplete: (List<ProjectStructureItem>) -> Unit
 ) {
     val dialogItems = projectStructure.toUnifiedDialogItems()
 

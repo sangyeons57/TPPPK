@@ -160,10 +160,12 @@ class GetProjectStructureUseCaseImpl @Inject constructor(
                 when (channelResult) {
                     is CustomResult.Success -> {
                         try {
-                            val allChannels = channelResult.data.filterIsInstance<ProjectChannel>()
+                            val allChannels = channelResult.data
+                                .filterIsInstance<ProjectChannel>()
+                                .filter { it.isActive() } // 활성 채널만 필터링 추가
                             Log.d(
                                 "GetProjectStructureUseCase",
-                                "Found ${allChannels.size} channels for project ${projectId.value}"
+                                "Found ${allChannels.size} active channels for project ${projectId.value}"
                             )
                             
                             // categoryId로 채널들을 그룹핑

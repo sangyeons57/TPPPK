@@ -10,11 +10,14 @@ import com.google.api.core.ApiFutureCallback;
 import com.google.api.core.ApiFutures;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.SetOptions;
 import com.google.cloud.firestore.WriteResult;
 import com.google.firebase.cloud.FirestoreClient;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -26,6 +29,7 @@ public class FirestoreMessageService {
     private static final Logger logger = LoggerFactory.getLogger(FirestoreMessageService.class);
     
     private final Firestore firestore;
+    private final ObjectMapper objectMapper;
     
     public FirestoreMessageService() {
         if (FirebaseConfig.isInitialized()) {
@@ -35,6 +39,11 @@ public class FirestoreMessageService {
             this.firestore = null;
             logger.warn("❌ FirestoreMessageService initialized without Firebase (mock mode)");
         }
+        
+        // ObjectMapper 설정 (표준 JSON 생성 보장)
+        this.objectMapper = new ObjectMapper();
+        this.objectMapper.registerModule(new JavaTimeModule());
+        logger.debug("✅ ObjectMapper initialized for standard JSON serialization");
     }
     
     /**
@@ -53,46 +62,45 @@ public class FirestoreMessageService {
             String collectionPath;
             String logInfo;
             
-            logger.info("💾 Processing message: roomId={}, channelType={}, projectId={}", 
-                       roomId, message.getChannelType(), message.getProjectId());
+            logger.info("💾 Processing message: roomId={}, projectId={}", 
+                       roomId, message.getProjectId());
             
-            // channelType을 기반으로 Firestore 경로 결정
-            if (WebSocketEventConstants.CHANNEL_TYPE_DM.equals(message.getChannelType())) {
-                // DM 채널: dm_channels/{channelId}/messages
-                collectionPath = "dm_channels/" + roomId + "/" + FirestoreConstants.COLLECTION_MESSAGES;
-                logInfo = "dmChannelId=" + roomId;
-                logger.info("💾 DM channel detected: channelId={}", roomId);
-            } else if (WebSocketEventConstants.CHANNEL_TYPE_PROJECT.equals(message.getChannelType())) {
-                // 프로젝트 채널: projects/{projectId}/channels/{channelId}/messages
-                if (message.getProjectId() == null || message.getProjectId().trim().isEmpty()) {
-                    logger.error("❌ ProjectId is required for PROJECT channel type. roomId={}", roomId);
-                    return CompletableFuture.completedFuture(false);
-                }
+            // 채널 유형은 projectId 존재 여부로 결정
+            if (message.getProjectId() != null && !message.getProjectId().trim().isEmpty()) {
                 collectionPath = FirestoreConstants.COLLECTION_PROJECTS + "/" + message.getProjectId() + "/" + FirestoreConstants.COLLECTION_CHANNELS + "/" + roomId + "/" + FirestoreConstants.COLLECTION_MESSAGES;
                 logInfo = "projectId=" + message.getProjectId() + ", channelId=" + roomId;
                 logger.info("💾 Project channel detected: projectId={}, channelId={}", message.getProjectId(), roomId);
             } else {
-                logger.error("❌ Unknown channelType: {}. Expected 'DM' or 'PROJECT'", message.getChannelType());
-                return CompletableFuture.completedFuture(false);
+                collectionPath = "dm_channels/" + roomId + "/" + FirestoreConstants.COLLECTION_MESSAGES;
+                logInfo = "dmChannelId=" + roomId;
+                logger.info("💾 DM channel detected: channelId={}", roomId);
             }
 
 
             // 메시지 데이터 구성 (payload + messageType 사용)
             Map<String, Object> messageData = new HashMap<>();
-            messageData.put(FirestoreConstants.FIELD_SENDER_ID, message.getSenderId());
-            messageData.put(FirestoreConstants.FIELD_MESSAGE_TYPE, message.getMessageType() != null ? message.getMessageType() : WebSocketEventConstants.MESSAGE_TYPE_TEXT);
+            String effectiveSenderId = (message.getMessage() != null && message.getMessage().getSenderId() != null)
+                    ? message.getMessage().getSenderId() : message.getSenderId();
+            String effectiveMessageId = (message.getMessage() != null && message.getMessage().getId() != null)
+                    ? message.getMessage().getId() : message.getMessageId();
+            String effectiveReplyTo = (message.getMessage() != null && message.getMessage().getReplyToMessageId() != null)
+                    ? message.getMessage().getReplyToMessageId() : message.getReplyToMessageId();
+            java.time.Instant effectiveCreatedAt = message.getEffectiveTimestampAsInstant();
+
+            messageData.put(FirestoreConstants.FIELD_SENDER_ID, effectiveSenderId);
+            // Prefer nested message.messageType if present
+            String effectiveMessageType = (message.getMessage() != null && message.getMessage().getMessageType() != null)
+                    ? message.getMessage().getMessageType()
+                    : (message.getMessageType() != null ? message.getMessageType() : WebSocketEventConstants.MESSAGE_TYPE_TEXT);
+            messageData.put(FirestoreConstants.FIELD_MESSAGE_TYPE, effectiveMessageType);
             
-            // payload 전용 처리 (일관성을 위해 content는 deprecated)
+            // payload 전용 처리
             String payloadJson;
-            if (message.getPayload() != null && !message.getPayload().isEmpty()) {
-                // payload 우선 사용
-                payloadJson = convertMapToJson(message.getPayload());
-            } else if (message.getContent() != null && !message.getContent().isEmpty()) { 
-                // 백워드 호환성: content를 TEXT payload로 변환
-                Map<String, Object> textPayload = new HashMap<>();
-                textPayload.put(PayloadConstants.CONTENT, message.getContent());
-                payloadJson = convertMapToJson(textPayload);
-                logger.warn("⚠️ Using deprecated content field, converting to payload: {}", message.getMessageId());
+            Map<String, Object> effectivePayload = (message.getMessage() != null && message.getMessage().getPayload() != null)
+                    ? message.getMessage().getPayload()
+                    : message.getPayload();
+            if (effectivePayload != null && !effectivePayload.isEmpty()) {
+                payloadJson = convertMapToJson(effectivePayload);
             } else {
                 // 빈 payload
                 payloadJson = "{}";
@@ -100,17 +108,28 @@ public class FirestoreMessageService {
             messageData.put(FirestoreConstants.FIELD_PAYLOAD, payloadJson);
             
             messageData.put(FirestoreConstants.FIELD_CHANNEL_ID, roomId); // ✅ channelId 필드 추가
-            messageData.put(FirestoreConstants.FIELD_CREATED_AT, message.getTimestampAsInstant());
-            messageData.put(FirestoreConstants.FIELD_UPDATED_AT, message.getTimestampAsInstant());
+            messageData.put(FirestoreConstants.FIELD_CREATED_AT, effectiveCreatedAt);
+            messageData.put(FirestoreConstants.FIELD_UPDATED_AT, effectiveCreatedAt);
             messageData.put(FirestoreConstants.FIELD_IS_DELETED, false);
-            messageData.put(FirestoreConstants.FIELD_REPLY_TO_MESSAGE_ID, message.getReplyToMessageId());
+            messageData.put(FirestoreConstants.FIELD_REPLY_TO_MESSAGE_ID, effectiveReplyTo);
             messageData.put(FirestoreConstants.FIELD_MENTIONS, new java.util.ArrayList<>()); // 빈 배열로 초기화
             
-            logger.info("💾 Saving message to Firestore: {}, messageId={}, senderId={}", 
-                       logInfo, message.getMessageId(), message.getSenderId());
+            logger.info("💾 Saving message to Firestore: {}, messageId(effective)={}, senderId={}", 
+                       logInfo, effectiveMessageId, effectiveSenderId);
 
-            logger.info("💾 Collection Path detected: collectionPath={}, messageId={}, messageDta={}", collectionPath, message.getMessageId(), messageData);
-            ApiFuture<WriteResult> future = firestore.collection(collectionPath).document(message.getMessageId()).set(messageData);
+            logger.info("💾 Collection Path detected: collectionPath={}, messageId(effective)={}, messageData={}", collectionPath, effectiveMessageId, messageData);
+
+            // Ensure non-empty document id; auto-generate if missing
+            DocumentReference docRef;
+            if (effectiveMessageId == null || effectiveMessageId.trim().isEmpty()) {
+                docRef = firestore.collection(collectionPath).document();
+                effectiveMessageId = docRef.getId();
+                logger.warn("⚠️ Missing messageId; auto-generated Firestore doc id: {}", effectiveMessageId);
+            } else {
+                docRef = firestore.collection(collectionPath).document(effectiveMessageId);
+            }
+
+            ApiFuture<WriteResult> future = docRef.set(messageData);
 
             return toCompletableFuture(future)
                 .thenApply(result -> {
@@ -131,7 +150,7 @@ public class FirestoreMessageService {
     }
     
     /**
-     * 메시지 편집을 Firestore에 반영
+     * 메시지 편집을 Firestore에 반영 (upsert 방식으로 createdAt 원본 시간 유지)
      */
     public CompletableFuture<Boolean> updateMessage(String roomId, ChatMessage message) {
         if (firestore == null) {
@@ -143,62 +162,84 @@ public class FirestoreMessageService {
             String collectionPath;
             String logInfo;
             
-            // channelType을 기반으로 Firestore 경로 결정
-            if (WebSocketEventConstants.CHANNEL_TYPE_DM.equals(message.getChannelType())) {
-                collectionPath = "dm_channels/" + roomId + "/messages";
-                logInfo = "dmChannelId=" + roomId;
-            } else if (WebSocketEventConstants.CHANNEL_TYPE_PROJECT.equals(message.getChannelType())) {
-                if (message.getProjectId() == null || message.getProjectId().trim().isEmpty()) {
-                    logger.error("❌ ProjectId is required for PROJECT channel type update. roomId={}", roomId);
-                    return CompletableFuture.completedFuture(false);
-                }
+            // 채널 유형은 projectId 존재 여부로 결정
+            if (message.getProjectId() != null && !message.getProjectId().trim().isEmpty()) {
                 collectionPath = "projects/" + message.getProjectId() + "/channels/" + roomId + "/messages";
                 logInfo = "projectId=" + message.getProjectId() + ", channelId=" + roomId;
             } else {
-                logger.error("❌ Unknown channelType for update: {}. Expected 'DM' or 'PROJECT'", message.getChannelType());
-                return CompletableFuture.completedFuture(false);
+                collectionPath = "dm_channels/" + roomId + "/messages";
+                logInfo = "dmChannelId=" + roomId;
             }
             
             DocumentReference docRef = firestore.collection(collectionPath).document(message.getMessageId());
             
-            Map<String, Object> updateData = new HashMap<>();
-            updateData.put(FirestoreConstants.FIELD_MESSAGE_TYPE, message.getMessageType() != null ? message.getMessageType() : WebSocketEventConstants.MESSAGE_TYPE_TEXT);
-            
-            // payload 전용 업데이트
-            String payloadJson;
-            if (message.getPayload() != null && !message.getPayload().isEmpty()) {
-                // payload 우선 사용
-                payloadJson = convertMapToJson(message.getPayload());
-            } else if (message.getContent() != null && !message.getContent().isEmpty()) {
-                // 백워드 호환성: content를 TEXT payload로 변환
-                Map<String, Object> textPayload = new HashMap<>();
-                textPayload.put(PayloadConstants.CONTENT, message.getContent());
-                payloadJson = convertMapToJson(textPayload);
-                logger.warn("⚠️ Using deprecated content field for update, converting to payload: {}", message.getMessageId());
-            } else {
-                // 빈 payload
-                payloadJson = "{}";
-            }
-            updateData.put(FirestoreConstants.FIELD_PAYLOAD, payloadJson);
-            updateData.put(FirestoreConstants.FIELD_UPDATED_AT, message.getTimestampAsInstant());
-            
-            logger.info("✏️ Updating message in Firestore: {}, messageId={}", 
-                       logInfo, message.getMessageId());
-            
-            ApiFuture<WriteResult> future = docRef.update(updateData);
-            return toCompletableFuture(future)
+            // 먼저 기존 문서 조회하여 createdAt 확인
+            return toCompletableFuture(docRef.get())
+                .thenCompose(documentSnapshot -> {
+                    Map<String, Object> upsertData = new HashMap<>();
+                    
+                    // 기본 필드들
+                    String effectiveSenderId = (message.getMessage() != null && message.getMessage().getSenderId() != null)
+                            ? message.getMessage().getSenderId() : message.getSenderId();
+                    upsertData.put(FirestoreConstants.FIELD_SENDER_ID, effectiveSenderId);
+                    // Prefer nested message.messageType if present
+                    String effectiveMessageType = (message.getMessage() != null && message.getMessage().getMessageType() != null)
+                            ? message.getMessage().getMessageType()
+                            : (message.getMessageType() != null ? message.getMessageType() : WebSocketEventConstants.MESSAGE_TYPE_TEXT);
+                    upsertData.put(FirestoreConstants.FIELD_MESSAGE_TYPE, effectiveMessageType);
+                    upsertData.put(FirestoreConstants.FIELD_CHANNEL_ID, roomId);
+                    String effectiveReplyTo = (message.getMessage() != null && message.getMessage().getReplyToMessageId() != null)
+                            ? message.getMessage().getReplyToMessageId() : message.getReplyToMessageId();
+                    upsertData.put(FirestoreConstants.FIELD_REPLY_TO_MESSAGE_ID, effectiveReplyTo);
+                    upsertData.put(FirestoreConstants.FIELD_IS_DELETED, false);
+                    
+                    // payload 처리
+                    String payloadJson;
+                    Map<String, Object> effectivePayload = (message.getMessage() != null && message.getMessage().getPayload() != null)
+                            ? message.getMessage().getPayload()
+                            : message.getPayload();
+                    if (effectivePayload != null && !effectivePayload.isEmpty()) {
+                        payloadJson = convertMapToJson(effectivePayload);
+                    } else {
+                        payloadJson = "{}";
+                    }
+                    upsertData.put(FirestoreConstants.FIELD_PAYLOAD, payloadJson);
+                    
+                    // createdAt 처리: 기존 문서가 있으면 유지, 없으면 현재 시간
+                    if (documentSnapshot.exists() && documentSnapshot.contains(FirestoreConstants.FIELD_CREATED_AT)) {
+                        // 기존 createdAt 유지
+                        Object existingCreatedAt = documentSnapshot.get(FirestoreConstants.FIELD_CREATED_AT);
+                        upsertData.put(FirestoreConstants.FIELD_CREATED_AT, existingCreatedAt);
+                        logger.info("✏️ Updating existing message, preserving createdAt: {}", message.getMessageId());
+                    } else {
+                        // 새 문서 생성 시 현재 시간으로 createdAt 설정
+                        upsertData.put(FirestoreConstants.FIELD_CREATED_AT, message.getEffectiveTimestampAsInstant());
+                        upsertData.put(FirestoreConstants.FIELD_MENTIONS, new java.util.ArrayList<>());
+                        logger.info("✏️ Creating new message during edit operation: {}", message.getMessageId());
+                    }
+                    
+                    // updatedAt는 항상 현재 시간
+                    upsertData.put(FirestoreConstants.FIELD_UPDATED_AT, message.getEffectiveTimestampAsInstant());
+                    
+                    logger.info("✏️ Upserting message in Firestore: {}, messageId={}", 
+                               logInfo, message.getMessageId());
+                    
+                    // SetOptions.merge()를 사용하여 upsert 수행
+                    ApiFuture<WriteResult> future = docRef.set(upsertData, SetOptions.merge());
+                    return toCompletableFuture(future);
+                })
                 .thenApply(result -> {
-                    logger.info("✅ Message updated in Firestore successfully: {}", message.getMessageId());
+                    logger.info("✅ Message upserted in Firestore successfully: {}", message.getMessageId());
                     return true;
                 })
                 .exceptionally(throwable -> {
-                    logger.error("❌ Failed to update message in Firestore: {} - {}", 
+                    logger.error("❌ Failed to upsert message in Firestore: {} - {}", 
                                message.getMessageId(), throwable.getMessage());
                     return false;
                 });
                 
         } catch (Exception e) {
-            logger.error("❌ Error preparing message for Firestore update: {} - {}", 
+            logger.error("❌ Error preparing message for Firestore upsert: {} - {}", 
                        message.getMessageId(), e.getMessage(), e);
             return CompletableFuture.completedFuture(false);
         }
@@ -217,20 +258,13 @@ public class FirestoreMessageService {
             String collectionPath;
             String logInfo;
             
-            // channelType을 기반으로 Firestore 경로 결정
-            if (WebSocketEventConstants.CHANNEL_TYPE_DM.equals(message.getChannelType())) {
-                collectionPath = "dm_channels/" + roomId + "/messages";
-                logInfo = "dmChannelId=" + roomId;
-            } else if (WebSocketEventConstants.CHANNEL_TYPE_PROJECT.equals(message.getChannelType())) {
-                if (message.getProjectId() == null || message.getProjectId().trim().isEmpty()) {
-                    logger.error("❌ ProjectId is required for PROJECT channel type delete. roomId={}", roomId);
-                    return CompletableFuture.completedFuture(false);
-                }
+            // 채널 유형은 projectId 존재 여부로 결정
+            if (message.getProjectId() != null && !message.getProjectId().trim().isEmpty()) {
                 collectionPath = "projects/" + message.getProjectId() + "/channels/" + roomId + "/messages";
                 logInfo = "projectId=" + message.getProjectId() + ", channelId=" + roomId;
             } else {
-                logger.error("❌ Unknown channelType for delete: {}. Expected 'DM' or 'PROJECT'", message.getChannelType());
-                return CompletableFuture.completedFuture(false);
+                collectionPath = "dm_channels/" + roomId + "/messages";
+                logInfo = "dmChannelId=" + roomId;
             }
             
             DocumentReference docRef = firestore.collection(collectionPath).document(message.getMessageId());
@@ -282,51 +316,23 @@ public class FirestoreMessageService {
         return completableFuture;
     }
     
-    /**
-     * Map을 간단한 JSON 문자열로 변환하는 헬퍼 메서드 (String values)
-     */
-    private String convertStringMapToJson(Map<String, String> map) {
-        if (map == null || map.isEmpty()) {
-            return "{}";
-        }
-        
-        StringBuilder json = new StringBuilder("{");
-        boolean first = true;
-        for (Map.Entry<String, String> entry : map.entrySet()) {
-            if (!first) {
-                json.append(",");
-            }
-            json.append("\"").append(entry.getKey()).append("\":");
-            json.append("\"").append(entry.getValue() != null ? entry.getValue() : "").append("\"");
-            first = false;
-        }
-        json.append("}");
-        return json.toString();
-    }
     
     /**
-     * Map을 간단한 JSON 문자열로 변환하는 헬퍼 메서드 (Object values)
+     * Map을 표준 JSON 문자열로 변환하는 헬퍼 메서드 (Jackson ObjectMapper 사용)
+     * 기존 수동 문자열 연결 방식에서 Jackson으로 전환하여 표준 JSON 보장
      */
     private String convertMapToJson(Map<String, Object> map) {
         if (map == null || map.isEmpty()) {
             return "{}";
         }
         
-        StringBuilder json = new StringBuilder("{");
-        boolean first = true;
-        for (Map.Entry<String, Object> entry : map.entrySet()) {
-            if (!first) {
-                json.append(",");
-            }
-            json.append("\"").append(entry.getKey()).append("\":");
-            if (entry.getValue() instanceof String) {
-                json.append("\"").append(entry.getValue()).append("\"");
-            } else {
-                json.append(entry.getValue());
-            }
-            first = false;
+        try {
+            String jsonResult = objectMapper.writeValueAsString(map);
+            logger.debug("✅ Map을 표준 JSON로 변환 성공: {}", jsonResult);
+            return jsonResult;
+        } catch (Exception e) {
+            logger.warn("⚠️ Map을 JSON으로 변환 실패, 빈 객체 반환: {}", e.getMessage());
+            return "{}";
         }
-        json.append("}");
-        return json.toString();
     }
 }

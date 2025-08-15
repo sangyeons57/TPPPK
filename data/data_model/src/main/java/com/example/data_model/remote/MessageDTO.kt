@@ -20,7 +20,7 @@ data class MessageDTO(
     @get:PropertyName(MESSAGE_TYPE)
     val messageType: String = "TEXT", // 메시지 타입 (TEXT, SYSTEM_PROJECT_JOIN, etc.)
     @get:PropertyName(PAYLOAD)
-    val payload: String = "{}", // JSON 페이로드 (기존 content 대체)
+    val payload: Any? = null, // String 또는 Map<String, Any?> 모두 호환 (기존 content 대체)
     @get:PropertyName(REPLY_TO_MESSAGE_ID)
     val replyToMessageId: String? = null,
     @get:PropertyName(IS_DELETED)
@@ -53,4 +53,3 @@ data class MessageDTO(
     }
 
 }
-

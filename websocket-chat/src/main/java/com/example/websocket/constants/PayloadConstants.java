@@ -164,6 +164,13 @@ public final class PayloadConstants {
     /** 설정 정보 */
     public static final String CONFIG_DATA = "configData";
 
+    // ================================
+    // 멘션 관련 페이로드 키
+    // ================================
+
+    /** 멘션 대상 목록 (List<String> 또는 List<Map{userId:..}>) */
+    public static final String MENTIONS = "mentions";
+
     // Private constructor to prevent instantiation
     private PayloadConstants() {
         throw new AssertionError("Cannot instantiate utility class");

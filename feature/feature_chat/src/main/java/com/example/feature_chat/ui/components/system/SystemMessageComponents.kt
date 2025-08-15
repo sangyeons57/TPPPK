@@ -16,21 +16,27 @@ import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Start
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.domain.vo.message.MessagePayload
+import coil.compose.AsyncImage
 
 /**
  * 날짜 표시 시스템 메시지 컴포넌트 (기존 메시지 기반)
@@ -231,7 +237,8 @@ fun ProjectJoinSystemMessage(
 fun MemberInvitationSystemMessage(
     payload: String,
     onAddMember: (String, String) -> Unit, // (projectId, targetUserId) -> Unit
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isSender: Boolean = false // 현재 메시지 전송자 여부
 ) {
     val messagePayload = MessagePayload(payload)
     val projectId = messagePayload.getValue("projectId") ?: ""
@@ -239,6 +246,14 @@ fun MemberInvitationSystemMessage(
     val inviterName = messagePayload.getValue("inviterName") ?: "사용자"
     val targetUserId = messagePayload.getValue("targetUserId") ?: ""
     val actionText = messagePayload.getValue("actionText") ?: "멤버로 추가"
+    val projectImageUrl =
+        messagePayload.getValue("projectImageUrl") ?: messagePayload.getValue("imageUrl")
+
+    // 1:1 채널이므로 전송자가 아니면 항상 액션 표시 (수신자)
+    val shouldShowActions = !isSender
+
+    // 참여 확인 다이얼로그 표시 상태
+    val showJoinDialog = remember { mutableStateOf(false) }
 
     Box(
         modifier = modifier
@@ -287,41 +302,84 @@ fun MemberInvitationSystemMessage(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Button(
-                        onClick = { onAddMember(projectId, targetUserId) },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.tertiary,
-                            contentColor = MaterialTheme.colorScheme.onTertiary
-                        ),
-                        shape = RoundedCornerShape(12.dp)
+                if (shouldShowActions) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            text = actionText,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-
-                    Button(
-                        onClick = { /* 거절 로직 */ },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.surface,
-                            contentColor = MaterialTheme.colorScheme.onSurface
-                        ),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text(
-                            text = "거절",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Medium
-                        )
+                        Button(
+                            onClick = { showJoinDialog.value = true },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.tertiary,
+                                contentColor = MaterialTheme.colorScheme.onTertiary
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                text = actionText,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                 }
             }
         }
+    }
+
+    // 참여 확인 다이얼로그
+    if (showJoinDialog.value && shouldShowActions) {
+        AlertDialog(
+            onDismissRequest = { showJoinDialog.value = false },
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // 프로젝트 프로필 이미지 (있으면 표시, 없으면 기본 아이콘)
+                    if (!projectImageUrl.isNullOrBlank()) {
+                        AsyncImage(
+                            model = projectImageUrl,
+                            contentDescription = "프로젝트 프로필",
+                            modifier = Modifier
+                                .width(32.dp)
+                                .height(32.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Group,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.width(24.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = projectName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            },
+            text = {
+                Text(
+                    text = "'${projectName}' 프로젝트에 참여하시겠습니까?",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showJoinDialog.value = false
+                        onAddMember(projectId, targetUserId)
+                    }
+                ) { Text("참여") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showJoinDialog.value = false }) {
+                    Text("거절")
+                }
+            }
+        )
     }
 }
 

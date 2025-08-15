@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.sp
 import com.example.feature_chat.model.ChatMessageUiModel
 
@@ -42,6 +43,17 @@ fun MessageStatusRow(
             fontSize = 10.sp,
             color = MaterialTheme.colorScheme.outline
         )
+
+        // 수정 표시
+        if (message.isModified) {
+            android.util.Log.d("MessageStatusRow", "🔧 수정됨 표시 렌더링: ${message.messageId}")
+            Text(
+                text = "(수정됨)",
+                fontSize = 9.sp,
+                fontStyle = FontStyle.Italic,
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.7f)
+            )
+        }
 
         // 내 메시지인 경우 전송 상태 표시
         if (message.isMyMessage) {

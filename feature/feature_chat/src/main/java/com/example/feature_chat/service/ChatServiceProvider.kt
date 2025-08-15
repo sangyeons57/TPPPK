@@ -11,8 +11,8 @@ import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectRoleUseCaseProvider
 import com.example.domain_usecase.provider.user.UserUseCaseProvider
 import com.example.feature_chat.queue.OfflineMessageQueue
-import com.example.websocket.core.WebSocketMessage
 import com.example.websocket.usecase.WebSocketUseCaseProvider
+import com.example.websocket.usecase.SendMessageUseCase
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
@@ -33,6 +33,7 @@ class ChatServiceProvider @Inject constructor(
     private val offlineMessageQueue: OfflineMessageQueue,
     private val navigationManger: NavigationManger,
     private val messageRepository: MessageRepository,
+    private val sendMessageUseCase: SendMessageUseCase,
 ) {
     
     /**
@@ -56,7 +57,6 @@ class ChatServiceProvider @Inject constructor(
         val fileUseCases = fileUseCaseProvider.create()
 
         val roomId = channelId  // 접두사 제거 - 단순히 channelId만 사용
-        val channelType = WebSocketMessage.CHANNEL_TYPE_PROJECT
         
 
         val userProfileService = UserProfileService(
@@ -72,9 +72,9 @@ class ChatServiceProvider @Inject constructor(
             userProfileService = userProfileService,
             fileUseCases = fileUseCases,
             dmUseCaseProvider = dmUseCaseProvider,
+            sendMessageUseCase = sendMessageUseCase,
             roomId = roomId,
-            projectId = projectId,
-            channelType = channelType
+            projectId = projectId
         )
         
         val navigationService = NavigationService(navigationManger)
@@ -110,7 +110,6 @@ class ChatServiceProvider @Inject constructor(
         val fileUseCases = fileUseCaseProvider.create()
 
         val roomId = channelId  // 접두사 제거 - 단순히 channelId만 사용
-        val channelType = WebSocketMessage.CHANNEL_TYPE_DM
         
         val userProfileService = UserProfileService(
             userUseCases = userUseCases,
@@ -125,9 +124,9 @@ class ChatServiceProvider @Inject constructor(
             userProfileService = userProfileService,
             fileUseCases = fileUseCases,
             dmUseCaseProvider = dmUseCaseProvider,
+            sendMessageUseCase = sendMessageUseCase,
             roomId = roomId,
-            projectId = null,
-            channelType = channelType
+            projectId = null
         )
         
         val navigationService = NavigationService(navigationManger)

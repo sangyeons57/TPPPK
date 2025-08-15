@@ -107,6 +107,11 @@ fun AddProjectElementDialog(
                 is AddProjectElementDialogEvent.ChannelCreated -> {
                     onChannelCreated(event.channel)
                 }
+                is AddProjectElementDialogEvent.MemberInvited -> {
+                    // 멤버 초대 성공 시 다이얼로그 닫기 (성공 처리는 ViewModel에서 완료됨)
+                    onDismissRequest()
+                    viewModel.resetFormState()
+                }
             }
         }
     }
@@ -164,7 +169,11 @@ fun AddProjectElementDialog(
                 
                 // 탭 선택
                 TabRow(
-                    selectedTabIndex = if (uiState.selectedTab == CreateElementType.CATEGORY) 0 else 1,
+                    selectedTabIndex = when (uiState.selectedTab) {
+                        CreateElementType.CATEGORY -> 0
+                        CreateElementType.CHANNEL -> 1
+                        CreateElementType.MEMBER_INVITE -> 2
+                    },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Tab(
@@ -176,6 +185,11 @@ fun AddProjectElementDialog(
                         selected = uiState.selectedTab == CreateElementType.CHANNEL,
                         onClick = { viewModel.onTabChanged(1) },
                         text = { Text("채널") }
+                    )
+                    Tab(
+                        selected = uiState.selectedTab == CreateElementType.MEMBER_INVITE,
+                        onClick = { viewModel.onTabChanged(2) },
+                        text = { Text("멤버 초대") }
                     )
                 }
                 
@@ -210,6 +224,15 @@ fun AddProjectElementDialog(
                                 onChannelCategoryChanged = viewModel::onChannelCategoryChanged,
                                 onChannelTypeChanged = viewModel::onChannelTypeChanged,
                                 onCreateChannel = viewModel::onCreateChannel
+                            )
+                        }
+                        CreateElementType.MEMBER_INVITE -> {
+                            MemberInviteContent(
+                                userName = uiState.memberInviteUserName,
+                                userNameError = uiState.memberInviteUserNameError,
+                                isSendingInvite = uiState.isSendingInvite,
+                                onUserNameChanged = viewModel::onMemberInviteUserNameChanged,
+                                onSendInvite = viewModel::onSendMemberInvite
                             )
                         }
                     }
@@ -372,15 +395,7 @@ private fun ChannelCreationContent(
                 expanded = expanded,
                 onDismissRequest = { expanded = false }
             ) {
-                // "카테고리 선택안함" 옵션
-                DropdownMenuItem(
-                    text = { Text("카테고리 선택안함 (프로젝트 직속 채널)") },
-                    onClick = {
-                        onChannelCategoryChanged(null)
-                        expanded = false
-                    }
-                )
-                
+
                 // 기존 카테고리 옵션들
                 availableCategories.forEach { category ->
                     DropdownMenuItem(
@@ -474,6 +489,84 @@ private fun ChannelCreationContent(
         }
     }
     
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+}
+
+/**
+ * 멤버 초대 컨텐츠
+ */
+@Composable
+private fun MemberInviteContent(
+    userName: String,
+    userNameError: String?,
+    isSendingInvite: Boolean,
+    onUserNameChanged: (String) -> Unit,
+    onSendInvite: () -> Unit
+) {
+    val focusManager = LocalFocusManager.current
+    val focusRequester = remember { FocusRequester() }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            text = "프로젝트에 초대할 사용자의 이름을 입력해주세요.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        // 사용자 이름 입력
+        OutlinedTextField(
+            value = userName,
+            onValueChange = onUserNameChanged,
+            label = { Text("사용자 이름") },
+            placeholder = { Text("초대할 사용자 이름 입력") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(focusRequester),
+            enabled = !isSendingInvite,
+            isError = userNameError != null,
+            supportingText = userNameError?.let { { Text(it) } },
+            keyboardOptions = KeyboardOptions.Default.copy(
+                imeAction = androidx.compose.ui.text.input.ImeAction.Send
+            ),
+            keyboardActions = KeyboardActions(
+                onSend = {
+                    focusManager.clearFocus()
+                    onSendInvite()
+                }
+            )
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 초대 전송 버튼
+        Button(
+            onClick = {
+                focusManager.clearFocus()
+                onSendInvite()
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            enabled = !isSendingInvite && userName.isNotBlank()
+        ) {
+            if (isSendingInvite) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("초대 전송 중...")
+            } else {
+                Text("초대 메시지 전송")
+            }
+        }
+    }
+
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
     }

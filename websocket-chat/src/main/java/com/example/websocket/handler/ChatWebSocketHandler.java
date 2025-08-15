@@ -8,6 +8,8 @@ import com.example.websocket.service.FirestoreMessageService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.example.websocket.constants.PayloadConstants;
+import com.example.websocket.fcm.MentionNotificationService;
 import jakarta.websocket.*;
 import jakarta.websocket.server.ServerEndpoint;
 import jakarta.websocket.server.ServerEndpointConfig;
@@ -30,6 +32,10 @@ public class ChatWebSocketHandler {
     private FirestoreMessageService firestoreService;
     private ObjectMapper objectMapper;
     
+    // Mention notification dependencies (shared from ServiceProvider)
+    private MentionNotificationService mentionNotificationService;
+    private java.util.concurrent.ExecutorService notifyExecutor;
+    
     private String userId;
     private String currentRoomId;
     private Session session;
@@ -51,6 +57,10 @@ public class ChatWebSocketHandler {
         this();
         this.authService = authService;
         this.roomManager = roomManager;
+        // Pull shared services from ServiceProvider
+        com.example.websocket.service.ServiceProvider provider = com.example.websocket.service.ServiceProvider.getInstance();
+        this.mentionNotificationService = provider.getMentionNotificationService();
+        this.notifyExecutor = provider.getNotifyExecutor();
     }
 
     @OnOpen
@@ -256,15 +266,60 @@ public class ChatWebSocketHandler {
             message.setSenderId(userId);
             message.setTimestampFromInstant(Instant.now());
             message.setRoomId(currentRoomId);
+
+            // Normalize nested message fields for domain ownership
+            if (message.getMessage() == null) {
+                message.setMessage(new com.example.websocket.model.MessageData());
+            }
+            if (message.getMessage().getSenderId() == null) {
+                message.getMessage().setSenderId(userId);
+            }
+            if (message.getMessage().getTimestamp() == null) {
+                message.getMessage().setTimestamp((double) Instant.now().getEpochSecond());
+            }
+            if (message.getMessage().getId() == null) {
+                message.getMessage().setId(message.getMessageId());
+            }
+
+            // Ensure message has a non-empty id for persistence/broadcast
+            String effectiveId = message.getEffectiveMessageId();
+            if (effectiveId == null || effectiveId.trim().isEmpty()) {
+                String generatedId = java.util.UUID.randomUUID().toString();
+                message.setMessageId(generatedId);
+                if (message.getMessage() != null) {
+                    message.getMessage().setId(generatedId);
+                }
+                logger.info("🆔 Generated messageId on server: {} for room {}", generatedId, currentRoomId);
+            }
+            if (message.getMessage().getReplyToMessageId() == null) {
+                message.getMessage().setReplyToMessageId(message.getReplyToMessageId());
+            }
             
-            logger.info("📨 Processing message: channelType={}, projectId={}, roomId={}", 
-                       message.getChannelType(), message.getProjectId(), currentRoomId);
+            logger.info("📨 Processing message: projectId={}, roomId={}", 
+                       message.getProjectId(), currentRoomId);
 
             // 1. 먼저 Firestore에 저장
             firestoreService.saveMessage(currentRoomId, message)
                 .thenAccept(success -> {
                     if (success) {
                         logger.info("✅ Message saved to Firestore: {}", message.getMessageId());
+                        // After persistence, trigger mention notifications asynchronously
+                        try {
+                            List<String> mentionedUserIds = extractMentionedUserIds(message);
+                            if (mentionNotificationService != null && mentionedUserIds != null && !mentionedUserIds.isEmpty()) {
+                                String channelType = (message.getProjectId() != null && !message.getProjectId().trim().isEmpty()) ? "project" : "dm";
+                                String channelId = currentRoomId;
+                                String messageId = message.getEffectiveMessageId();
+                                String senderId = userId;
+                                String senderName = userId;
+                                String fullText = safeGetTextFromPayload(message);
+                                notifyExecutor.submit(() -> mentionNotificationService.notifyMentions(
+                                        channelType, channelId, messageId, senderId, senderName, fullText, mentionedUserIds
+                                ));
+                            }
+                        } catch (Exception ex) {
+                            logger.warn("⚠️ Failed to schedule mention notifications: {}", ex.getMessage());
+                        }
                     } else {
                         logger.warn("⚠️ Failed to save message to Firestore: {}", message.getMessageId());
                     }
@@ -282,13 +337,52 @@ public class ChatWebSocketHandler {
             // 3. 송신자에게 ACK 전송
             ChatMessage ack = ChatMessage.createSystemMessage(WebSocketEventConstants.ACK, currentRoomId, "server", 
                                             "Message delivered", Instant.now());
-            ack.setReplyToMessageId(message.getMessageId());
+            ack.setReplyToMessageId(message.getEffectiveMessageId());
             sendMessage(ack);
             logger.info("📩 ACK sent to sender {} for message {}", userId, message.getMessageId());
 
         } catch (Exception e) {
             logger.error("💥 Error processing message: {}", e.getMessage(), e);
             sendErrorMessage("Failed to process message");
+        }
+    }
+
+    // Extract mentioned user IDs from the incoming message payload.
+    // Supports formats:
+    // - payload["mentions"] = List<String>
+    // - payload["mentions"] = List<Map> with key "userId"
+    private List<String> extractMentionedUserIds(ChatMessage message) {
+        try {
+            Map<String, Object> payload = message != null ? message.getEffectivePayload() : null;
+            if (payload == null) return java.util.Collections.emptyList();
+            Object raw = payload.get(PayloadConstants.MENTIONS);
+            if (!(raw instanceof java.util.List)) return java.util.Collections.emptyList();
+            java.util.List<?> arr = (java.util.List<?>) raw;
+            java.util.Set<String> ids = new java.util.HashSet<>();
+            for (Object el : arr) {
+                if (el instanceof String s) {
+                    if (s != null && !s.trim().isEmpty()) ids.add(s);
+                } else if (el instanceof java.util.Map<?, ?> m) {
+                    Object uid = m.get("userId");
+                    if (uid instanceof String s && !s.trim().isEmpty()) ids.add(s);
+                }
+            }
+            // remove self if present
+            ids.remove(userId);
+            return new java.util.ArrayList<>(ids);
+        } catch (Exception e) {
+            return java.util.Collections.emptyList();
+        }
+    }
+
+    private String safeGetTextFromPayload(ChatMessage message) {
+        try {
+            Map<String, Object> payload = message != null ? message.getEffectivePayload() : null;
+            if (payload == null) return "";
+            Object v = payload.get(PayloadConstants.CONTENT);
+            return v != null ? String.valueOf(v) : "";
+        } catch (Exception e) {
+            return "";
         }
     }
 
@@ -302,6 +396,31 @@ public class ChatWebSocketHandler {
             message.setSenderId(userId);
             message.setTimestampFromInstant(Instant.now());
             message.setRoomId(currentRoomId);
+
+            // Normalize nested message fields for domain ownership
+            if (message.getMessage() == null) {
+                message.setMessage(new com.example.websocket.model.MessageData());
+            }
+            if (message.getMessage().getSenderId() == null) {
+                message.getMessage().setSenderId(userId);
+            }
+            if (message.getMessage().getTimestamp() == null) {
+                message.getMessage().setTimestamp((double) Instant.now().getEpochSecond());
+            }
+            if (message.getMessage().getId() == null) {
+                message.getMessage().setId(message.getMessageId());
+            }
+
+            // Ensure non-empty id for edit operation as well
+            String effectiveId = message.getEffectiveMessageId();
+            if (effectiveId == null || effectiveId.trim().isEmpty()) {
+                String generatedId = java.util.UUID.randomUUID().toString();
+                message.setMessageId(generatedId);
+                if (message.getMessage() != null) {
+                    message.getMessage().setId(generatedId);
+                }
+                logger.info("🆔 Generated messageId on server (edit): {} for room {}", generatedId, currentRoomId);
+            }
             
             logger.info("✏️ Processing message edit: messageId={}, roomId={}", 
                        message.getMessageId(), currentRoomId);
@@ -327,7 +446,7 @@ public class ChatWebSocketHandler {
             // Send ACK to sender
             ChatMessage ack = ChatMessage.createSystemMessage(WebSocketEventConstants.ACK, currentRoomId, "server", 
                                             "Message edit delivered", Instant.now());
-            ack.setReplyToMessageId(message.getMessageId());
+            ack.setReplyToMessageId(message.getEffectiveMessageId());
             sendMessage(ack);
 
         } catch (Exception e) {
@@ -346,7 +465,32 @@ public class ChatWebSocketHandler {
             message.setSenderId(userId);
             message.setTimestampFromInstant(Instant.now());
             message.setRoomId(currentRoomId);
+
+            // Normalize nested message fields for domain ownership
+            if (message.getMessage() == null) {
+                message.setMessage(new com.example.websocket.model.MessageData());
+            }
+            if (message.getMessage().getSenderId() == null) {
+                message.getMessage().setSenderId(userId);
+            }
+            if (message.getMessage().getTimestamp() == null) {
+                message.getMessage().setTimestamp((double) Instant.now().getEpochSecond());
+            }
+            if (message.getMessage().getId() == null) {
+                message.getMessage().setId(message.getMessageId());
+            }
             
+            // Ensure non-empty id for delete operation as well
+            String effectiveId = message.getEffectiveMessageId();
+            if (effectiveId == null || effectiveId.trim().isEmpty()) {
+                String generatedId = java.util.UUID.randomUUID().toString();
+                message.setMessageId(generatedId);
+                if (message.getMessage() != null) {
+                    message.getMessage().setId(generatedId);
+                }
+                logger.info("🆔 Generated messageId on server (delete): {} for room {}", generatedId, currentRoomId);
+            }
+
             logger.info("🗑️ Processing message deletion: messageId={}, roomId={}", 
                        message.getMessageId(), currentRoomId);
 
@@ -371,7 +515,7 @@ public class ChatWebSocketHandler {
             // Send ACK to sender
             ChatMessage ack = ChatMessage.createSystemMessage(WebSocketEventConstants.ACK, currentRoomId, "server", 
                                             "Message deletion delivered", Instant.now());
-            ack.setReplyToMessageId(message.getMessageId());
+            ack.setReplyToMessageId(message.getEffectiveMessageId());
             sendMessage(ack);
 
         } catch (Exception e) {

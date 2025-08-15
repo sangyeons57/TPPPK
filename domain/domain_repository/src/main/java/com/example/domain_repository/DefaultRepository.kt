@@ -15,6 +15,12 @@ interface DefaultRepository<D : AggregateRoot> : Repository {
     suspend fun save(entity: D): CustomResult<DocumentId, Exception>
     suspend fun delete(id: DocumentId): CustomResult<Unit, Exception>
 
+    // 직접 필드 업데이트를 위한 메서드 추가
+    suspend fun updateFields(
+        id: DocumentId,
+        fields: Map<String, Any?>
+    ): CustomResult<DocumentId, Exception>
+
     suspend fun findById(
         id: DocumentId,
         source: Source = Source.DEFAULT

@@ -71,6 +71,8 @@ fun ChatMessageItemComposable(
 ) {
     LocalContext.current
 
+    // 삭제된 메시지는 SQL 쿼리 단계에서 이미 필터링됨
+
     // 메시지 타입에 따라 다른 UI 렌더링
     when (message.messageType) {
         MessageType.TEXT -> {
@@ -131,6 +133,10 @@ fun ChatMessageItemComposable(
 
                     // 이미지가 있는 경우 이미지 컴포넌트 사용, 없으면 텍스트만 표시
                     if (message.hasImages) {
+                        android.util.Log.d(
+                            "ChatMessageItem",
+                            "🖼️ [UI렌더링] hasImages=true, ImageMessageComponent 호출"
+                        )
                         ImageMessageComponent(
                             message = message,
                             onImageClick = onImageClick
@@ -142,47 +148,46 @@ fun ChatMessageItemComposable(
                         )
                     }
 
-                    // 수정 표시 (메시지 내용 아래에 표시)
-                    if (message.isModified) {
-                        Text(
-                            text = "(수정됨)",
-                            fontSize = 10.sp,
-                            fontStyle = FontStyle.Italic,
-                            color = MaterialTheme.colorScheme.outline,
-                            modifier = Modifier.padding(top = 2.dp)
-                        )
-                    }
+                    // 수정 표시는 이제 MessageStatusRow(시간 옆)에서 처리됨
 
-                    // 첨부파일 렌더링 (새로운 payload 기반 시스템)
-                    val attachments = remember(message.payload) {
+                    // 첨부파일 렌더링 (이미지가 아닌 파일만 - 이미지는 ImageMessageComponent에서 처리)
+                    val nonImageAttachments = remember(message.payload) {
                         try {
                             val messagePayload = MessagePayload(message.payload)
                             val attachmentList = messagePayload.getAttachments()
-                            if (attachmentList.isNotEmpty()) {
+                            // 이미지가 아닌 첨부파일만 필터링 (이중 렌더링 방지)
+                            val filteredAttachments = attachmentList.filter { attachment ->
+                                val kind = attachment[MessagePayload.KEY_KIND] as? String
+                                kind != "image" // 이미지가 아닌 것만
+                            }
+                            if (filteredAttachments.isNotEmpty()) {
                                 android.util.Log.d(
                                     "ChatMessageItem",
-                                    "🖼️ [UI표시] 메시지 아이템에서 첨부파일 렌더링: ${attachmentList.size}개"
+                                    "🖼️ [UI표시] 메시지 아이템에서 비이미지 첨부파일 렌더링: ${filteredAttachments.size}개"
                                 )
                             }
-                            attachmentList
+                            filteredAttachments
                         } catch (e: Exception) {
                             emptyList()
                         }
                     }
 
-                    if (attachments.isNotEmpty()) {
+                    if (nonImageAttachments.isNotEmpty()) {
                         Column(
                             modifier = Modifier.padding(top = 8.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            attachments.forEach { attachment ->
+                            nonImageAttachments.forEach { attachment ->
                                 AttachmentRenderer(
                                     attachment = attachment,
                                     modifier = Modifier.fillMaxWidth(),
                                     onAttachmentClick = { clickedAttachment ->
-                                        // TODO: 첨부파일 클릭 처리 (이미지 확대, 파일 다운로드 등)
+                                        // 파일 다운로드 또는 열기 처리
                                         val url = clickedAttachment["url"] as? String ?: ""
-                                        android.util.Log.d("ChatScreen", "Attachment clicked: $url")
+                                        android.util.Log.d(
+                                            "ChatScreen",
+                                            "Non-image attachment clicked: $url"
+                                        )
                                     }
                                 )
                             }
@@ -229,96 +234,23 @@ fun ChatMessageItemComposable(
             )
         }
 
-        MessageType.SYSTEM_MEMBER_INVITATION -> {
-            MemberInvitationSystemMessage(
-                payload = message.payload,
-                onAddMember = onAddMember,
+        MessageType.PROJECT_INVITE -> {
+            ProjectInviteMessage(
+                payload = MessagePayload(message.payload),
+                onJoinProject = onJoinProject,
                 modifier = modifier.padding(vertical = 6.dp)
             )
         }
 
-        MessageType.IMAGE -> {
-            // 이미지 메시지 처리 - 기본적으로 TEXT와 동일하게 처리
-            // TODO: 추후 이미지 전용 UI 구현 시 업데이트
-            Row(
-                modifier = modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp)
-                    .combinedClickable(
-                        onClick = { /* 일반 클릭은 Bubble 자체에는 불필요할 수 있음 */ },
-                        onLongClick = onLongClick
-                    ),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                if (isFirstInGroup) {
-                    SimpleUserProfileImage(
-                        imageUrl = message.userProfileUrl,
-                        contentDescription = "${message.userName} 프로필",
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .clickable(onClick = onUserProfileClick),
-                    )
-                } else {
-                    Spacer(modifier = Modifier.width(40.dp))
-                }
-
-                Column {
-                    if (isFirstInGroup) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = message.userName,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-
-                            MessageStatusRow(
-                                message = message,
-                                onRetryMessage = onRetryMessage,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                    }
-
-                    val displayMessage = message.message
-                    val processedText = parseMentionsForDisplay(
-                        displayMessage,
-                        participants,
-                        projectMembers,
-                        projectRoles
-                    )
-
-                    // 이미지 메시지의 경우 이미지 우선 표시
-                    if (message.hasImages) {
-                        ImageMessageComponent(
-                            message = message,
-                            onImageClick = onImageClick
-                        )
-                    } else {
-                        ChatMessageText(
-                            processedText = processedText,
-                            onMentionClick = onMentionClick
-                        )
-                    }
-
-                    // 수정 표시 (메시지 내용 아래에 표시)
-                    if (message.isModified) {
-                        Text(
-                            text = "(수정됨)",
-                            fontSize = 10.sp,
-                            fontStyle = FontStyle.Italic,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                            modifier = Modifier.padding(start = 8.dp, top = 2.dp)
-                        )
-                    }
-                }
-            }
+        MessageType.SYSTEM_MEMBER_INVITATION -> {
+            MemberInvitationSystemMessage(
+                payload = message.payload,
+                onAddMember = onAddMember,
+                modifier = modifier.padding(vertical = 6.dp),
+                isSender = message.isMyMessage
+            )
         }
+
 
         MessageType.SYSTEM -> {
             // 일반 시스템 메시지
@@ -409,6 +341,54 @@ fun SelectedImagePreview(
                 modifier = Modifier.size(16.dp)
             )
         }
+    }
+}
+
+/**
+ * 프로젝트 초대 메시지 렌더링
+ */
+@Composable
+private fun ProjectInviteMessage(
+    payload: MessagePayload,
+    onJoinProject: (String) -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    // Parse payload outside composable to avoid try-catch around composable calls
+    val payloadData = remember(payload) {
+        try {
+            val payloadJson = payload.asJsonObject()
+            mapOf(
+                "projectName" to (payloadJson["projectName"]?.toString()?.removeSurrounding("\"")
+                    ?: "프로젝트"),
+                "inviterName" to (payloadJson["inviterName"]?.toString()?.removeSurrounding("\"")
+                    ?: "알 수 없음"),
+                "actionText" to (payloadJson["actionText"]?.toString()?.removeSurrounding("\"")
+                    ?: "참여하기"),
+                "invitationId" to (payloadJson["invitationId"]?.toString()?.removeSurrounding("\"")
+                    ?: ""),
+                "isValid" to true
+            )
+        } catch (e: Exception) {
+            mapOf("isValid" to false)
+        }
+    }
+
+    if (payloadData["isValid"] == true) {
+        ProjectInviteMessageComponent(
+            projectName = payloadData["projectName"] as String,
+            inviterName = payloadData["inviterName"] as String,
+            actionText = payloadData["actionText"] as String,
+            onJoinProject = { onJoinProject(payloadData["invitationId"] as String) },
+            modifier = modifier
+        )
+    } else {
+        // Fallback UI for parsing errors
+        Text(
+            text = "프로젝트 초대 메시지",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = modifier
+        )
     }
 }
 

@@ -37,6 +37,9 @@ object WebSocketFieldConstants {
     
     /** 페이로드 필드 */
     const val FIELD_PAYLOAD = "payload"
+
+    /** 중첩 메시지 필드 (도메인 Message 래핑) */
+    const val FIELD_MESSAGE = "message"
     
     /** 프로젝트 ID 필드 */
     const val FIELD_PROJECT_ID = "projectId"
@@ -63,12 +66,6 @@ object WebSocketFieldConstants {
     /** 시스템 메시지 */
     const val MESSAGE_TYPE_SYSTEM = "SYSTEM"
     
-    /** 이미지 메시지 */
-    const val MESSAGE_TYPE_IMAGE = "IMAGE"
-    
-    /** 파일 메시지 */
-    const val MESSAGE_TYPE_FILE = "FILE"
-    
     /** 시스템 날짜 메시지 */
     const val MESSAGE_TYPE_SYSTEM_DATE = "SYSTEM_DATE"
     
@@ -81,346 +78,41 @@ object WebSocketFieldConstants {
     /** 시스템 사용자 초대 메시지 */
     const val MESSAGE_TYPE_SYSTEM_USER_INVITE = "SYSTEM_USER_INVITE"
 
-    // ================================
-    // 페이로드 키 상수 (서버 PayloadConstants.java와 100% 일치)
-    // ================================
+    /** 시스템 멤버 초대 메시지 (프로젝트 멤버 초대 안내) */
+    const val MESSAGE_TYPE_SYSTEM_MEMBER_INVITATION = "SYSTEM_MEMBER_INVITATION"
 
-    /** 메시지 텍스트 내용 - 서버: CONTENT */
-    const val PAYLOAD_CONTENT = "content"
-
-    /** 메시지 제목 - 서버: TITLE */
-    const val PAYLOAD_TITLE = "title"
-
-    /** 메시지 부제목 - 서버: SUBTITLE */
-    const val PAYLOAD_SUBTITLE = "subtitle"
-
-    /** 이미지 URL - 서버: IMAGE_URL */
-    const val PAYLOAD_IMAGE_URL = "imageUrl"
-
-    /** 파일 URL - 서버: FILE_URL */
-    const val PAYLOAD_FILE_URL = "fileUrl"
-
-    /** 파일 이름 - 서버: FILE_NAME */
-    const val PAYLOAD_FILE_NAME = "fileName"
-
-    /** 파일 크기 - 서버: FILE_SIZE */
-    const val PAYLOAD_FILE_SIZE = "fileSize"
-
-    /** 파일 타입 - 서버: FILE_TYPE */
-    const val PAYLOAD_FILE_TYPE = "fileType"
-
-    /** MIME 타입 - 서버: MIME_TYPE */
-    const val PAYLOAD_MIME_TYPE = "mimeType"
-
-    /** 썸네일 URL - 서버: THUMBNAIL_URL */
-    const val PAYLOAD_THUMBNAIL_URL = "thumbnailUrl"
-
-    /** 업로드 진행률 - 서버: UPLOAD_PROGRESS */
-    const val PAYLOAD_UPLOAD_PROGRESS = "uploadProgress"
+    /** 프로젝트 초대 메시지 */
+    const val MESSAGE_TYPE_PROJECT_INVITE = "PROJECT_INVITE"
 
     // ================================
-    // 시스템 메시지 페이로드 키
+    // 프로젝트 초대 메시지 전용 필드 상수
     // ================================
 
-    /** 시스템 메시지 타입 */
-    const val PAYLOAD_SYSTEM_TYPE = "systemType"
+    /** 초대 ID 필드 */
+    const val FIELD_INVITATION_ID = "invitationId"
 
-    /** 관련 사용자 ID */
-    const val PAYLOAD_USER_ID = "userId"
+    /** 프로젝트 이름 필드 */
+    const val FIELD_PROJECT_NAME = "projectName"
 
-    /** 관련 사용자 이름 */
-    const val PAYLOAD_USER_NAME = "userName"
-
-    /** 액션 타입 */
-    const val PAYLOAD_ACTION_TYPE = "actionType"
-
-    /** 대상 사용자 ID */
-    const val PAYLOAD_TARGET_USER_ID = "targetUserId"
-
-    /** 대상 사용자 이름 */
-    const val PAYLOAD_TARGET_USER_NAME = "targetUserName"
+    /** 초대자 이름 필드 */
+    const val FIELD_INVITER_NAME = "inviterName"
 
     // ================================
-    // 프로젝트 관련 페이로드 키
+    // 유틸리티 함수 (메시지 타입 판별만 보유)
     // ================================
 
-    /** 프로젝트 이름 */
-    const val PAYLOAD_PROJECT_NAME = "projectName"
+    fun isTextMessage(messageType: String?): Boolean = messageType == MESSAGE_TYPE_TEXT
 
-    /** 채널 이름 */
-    const val PAYLOAD_CHANNEL_NAME = "channelName"
+    fun isSystemMessage(messageType: String?): Boolean = messageType in setOf(
+        MESSAGE_TYPE_SYSTEM,
+        MESSAGE_TYPE_SYSTEM_DATE,
+        MESSAGE_TYPE_SYSTEM_PROJECT_JOIN,
+        MESSAGE_TYPE_SYSTEM_PROJECT_LEAVE,
+        MESSAGE_TYPE_SYSTEM_USER_INVITE,
+        MESSAGE_TYPE_SYSTEM_MEMBER_INVITATION,
+        MESSAGE_TYPE_PROJECT_INVITE
+    )
 
-    /** 초대 코드 */
-    const val PAYLOAD_INVITE_CODE = "inviteCode"
-
-    /** 역할/권한 */
-    const val PAYLOAD_ROLE = "role"
-
-    // ================================
-    // 메타데이터 페이로드 키
-    // ================================
-
-    /** 클라이언트 정보 */
-    const val PAYLOAD_CLIENT_INFO = "clientInfo"
-
-    /** 디바이스 타입 */
-    const val PAYLOAD_DEVICE_TYPE = "deviceType"
-
-    /** 앱 버전 */
-    const val PAYLOAD_APP_VERSION = "appVersion"
-
-    /** 타임스탬프 메타데이터 */
-    const val PAYLOAD_TIMESTAMP_META = "timestampMeta"
-
-    // ================================
-    // 오류 관련 페이로드 키
-    // ================================
-
-    /** 오류 메시지 */
-    const val PAYLOAD_ERROR_MESSAGE = "errorMessage"
-
-    /** 오류 코드 */
-    const val PAYLOAD_ERROR_CODE = "errorCode"
-
-    /** 오류 상세 정보 */
-    const val PAYLOAD_ERROR_DETAILS = "errorDetails"
-
-    /** 스택 트레이스 */
-    const val PAYLOAD_STACK_TRACE = "stackTrace"
-
-    // ================================
-    // 알림 관련 페이로드 키
-    // ================================
-
-    /** 알림 제목 */
-    const val PAYLOAD_NOTIFICATION_TITLE = "notificationTitle"
-
-    /** 알림 내용 */
-    const val PAYLOAD_NOTIFICATION_BODY = "notificationBody"
-
-    /** 알림 아이콘 */
-    const val PAYLOAD_NOTIFICATION_ICON = "notificationIcon"
-
-    /** 알림 액션 */
-    const val PAYLOAD_NOTIFICATION_ACTION = "notificationAction"
-
-    // ================================
-    // 인증 관련 페이로드 키
-    // ================================
-
-    /** 인증 토큰 */
-    const val PAYLOAD_AUTH_TOKEN = "authToken"
-
-    /** 리프레시 토큰 */
-    const val PAYLOAD_REFRESH_TOKEN = "refreshToken"
-
-    /** 토큰 만료 시간 */
-    const val PAYLOAD_TOKEN_EXPIRES_AT = "tokenExpiresAt"
-
-    // ================================
-    // 기타 통신 관련 페이로드 키
-    // ================================
-
-    /** 요청 ID */
-    const val PAYLOAD_REQUEST_ID = "requestId"
-
-    /** 응답 상태 */
-    const val PAYLOAD_RESPONSE_STATUS = "responseStatus"
-
-    /** 추가 데이터 */
-    const val PAYLOAD_EXTRA_DATA = "extraData"
-
-    /** 설정 정보 */
-    const val PAYLOAD_CONFIG_DATA = "configData"
-
-    // ================================
-    // 유틸리티 함수
-    // ================================
-
-    /**
-     * 메시지 타입이 텍스트인지 확인
-     */
-    fun isTextMessage(messageType: String?): Boolean {
-        return messageType == MESSAGE_TYPE_TEXT
-    }
-
-    /**
-     * 메시지 타입이 시스템 메시지인지 확인
-     */
-    fun isSystemMessage(messageType: String?): Boolean {
-        return messageType in setOf(
-            MESSAGE_TYPE_SYSTEM,
-            MESSAGE_TYPE_SYSTEM_DATE,
-            MESSAGE_TYPE_SYSTEM_PROJECT_JOIN,
-            MESSAGE_TYPE_SYSTEM_PROJECT_LEAVE,
-            MESSAGE_TYPE_SYSTEM_USER_INVITE
-        )
-    }
-
-    /**
-     * 메시지 타입이 미디어(이미지/파일)인지 확인
-     */
-    fun isMediaMessage(messageType: String?): Boolean {
-        return messageType in setOf(MESSAGE_TYPE_IMAGE, MESSAGE_TYPE_FILE)
-    }
-
-    /**
-     * 페이로드에서 텍스트 콘텐츠 추출
-     */
-    fun getTextContent(payload: Map<String, String>?): String? {
-        return payload?.get(PAYLOAD_CONTENT)
-    }
-
-    /**
-     * 텍스트 콘텐츠가 포함된 페이로드 생성
-     */
-    fun createTextPayload(content: String): Map<String, String> {
-        return mapOf(PAYLOAD_CONTENT to content)
-    }
-
-    /**
-     * 시스템 메시지 페이로드 생성
-     */
-    fun createSystemPayload(
-        systemType: String,
-        content: String,
-        userId: String? = null,
-        userName: String? = null
-    ): Map<String, String> {
-        return buildMap {
-            put(PAYLOAD_CONTENT, content)
-            put(PAYLOAD_SYSTEM_TYPE, systemType)
-            userId?.let { put(PAYLOAD_USER_ID, it) }
-            userName?.let { put(PAYLOAD_USER_NAME, it) }
-        }
-    }
-
-    /**
-     * 파일 메시지 페이로드 생성
-     */
-    fun createFilePayload(
-        fileName: String,
-        fileUrl: String,
-        fileSize: Long? = null,
-        fileType: String? = null,
-        mimeType: String? = null
-    ): Map<String, String> {
-        return buildMap {
-            put(PAYLOAD_FILE_NAME, fileName)
-            put(PAYLOAD_FILE_URL, fileUrl)
-            fileSize?.let { put(PAYLOAD_FILE_SIZE, it.toString()) }
-            fileType?.let { put(PAYLOAD_FILE_TYPE, it) }
-            mimeType?.let { put(PAYLOAD_MIME_TYPE, it) }
-        }
-    }
-
-    /**
-     * 이미지 메시지 페이로드 생성
-     */
-    fun createImagePayload(
-        imageUrl: String,
-        thumbnailUrl: String? = null,
-        fileName: String? = null
-    ): Map<String, String> {
-        return buildMap {
-            put(PAYLOAD_IMAGE_URL, imageUrl)
-            thumbnailUrl?.let { put(PAYLOAD_THUMBNAIL_URL, it) }
-            fileName?.let { put(PAYLOAD_FILE_NAME, it) }
-        }
-    }
-
-    // ================================
-    // 서버-클라이언트 키 동기화 검증
-    // ================================
-
-    /**
-     * 서버 상수와 동기화 상태 확인 (개발용)
-     * 이 함수는 개발/테스트 시 서버와 클라이언트 키가 일치하는지 확인합니다.
-     */
-    fun validateServerClientSync(): Map<String, Boolean> {
-        return mapOf(
-            "FIELD_KEYS_MATCH" to validateFieldKeys(),
-            "PAYLOAD_KEYS_MATCH" to validatePayloadKeys(),
-            "MESSAGE_TYPES_MATCH" to validateMessageTypes()
-        )
-    }
-
-    private fun validateFieldKeys(): Boolean {
-        // 서버 WebSocketEventConstants.java의 FIELD_* 상수와 비교
-        val serverFieldKeys = setOf(
-            "type", "roomId", "senderId", "messageType", "timestamp",
-            "messageId", "replyToMessageId", "payload", "projectId",
-            "channelType", "authToken", "errorCode", "metadata"
-        )
-
-        val clientFieldKeys = setOf(
-            FIELD_TYPE, FIELD_ROOM_ID, FIELD_SENDER_ID, FIELD_MESSAGE_TYPE,
-            FIELD_TIMESTAMP, FIELD_MESSAGE_ID, FIELD_REPLY_TO_MESSAGE_ID,
-            FIELD_PAYLOAD, FIELD_PROJECT_ID, FIELD_CHANNEL_TYPE,
-            FIELD_AUTH_TOKEN, FIELD_ERROR_CODE, FIELD_METADATA
-        )
-
-        return serverFieldKeys == clientFieldKeys
-    }
-
-    private fun validatePayloadKeys(): Boolean {
-        // 서버 PayloadConstants.java의 주요 키들과 비교
-        val serverPayloadKeys = setOf(
-            "content", "title", "subtitle", "imageUrl", "fileUrl",
-            "fileName", "fileSize", "fileType", "mimeType", "thumbnailUrl"
-        )
-
-        val clientPayloadKeys = setOf(
-            PAYLOAD_CONTENT, PAYLOAD_TITLE, PAYLOAD_SUBTITLE, PAYLOAD_IMAGE_URL,
-            PAYLOAD_FILE_URL, PAYLOAD_FILE_NAME, PAYLOAD_FILE_SIZE,
-            PAYLOAD_FILE_TYPE, PAYLOAD_MIME_TYPE, PAYLOAD_THUMBNAIL_URL
-        )
-
-        return serverPayloadKeys.all { it in clientPayloadKeys }
-    }
-
-    private fun validateMessageTypes(): Boolean {
-        // 서버 WebSocketEventConstants.java의 MESSAGE_TYPE_* 상수와 비교
-        val serverMessageTypes = setOf(
-            "TEXT", "SYSTEM", "IMAGE", "FILE", "SYSTEM_DATE",
-            "SYSTEM_PROJECT_JOIN", "SYSTEM_PROJECT_LEAVE", "SYSTEM_USER_INVITE"
-        )
-
-        val clientMessageTypes = setOf(
-            MESSAGE_TYPE_TEXT, MESSAGE_TYPE_SYSTEM, MESSAGE_TYPE_IMAGE,
-            MESSAGE_TYPE_FILE, MESSAGE_TYPE_SYSTEM_DATE,
-            MESSAGE_TYPE_SYSTEM_PROJECT_JOIN, MESSAGE_TYPE_SYSTEM_PROJECT_LEAVE,
-            MESSAGE_TYPE_SYSTEM_USER_INVITE
-        )
-
-        return serverMessageTypes == clientMessageTypes
-    }
-
-    /**
-     * 메시지 구조 유효성 검증
-     */
-    fun validateMessageStructure(messageMap: Map<String, Any?>): Boolean {
-        // 필수 필드 확인
-        val requiredFields = setOf(FIELD_TYPE)
-        val hasRequiredFields = requiredFields.all { messageMap.containsKey(it) }
-
-        // 타입별 필수 필드 확인
-        val messageType = messageMap[FIELD_MESSAGE_TYPE] as? String
-        val typeSpecificValidation = when (messageType) {
-            MESSAGE_TYPE_TEXT -> messageMap[FIELD_PAYLOAD] != null
-            MESSAGE_TYPE_IMAGE -> {
-                val payload = messageMap[FIELD_PAYLOAD] as? Map<*, *>
-                payload?.containsKey(PAYLOAD_IMAGE_URL) == true
-            }
-
-            MESSAGE_TYPE_SYSTEM -> {
-                val payload = messageMap[FIELD_PAYLOAD] as? Map<*, *>
-                payload?.containsKey(PAYLOAD_SYSTEM_TYPE) == true
-            }
-
-            else -> true // 알 수 없는 타입은 기본 검증만 수행
-        }
-
-        return hasRequiredFields && typeSpecificValidation
-    }
+    fun isMediaMessage(messageType: String?): Boolean =
+        false // No longer using separate IMAGE/FILE types
 }

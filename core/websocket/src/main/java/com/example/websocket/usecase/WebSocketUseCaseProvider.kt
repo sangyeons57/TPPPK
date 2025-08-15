@@ -203,7 +203,7 @@ class RoomWebSocketUseCases(
      */
     suspend fun sendMessageUseCase(
         senderId: UserId,
-        content: String,
+        payload: com.example.domain.vo.message.MessagePayload,
         messageId: DocumentId,
         replyToMessageId: DocumentId? = null,
         projectId: String? = null,
@@ -212,7 +212,7 @@ class RoomWebSocketUseCases(
         return webSocketMessageService.sendMessage(
             roomId = roomId,
             senderId = senderId,
-            content = content,
+            payload = payload,
             messageId = messageId,
             replyToMessageId = replyToMessageId,
             projectId = projectId,
@@ -220,22 +220,37 @@ class RoomWebSocketUseCases(
         )
     }
 
+    // sendMessageWithPayloadUseCase 제거: 통합된 payload 기반 API 사용
+
     /**
-     * 메시지 수정
+     * 메시지 수정 (payload 기반)
      */
     suspend fun editMessageUseCase(
         messageId: DocumentId,
-        newContent: String,
+        newPayload: com.example.domain.vo.message.MessagePayload,
         projectId: String? = null,
         channelType: String? = null
     ): Result<Unit> {
         return webSocketMessageService.editMessage(
             roomId = roomId,
             messageId = messageId,
-            newContent = newContent,
+            newPayload = newPayload,
             projectId = projectId,
             channelType = channelType
         )
+    }
+
+    /**
+     * 메시지 수정 (텍스트 content - 하위 호환용)
+     */
+    suspend fun editMessageWithTextUseCase(
+        messageId: DocumentId,
+        newContent: String,
+        projectId: String? = null,
+        channelType: String? = null
+    ): Result<Unit> {
+        val newPayload = com.example.domain.vo.message.MessagePayload.forText(newContent)
+        return editMessageUseCase(messageId, newPayload, projectId, channelType)
     }
 
     /**

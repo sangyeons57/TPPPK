@@ -147,6 +147,14 @@ fun ChatScreen(
                     focusManager.clearFocus()
                 }
 
+                is ChatEvent.ShowEditDeleteDialog -> {
+                    showEditDeleteDialog = event.message
+                }
+
+                is ChatEvent.ShowUserProfileDialog -> {
+                    showUserProfileDialog = event.userId
+                }
+
                 else -> {} // 다른 이벤트는 UI에서 직접 처리
             }
         }
@@ -231,13 +239,7 @@ fun ChatScreen(
                         isEnabled = viewModel.canPerformWriteOperations(),
                         canSend = (uiState.pendingMessageText.isNotBlank() || uiState.selectedAttachmentUris.isNotEmpty()),
                         onTextChange = viewModel::onMessageInputChange,
-                        onSendClick = {
-                            if (uiState.isEditing) {
-                                viewModel.confirmEditMessage()
-                            } else {
-                                viewModel.onSendMessageClick()
-                            }
-                        },
+                        onSendClick = viewModel::onSendClick,
                         onAttachmentClick = { imagePickerLauncher.launch("image/*") },
                         onCancelEdit = viewModel::cancelEdit,
                         onKeyboardStateChange = { keyboardVisible ->

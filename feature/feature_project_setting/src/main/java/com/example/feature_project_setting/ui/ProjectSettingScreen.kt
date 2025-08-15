@@ -61,12 +61,13 @@ import com.example.core_ui.components.project.ProjectProfileImage
 import com.example.core_ui.picker.ImagePicker
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.enum.ProjectChannelType
+import com.example.domain.vo.DocumentId
 import com.example.domain.vo.project.ProjectName
 import com.example.feature_model.CategoryUiModel
 import com.example.feature_model.ChannelUiModel
-import com.example.feature_project_setting.viewmodel.viewmodel.ProjectSettingEvent
-import com.example.feature_project_setting.viewmodel.viewmodel.ProjectSettingUiState
-import com.example.feature_project_setting.viewmodel.viewmodel.ProjectSettingViewModel
+import com.example.feature_project_setting.viewmodel.ProjectSettingEvent
+import com.example.feature_project_setting.viewmodel.ProjectSettingUiState
+import com.example.feature_project_setting.viewmodel.ProjectSettingViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 /**
@@ -632,10 +633,7 @@ private fun RenameProjectDialogPreview() {
 @Composable
 private fun ProjectSettingScreenPreview() {
     TeamnovaPersonalProjectProjectingKotlinTheme {
-        ProjectSettingScreen(
-            modifier = TODO(),
-            viewModel = TODO()
-        )
+        ProjectSettingScreen()
     }
 }
 
@@ -646,12 +644,9 @@ private fun ProjectSettingContentLoadingPreview() {
         ProjectSettingContent(
             uiState = ProjectSettingUiState(
                 isLoading = true,
-                projectId = TODO(),
-                projectName = TODO(),
-                categories = TODO(),
-                error = TODO(),
-                showRenameProjectDialog = TODO(),
-                showDeleteProjectDialog = TODO()
+                projectId = DocumentId.EMPTY,
+                projectName = ProjectName.EMPTY,
+                categories = emptyList(),
             ),
             onCategoryEditClick = {},
             onCategoryDeleteClick = {},
@@ -677,12 +672,7 @@ private fun ProjectSettingContentErrorPreview() {
         ProjectSettingContent(
             uiState = ProjectSettingUiState(
                 error = "미리보기 에러 메시지입니다.",
-                projectId = TODO(),
-                projectName = TODO(),
-                categories = TODO(),
-                isLoading = TODO(),
-                showRenameProjectDialog = TODO(),
-                showDeleteProjectDialog = TODO()
+                projectId = DocumentId.EMPTY
             ),
             onCategoryEditClick = {},
             onCategoryDeleteClick = {},

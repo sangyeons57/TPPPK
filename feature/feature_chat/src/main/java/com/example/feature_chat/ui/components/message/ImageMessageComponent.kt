@@ -30,11 +30,55 @@ fun ImageMessageComponent(
     val context = LocalContext.current
     val imageUrls = message.imageUrls
 
-    if (imageUrls.isEmpty()) return
+    android.util.Log.d(
+        "ImageMessageComponent",
+        "🖼️ [UI진입] imageUrls.size=${imageUrls.size}, hasImages=${message.hasImages}, payload=${message.payload}"
+    )
+
+    // imageUrls가 비어있을 때 fallback으로 payload에서 직접 추출 시도
+    val finalImageUrls = if (imageUrls.isEmpty() && message.hasImages) {
+        android.util.Log.d(
+            "ImageMessageComponent",
+            "🖼️ [Fallback] imageUrls가 비어있어서 payload에서 직접 추출 시도"
+        )
+
+        try {
+            val messagePayload = com.example.domain.vo.message.MessagePayload(message.payload)
+            val attachments = messagePayload.getAttachments()
+            val fallbackUrls = attachments
+                .filter { attachment ->
+                    val kind =
+                        attachment[com.example.domain.vo.message.MessagePayload.KEY_KIND] as? String
+                    kind == "image"
+                }
+                .mapNotNull { attachment ->
+                    attachment[com.example.domain.vo.message.MessagePayload.KEY_URL] as? String
+                }
+            android.util.Log.d(
+                "ImageMessageComponent",
+                "🖼️ [Fallback] payload에서 ${fallbackUrls.size}개 URL 추출: $fallbackUrls"
+            )
+            fallbackUrls
+        } catch (e: Exception) {
+            android.util.Log.e(
+                "ImageMessageComponent",
+                "🖼️ [Fallback] payload 파싱 실패: ${e.message}",
+                e
+            )
+            emptyList()
+        }
+    } else {
+        imageUrls
+    }
+
+    if (finalImageUrls.isEmpty()) {
+        android.util.Log.d("ImageMessageComponent", "🖼️ [UI중단] 최종적으로 표시할 이미지 URL이 없음")
+        return
+    }
 
     android.util.Log.d(
         "ImageMessageComponent",
-        "🖼️ [UI표시] 이미지 메시지 컴포넌트 렌더링: ${imageUrls.size}개 이미지"
+        "🖼️ [UI표시] 이미지 메시지 컴포넌트 렌더링: ${finalImageUrls.size}개 이미지"
     )
 
     Column(
@@ -51,12 +95,12 @@ fun ImageMessageComponent(
         }
 
         // 이미지 표시
-        when (imageUrls.size) {
+        when (finalImageUrls.size) {
             1 -> {
                 // 단일 이미지 - 큰 크기로 표시
                 SingleImageView(
-                    imageUrl = imageUrls.first(),
-                    onClick = { onImageClick(imageUrls.first(), imageUrls, 0) },
+                    imageUrl = finalImageUrls.first(),
+                    onClick = { onImageClick(finalImageUrls.first(), finalImageUrls, 0) },
                     isLoading = message.isSending
                 )
             }
@@ -64,7 +108,7 @@ fun ImageMessageComponent(
             else -> {
                 // 다중 이미지 - 그리드 또는 가로 스크롤로 표시
                 MultipleImagesView(
-                    imageUrls = imageUrls,
+                    imageUrls = finalImageUrls,
                     onImageClick = onImageClick,
                     isLoading = message.isSending
                 )

@@ -7,9 +7,15 @@ import com.example.core_common.result.CustomResult
 import com.example.data_repository.util.RoomDatabaseLogger
 import com.example.domain.model.sync.SyncCoordinator
 import com.example.domain.vo.DocumentId
+import com.example.domain.vo.ChannelId
+import com.example.domain.model.base.Message
+import com.example.domain.vo.message.MessageType
+import com.example.websocket.usecase.SendMessageUseCase
+import com.example.domain.vo.message.MessagePayload
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain_usecase.provider.dev.DevMenuUseCaseProvider
 import com.example.domain_usecase.usecase.sync.ResetAndSyncUseCase
+import com.example.domain_usecase.usecase.dev.ClearAllRoomCacheUseCase
 import com.example.domain_usecase.usecase.sync.SyncUseCase
 import com.example.websocket.core.WebSocketConnectionState
 import com.example.websocket.event.WebSocketDomainEvent
@@ -30,7 +36,9 @@ class DevMenuViewModel @Inject constructor(
     private val syncManager: SyncCoordinator,
     private val syncUseCase: SyncUseCase,
     private val resetAndSyncUseCase: ResetAndSyncUseCase,
-    private val roomDatabaseLogger: RoomDatabaseLogger
+    private val clearAllRoomCacheUseCase: ClearAllRoomCacheUseCase,
+    private val roomDatabaseLogger: RoomDatabaseLogger,
+    private val sendMessageUseCase: SendMessageUseCase,
 ) : ViewModel() {
 
     // WebSocket use cases for dev testing
@@ -111,6 +119,13 @@ class DevMenuViewModel @Inject constructor(
     private val _localChatCacheClearResult = MutableStateFlow("")
     val localChatCacheClearResult: StateFlow<String> = _localChatCacheClearResult.asStateFlow()
 
+    // Room 전체 클리어 진행 상태/결과
+    private val _isRoomClearing = MutableStateFlow(false)
+    val isRoomClearing: StateFlow<Boolean> = _isRoomClearing.asStateFlow()
+
+    private val _roomClearResult = MutableStateFlow("")
+    val roomClearResult: StateFlow<String> = _roomClearResult.asStateFlow()
+
     // 동기화 관련 상태
     private val _outBoxStatus = MutableStateFlow("")
     val outBoxStatus: StateFlow<String> = _outBoxStatus.asStateFlow()
@@ -176,6 +191,10 @@ class DevMenuViewModel @Inject constructor(
      */
     fun clearResult() {
         _cacheClearResult.value = ""
+    }
+
+    fun clearRoomClearResult() {
+        _roomClearResult.value = ""
     }
 
     /**
@@ -363,15 +382,21 @@ class DevMenuViewModel @Inject constructor(
                 when (val sessionResult = authUseCases.getCurrentUserSessionUseCase()) {
                     is CustomResult.Success -> {
                         val userId = sessionResult.data.userId
-                        val result = webSocketUseCases.sendMessageUseCase(
+                        val msgId = DocumentId.generate()
+                        val payload = MessagePayload.forText(message)
+                        val domainMessage = Message.create(
+                            id = msgId,
                             senderId = userId,
-                            content = message,
-                            messageId = DocumentId.generate()
+                            messageType = MessageType.TEXT,
+                            payload = payload,
+                            replyToMessageId = null,
+                            mentions = emptyList(),
+                            channelId = ChannelId(TEST_ROOM_ID)
                         )
-                        if (result.isSuccess) {
-                            addMessage("✅ Message sent successfully")
-                        } else {
-                            addMessage("❌ Failed to send message: ${result.exceptionOrNull()?.message}")
+                        when (val result = sendMessageUseCase(domainMessage, projectId = null)) {
+                            is CustomResult.Success -> addMessage("✅ Message sent successfully: ${result.data.value}")
+                            is CustomResult.Failure -> addMessage("❌ Failed to send message: ${result.error.message}")
+                            else -> addMessage("⚠️ Unknown result while sending message")
                         }
                     }
                     is CustomResult.Failure -> {
@@ -582,6 +607,40 @@ class DevMenuViewModel @Inject constructor(
             } finally {
                 _isSyncing.value = false
                 Log.d("DevMenuViewModel-Sync", "🏁 Reset and sync process finished")
+            }
+        }
+    }
+
+    /**
+     * Room 전체 데이터(메시지, OutBox, 동기화 메타데이터) 삭제
+     */
+    fun clearAllRoomData() {
+        viewModelScope.launch {
+            _isRoomClearing.value = true
+            _roomClearResult.value = "🗑️ Room 전체 클리어 중..."
+
+            try {
+                when (val result = clearAllRoomCacheUseCase()) {
+                    is CustomResult.Success -> {
+                        _roomClearResult.value = "✅ Room 데이터 전체 클리어 완료"
+                        addMessage("✅ Room 데이터 전체 클리어 완료")
+                    }
+
+                    is CustomResult.Failure -> {
+                        _roomClearResult.value = "❌ Room 클리어 실패: ${result.error.message}"
+                        addMessage("❌ Room 클리어 실패: ${result.error.message}")
+                    }
+
+                    else -> {
+                        _roomClearResult.value = "⚠️ 결과를 알 수 없습니다"
+                        addMessage("⚠️ Room 전체 클리어 결과 알 수 없음")
+                    }
+                }
+            } catch (e: Exception) {
+                _roomClearResult.value = "💥 예외 발생: ${e.message}"
+                addMessage("💥 Room 전체 클리어 중 예외: ${e.message}")
+            } finally {
+                _isRoomClearing.value = false
             }
         }
     }

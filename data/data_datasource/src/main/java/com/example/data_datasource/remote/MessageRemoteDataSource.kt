@@ -155,7 +155,7 @@ open class MessageRemoteDataSourceImpl @Inject constructor(
     }
 
     override suspend fun push(events: List<OutBoxRecord>): PushResult {
-        return PushResult(successIds = events.map { it.id }, failIds = emptyList())
+        return PushResult(successIds = events.map { it.stream }, failIds = emptyList())
     }
 
     override suspend fun pullSince(cursor: String?, limit: Int): RemoteBatch<MessageDTO> {

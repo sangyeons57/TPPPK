@@ -9,7 +9,10 @@ import com.example.domain.usecase.project.ObserveProjectMembersUseCaseImpl
 import com.example.domain.vo.CollectionPath
 import com.example.domain.vo.DocumentId
 import com.example.domain_repository.base.AuthRepository
+import com.example.domain_repository.base.DMChannelRepository
 import com.example.domain_repository.base.MemberRepository
+import com.example.domain_repository.base.MessageRepository
+import com.example.domain_repository.base.ProjectInvitationRepository
 import com.example.domain_repository.base.ProjectRepository
 import com.example.domain_usecase.usecase.project.member.AddProjectMemberUseCase
 import com.example.domain_usecase.usecase.project.member.AddProjectMemberUseCaseImpl
@@ -23,6 +26,18 @@ import com.example.domain_usecase.usecase.project.member.TransferOwnershipUseCas
 import com.example.domain_usecase.usecase.project.member.TransferOwnershipUseCaseImpl
 import com.example.domain_usecase.usecase.project.member.UpdateMemberRolesUseCase
 import com.example.domain_usecase.usecase.project.member.UpdateMemberRolesUseCaseImpl
+import com.example.domain_usecase.usecase.project.member.SendProjectInviteMessageUseCase
+import com.example.domain_usecase.usecase.project.member.SendProjectInviteMessageUseCaseImpl
+import com.example.domain_usecase.usecase.project.member.AcceptProjectInviteFromMessageUseCase
+import com.example.domain_usecase.usecase.project.member.AcceptProjectInviteFromMessageUseCaseImpl
+import com.example.domain_usecase.usecase.project.invitation.SendProjectInvitationUseCase
+import com.example.domain_usecase.usecase.project.invitation.SendProjectInvitationUseCaseImpl
+import com.example.domain_usecase.usecase.project.invitation.AcceptProjectInvitationUseCase
+import com.example.domain_usecase.usecase.project.invitation.AcceptProjectInvitationUseCaseImpl
+import com.example.domain_usecase.usecase.dm.AddDmChannelUseCase
+import com.example.domain_usecase.usecase.dm.GetDmChannelUseCase
+import com.example.domain_usecase.usecase.project.SendMemberInvitationDMUseCase
+import com.example.domain_usecase.usecase.message.SendMessageUseCase
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -35,8 +50,40 @@ import javax.inject.Singleton
 class ProjectMemberUseCaseProvider @Inject constructor(
     private val memberRepository: MemberRepository,
     private val authRepository: AuthRepository,
-    private val projectRepository: ProjectRepository
+    private val projectRepository: ProjectRepository,
+    private val projectInvitationRepository: ProjectInvitationRepository,
+    private val messageRepository: MessageRepository,
+    private val dmChannelRepository: DMChannelRepository,
+    private val sendMessageUseCase: SendMessageUseCase
 ) {
+
+    private fun createAddDmChannelUseCase(): AddDmChannelUseCase {
+        return AddDmChannelUseCase(
+            dmChannelRepository = this.dmChannelRepository,
+            authRepository = this.authRepository
+        )
+    }
+
+    private fun createGetDmChannelUseCase(): GetDmChannelUseCase {
+        return GetDmChannelUseCase(
+            dmRepository = this.dmChannelRepository
+        )
+    }
+
+    private fun createSendMemberInvitationDMUseCase(): SendMemberInvitationDMUseCase {
+        // 올바른 collection 설정을 위해 여기서 repository를 설정
+        projectRepository.setCollection(CollectionPath.projects)
+        dmChannelRepository.setCollection(CollectionPath.dmChannels)
+        // messageRepository는 UseCase 내부에서 동적으로 설정
+
+        return SendMemberInvitationDMUseCase(
+            projectRepository = this.projectRepository,
+            dmChannelRepository = this.dmChannelRepository,
+            authRepository = this.authRepository,
+            messageRepository = this.messageRepository,
+            sendMessageUseCase = this.sendMessageUseCase
+        )
+    }
 
     /**
      * 특정 프로젝트의 멤버 관리 UseCase들을 생성합니다.
@@ -89,7 +136,39 @@ class ProjectMemberUseCaseProvider @Inject constructor(
                 projectRepository = this.projectRepository,
                 memberRepository = this.memberRepository,
                 authRepository = this.authRepository,
-            )
+            ),
+
+            // 프로젝트 초대 메시지 전송
+            sendProjectInviteMessageUseCase = SendProjectInviteMessageUseCaseImpl(
+                addDmChannelUseCase = createAddDmChannelUseCase(),
+                projectInvitationRepository = this.projectInvitationRepository,
+                messageRepository = this.messageRepository,
+                projectRepository = this.projectRepository,
+                authRepository = this.authRepository
+            ),
+
+            // 프로젝트 초대 관리
+            sendProjectInvitationUseCase = SendProjectInvitationUseCaseImpl(
+                projectInvitationRepository = this.projectInvitationRepository
+            ),
+
+            acceptProjectInvitationUseCase = AcceptProjectInvitationUseCaseImpl(
+                projectInvitationRepository = this.projectInvitationRepository
+            ),
+
+            acceptProjectInviteFromMessageUseCase = AcceptProjectInviteFromMessageUseCaseImpl(
+                projectInvitationRepository = this.projectInvitationRepository,
+                acceptProjectInvitationUseCase = AcceptProjectInvitationUseCaseImpl(
+                    projectInvitationRepository = this.projectInvitationRepository
+                )
+            ),
+
+            // 멤버 초대 DM 전송
+            sendMemberInvitationDMUseCase = createSendMemberInvitationDMUseCase(),
+
+            // ViewModel 오케스트레이션용 DM 유틸 UseCase들
+            addDmChannelUseCase = createAddDmChannelUseCase(),
+            getDmChannelUseCase = createGetDmChannelUseCase()
         )
     }
 
@@ -134,5 +213,21 @@ data class ProjectMemberUseCases(
     
     // 프로젝트 나가기 및 소유권 전달
     val leaveProjectUseCase: LeaveProjectUseCase,
-    val transferOwnershipUseCase: TransferOwnershipUseCase
+    val transferOwnershipUseCase: TransferOwnershipUseCase,
+
+    // 프로젝트 초대 메시지 전송
+    val sendProjectInviteMessageUseCase: SendProjectInviteMessageUseCase,
+
+    // 프로젝트 초대 관리
+    val sendProjectInvitationUseCase: SendProjectInvitationUseCase,
+    val acceptProjectInvitationUseCase: AcceptProjectInvitationUseCase,
+    val acceptProjectInviteFromMessageUseCase: AcceptProjectInviteFromMessageUseCase,
+
+    // 멤버 초대 DM 전송
+    @Deprecated("Prefer orchestrating in ViewModel with addDmChannelUseCase/getDmChannelUseCase + WS SendMessageUseCase")
+    val sendMemberInvitationDMUseCase: SendMemberInvitationDMUseCase,
+
+    // ViewModel 오케스트레이션용 DM 유틸 UseCase들
+    val addDmChannelUseCase: AddDmChannelUseCase,
+    val getDmChannelUseCase: GetDmChannelUseCase
 )
