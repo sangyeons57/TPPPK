@@ -17,6 +17,9 @@ local.properties
 .gradle/
 build/
 
+# Local Gradle cache (do not track)
+.gradle-local/
+
 # Maven build output
 websocket-chat/target/
 
