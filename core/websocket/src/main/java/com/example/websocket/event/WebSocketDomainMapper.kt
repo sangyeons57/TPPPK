@@ -9,14 +9,11 @@ import com.example.domain.vo.message.MessageIsDeleted
 import com.example.domain.vo.message.MessagePayload
 import com.example.domain.vo.message.MessageType
 import com.example.websocket.constant.WebSocketEventTypes
-import com.example.websocket.constant.WebSocketFieldConstants
-import com.example.websocket.core.WebSocketMessage
 import com.example.websocket.core.NestedMessage
+import com.example.websocket.core.WebSocketMessage
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import java.time.Instant
 import javax.inject.Inject
@@ -37,6 +34,11 @@ class WebSocketDomainMapper @Inject constructor() {
 
     /**
      * WebSocketMessage를 WebSocketDomainEvent로 변환
+     *
+     * 필드 매핑 원칙(중요):
+     * - message.* (NestedMessage)이 존재하면 이를 우선 사용한다.
+     * - 없을 경우 WebSocketMessage 봉투(envelope)의 동등 필드(senderId/payload/replyToMessageId/timestamp)를 폴백으로 사용한다.
+     * - roomId, projectId 등 라우팅/컨텍스트 필드는 봉투에서만 가져온다.
      */
     fun webSocketMessageToDomainEvent(
         message: WebSocketMessage,
@@ -44,6 +46,7 @@ class WebSocketDomainMapper @Inject constructor() {
     ): WebSocketDomainEvent {
         return when (message.type) {
             WebSocketMessage.TYPE_MESSAGE -> {
+                // 도메인 Message 필드 매핑: id/senderId/payload/replyTo/timestamp → Nested 우선
                 WebSocketDomainEvent.MessageReceived(
                     messageId = message.message?.id ?: "",
                     senderId = message.message?.senderId ?: message.senderId ?: "",
@@ -57,7 +60,7 @@ class WebSocketDomainMapper @Inject constructor() {
                     projectId = message.projectId,
                     channelType = null,
                     originalPayload = message.message?.payload?.toString()
-                        ?: message.payload?.toString(),  // 중첩 payload 우선
+                        ?: message.payload?.toString(),  // payload 전체 보존
                     messageTypeString = message.message?.messageType
                 )
             }
@@ -315,7 +318,7 @@ class WebSocketDomainMapper @Inject constructor() {
         } catch (_: Exception) {
             buildJsonObject {
                 put(
-                    com.example.domain.vo.message.MessagePayload.KEY_CONTENT,
+                    MessagePayload.KEY_CONTENT,
                     message.payload.getTextContent() ?: ""
                 )
             }

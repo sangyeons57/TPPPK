@@ -48,8 +48,19 @@ public class FirestoreMessageService {
     
     /**
      * 채팅 메시지를 Firestore에 저장
-     * @param roomId 채팅방 ID
-     * @param message 저장할 메시지
+     *
+     * 매핑 규칙(중요): ChatMessage → Firestore 문서
+     * - senderId              ← message.message.senderId 우선, 없으면 message.senderId
+     * - messageType           ← message.message.messageType 우선, 없으면 message.messageType 또는 TEXT
+     * - payload (string JSON) ← message.message.payload 우선, 없으면 message.payload (전체 JSON 문자열로 직렬화)
+     * - channelId             ← roomId 인자(봉투)
+     * - createdAt, updatedAt  ← message.message.timestamp 또는 message.timestamp (epoch seconds)
+     * - isDeleted             ← 기본 false (삭제 API에서 true)
+     * - replyToMessageId      ← message.message.replyToMessageId 우선, 없으면 message.replyToMessageId
+     * - mentions              ← 빈 배열 초기화 (향후 필요 시 파싱)
+     *
+     * @param roomId 채팅방 ID (Firestore 문서의 channelId)
+     * @param message 저장할 메시지 DTO (nested 우선, envelope 폴백)
      * @return 저장 결과 CompletableFuture
      */
     public CompletableFuture<Boolean> saveMessage(String roomId, ChatMessage message) {
@@ -78,6 +89,7 @@ public class FirestoreMessageService {
 
 
             // 메시지 데이터 구성 (payload + messageType 사용)
+            // 도메인 소유 필드는 nested(message.*) 우선, 없으면 봉투(envelope)에서 폴백
             Map<String, Object> messageData = new HashMap<>();
             String effectiveSenderId = (message.getMessage() != null && message.getMessage().getSenderId() != null)
                     ? message.getMessage().getSenderId() : message.getSenderId();
@@ -94,7 +106,7 @@ public class FirestoreMessageService {
                     : (message.getMessageType() != null ? message.getMessageType() : WebSocketEventConstants.MESSAGE_TYPE_TEXT);
             messageData.put(FirestoreConstants.FIELD_MESSAGE_TYPE, effectiveMessageType);
             
-            // payload 전용 처리
+            // payload 전용 처리 (전체 JSON 원형 보존)
             String payloadJson;
             Map<String, Object> effectivePayload = (message.getMessage() != null && message.getMessage().getPayload() != null)
                     ? message.getMessage().getPayload()

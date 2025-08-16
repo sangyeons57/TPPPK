@@ -477,4 +477,3 @@ export const leaveProjectFunction = onCall(
     }
   }
 );
-

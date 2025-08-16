@@ -2,7 +2,6 @@ package com.example.data_repository.base
 
 import android.util.Log
 import androidx.paging.PagingSource
-import androidx.paging.PagingState
 import androidx.room.RoomDatabase
 import androidx.room.withTransaction
 import com.example.core_common.result.CustomResult
@@ -15,13 +14,13 @@ import com.example.data_model.local.SyncMetadataDao
 import com.example.data_model.local.toEntity
 import com.example.data_model.remote.MessageDTO
 import com.example.data_repository.DefaultRepositoryImpl
+import com.example.data_repository.util.OutboxPayloadUtil
 import com.example.domain.enum.OutBoxStatus
 import com.example.domain.model.base.Message
 import com.example.domain.model.sync.OutBoxRecord
 import com.example.domain.vo.ChannelId
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.UserId
-import com.example.domain.vo.message.MessageIsDeleted
 import com.example.domain.vo.message.MessagePayload
 import com.example.domain.vo.message.MessageType
 import com.example.domain_repository.base.MessageRepository
@@ -29,14 +28,6 @@ import com.example.mapper.DtoMapper
 import com.example.mapper.message.MessageMapper
 import com.google.firebase.firestore.Source
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonNull
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonArray
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
-import kotlinx.serialization.json.add
-import java.time.Instant
 import java.util.UUID
 import javax.inject.Inject
 
@@ -61,7 +52,35 @@ class MessageRepositoryImpl @Inject constructor(
         return try {
             db.withTransaction {
                 val entityModel = entityMapper.domainToEntity(entity)
+
+                // 중복 방지: 동일 채널/보낸이/페이로드가 이미 존재하면 이전 레코드를 정리
+                runCatching {
+                    val existingId = messageDao.findExistingIdBySenderAndPayload(
+                        channelId = entityModel.channelId,
+                        senderId = entityModel.senderId,
+                        payload = entityModel.payload
+                    )
+                    if (existingId != null && existingId != entityModel.id) {
+                        // 이전(중복) 레코드를 tombstone 처리하여 UI 중복 제거
+                        messageDao.tombstone(existingId, entityModel.updatedAt)
+                    }
+                }.onFailure {
+                    Log.w("MessageRepository", "중복 검사 실패(무시): ${it.message}")
+                }
+
                 messageDao.upsert(entityModel)
+
+                // OutBox UPSERT 레코드 생성 (로컬 저장과 같은 트랜잭션)
+                val outboxPayload = OutboxPayloadUtil.toPayload(entityModel)
+                val outboxRecord = OutBoxRecord(
+                    id = UUID.randomUUID().toString(),
+                    stream = Message.COLLECTION_NAME,
+                    aggregateId = entityModel.id,
+                    op = OutBoxRecord.Op.UPSERT,
+                    payload = outboxPayload,
+                    createdAt = System.currentTimeMillis()
+                )
+                outboxDao.enqueue(outboxRecord.toEntity(OutBoxStatus.PENDING))
             }
             CustomResult.Success(entity.id)
         } catch (e: Exception) {
@@ -76,36 +95,19 @@ class MessageRepositoryImpl @Inject constructor(
         payload: MessagePayload
     ): String {
         val messageId = UUID.randomUUID().toString()
-        val now = System.currentTimeMillis()
+        System.currentTimeMillis()
 
-        db.withTransaction {
-            // 1. 메시지를 Room DB에 저장 (syncStatus 없음)
-            val message = Message.create(
-                id = DocumentId(messageId),
-                senderId = UserId(AuthUtil.getCurrentUserId() ?: ""),
-                messageType = MessageType.TEXT,
-                payload = payload,
-                replyToMessageId = null,
-                mentions = emptyList(),
-                channelId = ChannelId(channelId)
-            )
-
-            val entity = entityMapper.domainToEntity(message)
-            messageDao.upsert(entity)
-
-            // 2. OutBox에 전송 대기 레코드 생성 (플랫 JSON: channelId + payload 필드 병합)
-            val mergedOutboxPayload = buildOutboxPayload(channelId, payload)
-            val outboxRecord = OutBoxRecord(
-                id = UUID.randomUUID().toString(),
-                stream = "messages",
-                aggregateId = messageId,
-                op = OutBoxRecord.Op.UPSERT,
-                payload = mergedOutboxPayload,
-                createdAt = now
-            )
-
-            outboxDao.enqueue(outboxRecord.toEntity(OutBoxStatus.PENDING))
-        }
+        val message = Message.create(
+            id = DocumentId(messageId),
+            senderId = UserId(AuthUtil.getCurrentUserId() ?: ""),
+            messageType = MessageType.TEXT,
+            payload = payload,
+            replyToMessageId = null,
+            mentions = emptyList(),
+            channelId = ChannelId(channelId)
+        )
+        // save() 내부에서 트랜잭션 + OutBox enqueue 처리
+        save(message)
 
         return messageId
     }
@@ -256,34 +258,7 @@ class MessageRepositoryImpl @Inject constructor(
         }
     }
 
-    /**
-     * OutBox 레코드 생성 (메시지 전송 시 PENDING 상태로 생성)
-     */
-    override suspend fun createOutBoxRecord(
-        messageId: String,
-        channelId: String,
-        payload: String
-    ): CustomResult<Unit, Exception> {
-        return try {
-            val outboxRecord = OutBoxRecord(
-                id = UUID.randomUUID().toString(),
-                stream = "messages",
-                aggregateId = messageId,
-                op = OutBoxRecord.Op.UPSERT,
-                payload = """{"channelId":"$channelId","payload":"${
-                    payload.replace("\\", "\\\\").replace("\"", "\\\"")
-                }"}""",
-                createdAt = System.currentTimeMillis()
-            )
-
-            outboxDao.enqueue(outboxRecord.toEntity(OutBoxStatus.PENDING))
-            Log.d("MessageRepository", "OutBox record created: $messageId with status PENDING")
-            CustomResult.Success(Unit)
-        } catch (e: Exception) {
-            Log.e("MessageRepository", "Failed to create OutBox record: $messageId", e)
-            CustomResult.Failure(e)
-        }
-    }
+    // createOutBoxRecord 제거: save/sendMessage 경로에서 트랜잭션으로 자동 enqueue 처리
 
     /**
      * 특정 채널의 동기화 상태별 메시지 개수 조회
@@ -410,42 +385,4 @@ class MessageRepositoryImpl @Inject constructor(
         }
     }
 
-    private fun toJsonElement(value: Any?): JsonElement {
-        return when (value) {
-            null -> JsonNull
-            is String -> JsonPrimitive(value)
-            is Int -> JsonPrimitive(value)
-            is Long -> JsonPrimitive(value)
-            is Double -> JsonPrimitive(value)
-            is Float -> JsonPrimitive(value.toDouble())
-            is Boolean -> JsonPrimitive(value)
-            is Map<*, *> -> buildJsonObject {
-                value.forEach { (k, v) ->
-                    if (k != null) put(k.toString(), toJsonElement(v))
-                }
-            }
-            is List<*> -> buildJsonArray {
-                value.forEach { elem -> add(toJsonElement(elem)) }
-            }
-            else -> JsonPrimitive(value.toString())
-        }
-    }
-
-    private fun buildOutboxPayload(channelId: String, payload: MessagePayload): String {
-        // payload JSON에 channelId를 병합하여 OutBox에 저장
-        return try {
-            val jsonObj = payload.asJsonObject()
-            val merged = buildJsonObject {
-                jsonObj.forEach { (k, v) -> put(k, v) }
-                put("channelId", JsonPrimitive(channelId))
-            }
-            merged.toString()
-        } catch (e: Exception) {
-            // 실패 시 최소 content만 담아 전송
-            buildJsonObject {
-                put("content", JsonPrimitive(payload.getTextContent() ?: ""))
-                put("channelId", JsonPrimitive(channelId))
-            }.toString()
-        }
-    }
 }

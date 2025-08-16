@@ -14,6 +14,16 @@ import com.example.domain_repository.base.MemberRepository
 import com.example.domain_repository.base.MessageRepository
 import com.example.domain_repository.base.ProjectInvitationRepository
 import com.example.domain_repository.base.ProjectRepository
+import com.example.domain_usecase.usecase.dm.AddDmChannelUseCase
+import com.example.domain_usecase.usecase.dm.GetDmChannelUseCase
+import com.example.domain_usecase.usecase.message.SendMessageUseCase
+import com.example.domain_usecase.usecase.project.SendMemberInvitationDMUseCase
+import com.example.domain_usecase.usecase.project.invitation.AcceptProjectInvitationUseCase
+import com.example.domain_usecase.usecase.project.invitation.AcceptProjectInvitationUseCaseImpl
+import com.example.domain_usecase.usecase.project.invitation.SendProjectInvitationUseCase
+import com.example.domain_usecase.usecase.project.invitation.SendProjectInvitationUseCaseImpl
+import com.example.domain_usecase.usecase.project.member.AcceptProjectInviteFromMessageUseCase
+import com.example.domain_usecase.usecase.project.member.AcceptProjectInviteFromMessageUseCaseImpl
 import com.example.domain_usecase.usecase.project.member.AddProjectMemberUseCase
 import com.example.domain_usecase.usecase.project.member.AddProjectMemberUseCaseImpl
 import com.example.domain_usecase.usecase.project.member.GetProjectMemberUseCase
@@ -22,22 +32,12 @@ import com.example.domain_usecase.usecase.project.member.LeaveProjectUseCase
 import com.example.domain_usecase.usecase.project.member.LeaveProjectUseCaseImpl
 import com.example.domain_usecase.usecase.project.member.RemoveProjectMemberUseCase
 import com.example.domain_usecase.usecase.project.member.RemoveProjectMemberUseCaseImpl
+import com.example.domain_usecase.usecase.project.member.SendProjectInviteMessageUseCase
+import com.example.domain_usecase.usecase.project.member.SendProjectInviteMessageUseCaseImpl
 import com.example.domain_usecase.usecase.project.member.TransferOwnershipUseCase
 import com.example.domain_usecase.usecase.project.member.TransferOwnershipUseCaseImpl
 import com.example.domain_usecase.usecase.project.member.UpdateMemberRolesUseCase
 import com.example.domain_usecase.usecase.project.member.UpdateMemberRolesUseCaseImpl
-import com.example.domain_usecase.usecase.project.member.SendProjectInviteMessageUseCase
-import com.example.domain_usecase.usecase.project.member.SendProjectInviteMessageUseCaseImpl
-import com.example.domain_usecase.usecase.project.member.AcceptProjectInviteFromMessageUseCase
-import com.example.domain_usecase.usecase.project.member.AcceptProjectInviteFromMessageUseCaseImpl
-import com.example.domain_usecase.usecase.project.invitation.SendProjectInvitationUseCase
-import com.example.domain_usecase.usecase.project.invitation.SendProjectInvitationUseCaseImpl
-import com.example.domain_usecase.usecase.project.invitation.AcceptProjectInvitationUseCase
-import com.example.domain_usecase.usecase.project.invitation.AcceptProjectInvitationUseCaseImpl
-import com.example.domain_usecase.usecase.dm.AddDmChannelUseCase
-import com.example.domain_usecase.usecase.dm.GetDmChannelUseCase
-import com.example.domain_usecase.usecase.project.SendMemberInvitationDMUseCase
-import com.example.domain_usecase.usecase.message.SendMessageUseCase
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -94,6 +94,8 @@ class ProjectMemberUseCaseProvider @Inject constructor(
     fun createForProject(projectId: DocumentId): ProjectMemberUseCases {
         memberRepository.setCollection(CollectionPath.projectMembers(projectId.value))
         projectRepository.setCollection(CollectionPath.project(projectId.value))
+        // Ensure invitations repo is scoped to root collection for invite flows
+        projectInvitationRepository.setCollection(CollectionPath.projectInvitations())
 
         return ProjectMemberUseCases(
             // 멤버 기본 CRUD

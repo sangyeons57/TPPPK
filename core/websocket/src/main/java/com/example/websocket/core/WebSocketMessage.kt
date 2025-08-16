@@ -2,7 +2,6 @@ package com.example.websocket.core
 
 import com.example.websocket.constant.WebSocketFieldConstants
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -10,80 +9,74 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
- 
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.decodeFromString
 
 /**
  * WebSocket을 통해 송수신되는 메시지의 데이터 클래스
  *
- * JSON 직렬화/역직렬화가 가능하며, 클라이언트-서버 간 통신에 사용된다.
- * 다양한 메시지 타입을 지원하여 채팅, 시스템 알림, 인증 등의 기능을 처리한다.
+ * 목적과 매핑(중요):
+ * - 도메인 Message 필드 매핑 규칙을 명확히 문서화하여 송수신 스키마를 일관되게 유지한다.
+ * - 현재 구현은 "중첩 메시지(message: NestedMessage) 우선, 봉투(envelope) 폴백" 전략을 사용한다.
+ *   (향후 평탄(Flat) 스키마로 전환 시, 동일한 필드명을 봉투에 배치하면 된다.)
+ *
+ * 도메인 Message ←→ WebSocketMessage 매핑 규칙
+ * - Message.id            ← message.id (우선), 없으면 mapper에서 별도 처리
+ * - Message.senderId      ← message.senderId (우선), 없으면 senderId(봉투)
+ * - Message.messageType   ← message.messageType (우선), 없으면 TEXT 등 기본값/휴리스틱
+ * - Message.payload       ← message.payload (우선), 없으면 payload(봉투)
+ * - Message.replyToMessageId ← message.replyToMessageId (우선), 없으면 replyToMessageId(봉투)
+ * - Message.createdAt     ← (message.timestamp 또는 timestamp) epoch seconds → Instant
+ * - Message.channelId     ← roomId(봉투)
+ * - Message.projectId     ← projectId(봉투, 선택)
+ *
+ * 송신 시 권장 값 배치(현재 호환 로직 유지):
+ * - 가능하면 NestedMessage 안에 도메인 소유 필드(id, senderId, payload, messageType, replyToMessageId, timestamp)를 채운다.
+ * - 봉투(envelope)는 라우팅/메타(type, roomId, projectId, authToken 등)를 담는다.
+ * - 평탄(Flat) 전환 시에도 동일 이름을 봉투에 배치하면 서버는 폴백 로직으로 수신 호환됨.
  */
 @Serializable
 data class WebSocketMessage(
     /**
      * 메시지 타입 (필수)
-     *
-     * 가능한 값들:
-     * - MESSAGE: 일반 채팅 메시지
-     * - EDIT_MESSAGE: 메시지 수정
-     * - DELETE_MESSAGE: 메시지 삭제
-     * - MESSAGE_ACK: 메시지 처리 확인
-     * - EDIT_MESSAGE_ACK: 메시지 수정 확인
-     * - DELETE_MESSAGE_ACK: 메시지 삭제 확인
-     * - JOIN_ROOM: 방 입장
-     * - LEAVE_ROOM: 방 퇴장
-     * - JOINED_ROOM: 방 입장 완료 알림
-     * - LEFT_ROOM: 방 퇴장 완료 알림
-     * - AUTH: 인증 요청
-     * - AUTH_SUCCESS: 인증 성공
-     * - ERROR: 오류 메시지
-     * - SYSTEM: 시스템 메시지
+     * - MESSAGE / EDIT_MESSAGE / DELETE_MESSAGE / MESSAGE_ACK / EDIT_MESSAGE_ACK / DELETE_MESSAGE_ACK
+     * - JOIN_ROOM / LEAVE_ROOM / JOINED_ROOM / LEFT_ROOM / AUTH / AUTH_SUCCESS / ERROR / SYSTEM
      */
     val type: String,
 
     /**
      * 방 ID (옵션)
-     *
-     * 메시지가 속한 채팅방이나 그룹의 식별자
+     * - 도메인 Message.channelId 로 매핑
      */
     val roomId: String? = null,
 
     /**
      * 발신자 ID (옵션)
-     *
-     * 메시지를 보낸 사용자의 식별자
+     * - 도메인 Message.senderId 로 매핑 (NestedMessage.senderId 가 우선)
      */
     val senderId: String? = null,
 
 
     /**
      * 메시지 페이로드 (옵션)
-     *
-     * JSON 형태의 메시지 내용 - content 필드를 대체하는 새로운 형식
-     * JSON 직렬화/역직렬화에 포함됨
+     * - 도메인 Message.payload 로 매핑 (NestedMessage.payload 가 우선)
+     * - content 키를 포함하는 JSON 객체(텍스트 메시지의 경우)
      */
     val payload: JsonObject? = null,
 
     /**
      * 답장 대상 메시지 ID (옵션)
-     *
-     * 이 메시지가 답장하는 원본 메시지의 ID
+     * - 도메인 Message.replyToMessageId 로 매핑 (NestedMessage.replyToMessageId 가 우선)
      */
     val replyToMessageId: String? = null,
 
     /**
-     * 타임스탬프 (옵션)
-     *
-     * 메시지가 생성된 시간 (Unix epoch seconds)
+     * 타임스탬프 (옵션, Unix epoch seconds)
+     * - 도메인 Message.createdAt 로 매핑 (NestedMessage.timestamp 가 우선)
      */
     val timestamp: Double? = null,
 
     /**
      * 프로젝트 ID (옵션)
-     *
-     * 메시지가 속한 프로젝트의 식별자
+     * - 라우팅/컨텍스트 용도. 도메인 Message 자체의 필드는 아님(외부 컨텍스트)
      */
     val projectId: String? = null,
 
@@ -91,26 +84,24 @@ data class WebSocketMessage(
 
     /**
      * 인증 토큰 (옵션)
-     *
-     * 인증 메시지에서 사용되는 JWT 토큰
+     * - AUTH 메시지에서 사용
      */
     val authToken: String? = null,
 
     /**
      * 오류 코드 (옵션)
-     *
-     * 오류 메시지에서 사용되는 오류 코드
+     * - ERROR 메시지에서 사용
      */
     val errorCode: String? = null,
 
     /**
      * 추가 메타데이터 (옵션)
-     *
-     * 기타 필요한 정보를 담는 키-값 맵
+     * - 라우팅/표시용 메타데이터 (도메인 Message 비핵심)
      */
     val metadata: Map<String, String>? = null,
 
-    // 신규: 도메인 Message를 래핑하는 중첩 객체 (메시지 관련 이벤트에서 사용)
+    // 도메인 Message를 래핑하는 중첩 객체 (수신/파싱 시 우선 참조, 송신 시는 선택)
+    // 서버/클라 하위호환을 위해 유지. 평탄 스키마 전환 시 제거 가능.
     val message: NestedMessage? = null
 ) {
 
@@ -568,15 +559,15 @@ data class WebSocketMessage(
             val payload = buildJsonObject {
                 put(com.example.domain.vo.message.MessagePayload.KEY_CONTENT, JsonPrimitive(""))
                 put(
-                    com.example.websocket.constant.WebSocketFieldConstants.FIELD_PROJECT_NAME,
+                    WebSocketFieldConstants.FIELD_PROJECT_NAME,
                     JsonPrimitive(projectName)
                 )
                 put(
-                    com.example.websocket.constant.WebSocketFieldConstants.FIELD_INVITER_NAME,
+                    WebSocketFieldConstants.FIELD_INVITER_NAME,
                     JsonPrimitive(inviterName)
                 )
                 put(
-                    com.example.websocket.constant.WebSocketFieldConstants.FIELD_INVITATION_ID,
+                    WebSocketFieldConstants.FIELD_INVITATION_ID,
                     JsonPrimitive(invitationId)
                 )
             }
@@ -587,7 +578,7 @@ data class WebSocketMessage(
                 senderId = senderId,
                 message = NestedMessage(
                     id = messageId,
-                    messageType = com.example.websocket.constant.WebSocketFieldConstants.MESSAGE_TYPE_PROJECT_INVITE,
+                    messageType = WebSocketFieldConstants.MESSAGE_TYPE_PROJECT_INVITE,
                     payload = payload,
                     senderId = senderId,
                     timestamp = timestamp
@@ -688,6 +679,16 @@ data class WebSocketMessage(
 
 /**
  * 중첩 도메인 메시지 표현 (WebSocket 전송 전용)
+ *
+ * 필드 → 도메인 Message 매핑
+ * - id                → Message.id
+ * - messageType       → Message.messageType (문자열 ↔ enum 변환은 상위 매퍼에서 처리)
+ * - payload           → Message.payload (JSON 전체 보존)
+ * - senderId          → Message.senderId
+ * - replyToMessageId  → Message.replyToMessageId
+ * - timestamp         → Message.createdAt (epoch seconds → Instant)
+ *
+ * 참고: 상위(WebSocketMessage)의 senderId/payload/replyToMessageId/timestamp는 폴백 용도.
  */
 @Serializable
 data class NestedMessage(

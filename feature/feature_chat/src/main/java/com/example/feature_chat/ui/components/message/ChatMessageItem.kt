@@ -24,7 +24,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -32,8 +31,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -246,8 +245,14 @@ fun ChatMessageItemComposable(
             MemberInvitationSystemMessage(
                 payload = message.payload,
                 onAddMember = onAddMember,
-                modifier = modifier.padding(vertical = 6.dp),
-                isSender = message.isMyMessage
+                modifier = modifier,
+                isSender = message.isMyMessage,
+                // 프로필 정보 전달
+                senderName = message.userName,
+                senderProfileUrl = message.userProfileUrl,
+                timestamp = message.formattedTimestamp,
+                isFirstInGroup = isFirstInGroup,
+                onUserProfileClick = onUserProfileClick
             )
         }
 

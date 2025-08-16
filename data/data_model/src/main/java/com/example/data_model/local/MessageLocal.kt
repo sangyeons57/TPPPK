@@ -111,6 +111,27 @@ interface MessageDao {
     @Query("UPDATE messages SET isDeleted = 1, updatedAt = :ts WHERE id = :id")
     suspend fun tombstone(id: String, ts: Long)
 
+    /**
+     * 동일 채널/발신자/페이로드(내용)가 이미 존재하는지 확인하여 중복 업서트를 방지하기 위한 헬퍼.
+     * 서버 반영본이 도착했을 때 낙관적 로컬본과 페이로드가 동일하면 기존 ID를 반환한다.
+     */
+    @Query(
+        """
+        SELECT id FROM messages
+        WHERE channelId = :channelId
+          AND senderId = :senderId
+          AND payload = :payload
+          AND isDeleted = 0
+        ORDER BY createdAt DESC
+        LIMIT 1
+        """
+    )
+    suspend fun findExistingIdBySenderAndPayload(
+        channelId: String,
+        senderId: String,
+        payload: String
+    ): String?
+
     // ================================
     // 캐시 관리 관련 쿼리
     // ================================

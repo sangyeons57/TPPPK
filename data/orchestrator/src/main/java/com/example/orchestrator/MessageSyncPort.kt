@@ -1,9 +1,10 @@
 package com.example.orchestrator
 
 import android.util.Log
-import com.example.core_common.result.CustomResult
 import com.example.data_datasource.remote.MessageRemoteDataSource
 import com.example.data_model.local.MessageDao
+import com.example.data_model.local.OutboxDao
+import com.example.data_model.local.toModel
 import com.example.domain.model.base.Message
 import com.example.domain.model.sync.ApplyOutcome
 import com.example.domain.model.sync.ConflictResolver
@@ -13,9 +14,7 @@ import com.example.domain.model.sync.PushResult
 import com.example.domain.model.sync.RemoteBatch
 import com.example.domain.model.sync.SyncPort
 import com.example.domain.vo.CollectionPath
-import com.example.domain_repository.base.MessageRepository
 import com.example.mapper.message.MessageMapper
-import java.time.Instant
 import javax.inject.Inject
 
 /**
@@ -28,9 +27,9 @@ import javax.inject.Inject
  */
 class MessageSyncPort @Inject constructor(
     private val messageRemoteDataSource: MessageRemoteDataSource, // Firestore 직접 접근
-    private val messageRepository: MessageRepository, // Room DB 접근
     private val messageDao: MessageDao, // Room DB 직접 접근
     private val messageMapper: MessageMapper, // Message <-> MessageEntity 변환
+    private val outboxDao: OutboxDao, // OutBox 접근
     private val channelId: String
 ) : SyncPort<Message> {
 
@@ -54,68 +53,27 @@ class MessageSyncPort @Inject constructor(
      * @return 원격 배치 데이터
      */
     override suspend fun pullSince(cursor: String?, limit: Int): RemoteBatch<Message> {
-        val lastSyncTime = cursor?.toLongOrNull()?.let { Instant.ofEpochMilli(it) } ?: Instant.EPOCH
-        Log.d(
-            TAG,
-            "📥 Pulling messages since lastSyncTime: $lastSyncTime (cursor: $cursor), limit: $limit"
-        )
-
         return try {
-            val result = messageRemoteDataSource.getMessagesAfterTimestamp(
-                collectionPath = CollectionPath.dmChannelMessages(channelId),
-                timestamp = lastSyncTime
-            )
+            val path = CollectionPath.dmChannelMessages(channelId)
+            messageRemoteDataSource.setCollection(path)
 
-            when (result) {
-                is CustomResult.Success -> {
-                    val messages = result.data
-
-                    // 다음 동기화를 위한 시간 계산 (가장 최근 updatedAt 사용)
-                    val nextSyncTime = if (messages.isNotEmpty()) {
-                        messages.maxOfOrNull { it.updatedAt } ?: lastSyncTime
-                    } else {
-                        lastSyncTime
-                    }
-
-                    Log.d(TAG, "✅ Pulled ${messages.size} messages from Firestore")
-                    Log.d(TAG, "📊 Next syncTime: $nextSyncTime (${nextSyncTime.toEpochMilli()})")
-
-                    RemoteBatch(
-                        items = messages,
-                        tombstones = emptyList(), // 소프트 삭제는 isDeleted 필드로 처리
-                        nextCursor = nextSyncTime.toEpochMilli().toString(),
-                        hasMore = messages.size >= limit
-                    )
-                }
-
-                is CustomResult.Failure -> {
-                    Log.e(TAG, "❌ Failed to pull messages from Firestore", result.error)
-                    RemoteBatch(
-                        items = emptyList(),
-                        tombstones = emptyList(),
-                        nextCursor = cursor, // 실패 시 커서 유지하여 재시도 가능
-                        hasMore = false
-                    )
-                }
-
-                is CustomResult.Initial, is CustomResult.Loading, is CustomResult.Progress -> {
-                    Log.w(TAG, "⚠️ Unexpected result state: $result")
-                    RemoteBatch(
-                        items = emptyList(),
-                        tombstones = emptyList(),
-                        nextCursor = cursor,
-                        hasMore = false
-                    )
-                }
+            val dtoBatch = messageRemoteDataSource.pullSince(cursor, limit)
+            val items = dtoBatch.items.map { dto ->
+                val fixed = if (dto.channelId.isBlank()) dto.copy(channelId = channelId) else dto
+                messageMapper.dtoToDomain(fixed)
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "💥 Exception during pullSince", e)
+
             RemoteBatch(
-                items = emptyList(),
+                items = items,
                 tombstones = emptyList(),
-                nextCursor = cursor,
-                hasMore = false
+                nextCursor = dtoBatch.nextCursor,
+                hasMore = dtoBatch.hasMore,
+                watermark = dtoBatch.watermark
             )
+        } catch (e: Exception) {
+            Log.e(TAG, "pullSince failed (cursor=$cursor, limit=$limit)", e)
+            // Exception을 다시 던져서 상위 계층에서 처리하도록 함
+            throw e
         }
     }
 
@@ -182,11 +140,10 @@ class MessageSyncPort @Inject constructor(
      */
     override suspend fun readOutboxBatch(limit: Int): List<OutBoxRecord> {
         Log.d(TAG, "📤 Reading outbox batch, limit: $limit")
-
         return try {
-            // TODO: OutBox 구현체에서 대기 중인 메시지 가져오기
-            // messageRepository.getOutboxMessages(channelId, limit)
-            emptyList() // 임시로 빈 리스트 반환
+            // 채널 별 PENDING 메시지 조회 후 limit 적용
+            val pending = outboxDao.getPendingMessagesByChannel(channelId)
+            pending.take(limit).map { it.toModel() }
         } catch (e: Exception) {
             Log.e(TAG, "❌ Failed to read outbox batch", e)
             emptyList()
@@ -200,48 +157,14 @@ class MessageSyncPort @Inject constructor(
      * @return 전송 결과 (성공/실패 ID 리스트)
      */
     override suspend fun pushToRemote(events: List<OutBoxRecord>): PushResult {
-        Log.d(TAG, "🚀 Pushing ${events.size} events to Firestore")
-
+        Log.d(TAG, "🚀 Pushing ${events.size} events to remote")
         return try {
-            val successIds = mutableListOf<String>()
-            val failIds = mutableListOf<FailedEvent>()
-
-            events.forEach { event ->
-                try {
-                    // TODO: Firestore로 전송 로직 구현
-                    // 현재는 성공으로 처리
-                    successIds.add(event.id)
-                    Log.d(TAG, "✅ Pushed event: ${event.id}")
-                } catch (e: Exception) {
-                    failIds.add(
-                        FailedEvent(
-                            id = event.id,
-                            reason = e.message ?: "Unknown error",
-                            retryAfterMillis = 5000L // 5초 후 재시도
-                        )
-                    )
-                    Log.e(TAG, "❌ Failed to push event: ${event.id}", e)
-                }
-            }
-
-            Log.d(TAG, "📊 Push complete: success=${successIds.size}, failed=${failIds.size}")
-
-            PushResult(
-                successIds = successIds,
-                failIds = failIds
-            )
-
+            messageRemoteDataSource.push(events)
         } catch (e: Exception) {
             Log.e(TAG, "💥 Exception during pushToRemote", e)
             PushResult(
                 successIds = emptyList(),
-                failIds = listOf(
-                    FailedEvent(
-                        id = "batch_error",
-                        reason = e.message ?: "Push failed",
-                        retryAfterMillis = 10000L
-                    )
-                )
+                failIds = events.map { FailedEvent(it.id, e.message ?: "Push failed", 5000L) }
             )
         }
     }
@@ -251,7 +174,13 @@ class MessageSyncPort @Inject constructor(
      */
     override suspend fun ackOutbox(successIds: List<String>) {
         Log.d(TAG, "✅ Acknowledging ${successIds.size} successful outbox records")
-        // TODO: OutBox에서 성공한 레코드들 제거
+        try {
+            if (successIds.isNotEmpty()) {
+                outboxDao.markDispatched(successIds)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Failed to ack outbox records", e)
+        }
     }
 
     /**
@@ -259,7 +188,14 @@ class MessageSyncPort @Inject constructor(
      */
     override suspend fun retryOutBox(failed: List<FailedEvent>) {
         Log.d(TAG, "🔄 Marking ${failed.size} events for retry")
-        // TODO: OutBox에서 실패한 레코드들 재시도 설정
+        try {
+            val ids = failed.map { it.id }
+            if (ids.isNotEmpty()) {
+                outboxDao.markFailed(ids)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Failed to mark events for retry", e)
+        }
     }
 
     /**
@@ -276,9 +212,9 @@ class MessageSyncPort @Inject constructor(
  */
 class MessageSyncPortFactory @Inject constructor(
     private val messageRemoteDataSource: MessageRemoteDataSource,
-    private val messageRepository: MessageRepository,
     private val messageDao: MessageDao,
-    private val messageMapper: MessageMapper
+    private val messageMapper: MessageMapper,
+    private val outboxDao: OutboxDao
 ) {
     /**
      * 특정 채널용 MessageSyncPort 생성
@@ -286,9 +222,9 @@ class MessageSyncPortFactory @Inject constructor(
     fun create(channelId: String): MessageSyncPort {
         return MessageSyncPort(
             messageRemoteDataSource,
-            messageRepository,
             messageDao,
             messageMapper,
+            outboxDao,
             channelId
         )
     }

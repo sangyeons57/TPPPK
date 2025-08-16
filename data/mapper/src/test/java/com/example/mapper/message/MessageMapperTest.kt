@@ -12,7 +12,6 @@ import io.mockk.MockKAnnotations
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 
 class MessageMapperTest {
 
@@ -78,42 +77,14 @@ class MessageMapperTest {
     }
 
     @Test
-    fun `dtoToDomain should handle legacy content field`() {
-        // Given - DTO with legacy content field (no payload)
-        val dto = MessageDTO(
-            id = "test-id",
-            channelId = "channel-1",
-            senderId = "user-1",
-            messageType = "TEXT",
-            payload = emptyMap(), // Empty payload
-            content = "Legacy content", // Legacy content field
-            replyToMessageId = null,
-            isDeleted = false,
-            mentions = emptyList(),
-            createdAt = null,
-            updatedAt = null
-        )
-
-        // When
-        val result = messageMapper.dtoToDomain(dto)
-
-        // Then
-        assertEquals("test-id", result.id.value)
-        assertEquals(MessageType.TEXT, result.messageType)
-        assertNotNull(result.payload.getTextContent())
-        assertEquals("Legacy content", result.payload.getTextContent())
-    }
-
-    @Test
-    fun `dtoToDomain should prefer payload over content`() {
-        // Given - DTO with both payload and content (payload should win)
+    fun `dtoToDomain should parse payload map`() {
+        // Given - DTO with payload as Map
         val dto = MessageDTO(
             id = "test-id",
             channelId = "channel-1",
             senderId = "user-1",
             messageType = "TEXT",
             payload = mapOf("content" to "New payload content"),
-            content = "Legacy content",
             replyToMessageId = null,
             isDeleted = false,
             mentions = emptyList(),
@@ -129,7 +100,7 @@ class MessageMapperTest {
     }
 
     @Test
-    fun `domainToDto should create DTO with payload and empty content`() {
+    fun `domainToDto should create DTO with payload`() {
         // Given - 직접 JSON 구성으로 시스템 메시지 페이로드 생성
         val jsonString = """
             {
@@ -159,6 +130,6 @@ class MessageMapperTest {
         val payloadMap = result.payload as Map<String, Any?>
         assertEquals("2024-01-01", payloadMap["date"])
         assertEquals("2024년 1월 1일", payloadMap["displayText"])
-        assertEquals("", result.content) // Empty for backward compatibility
+        // content field removed; only payload is present
     }
 }

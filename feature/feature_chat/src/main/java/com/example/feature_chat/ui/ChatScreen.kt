@@ -13,20 +13,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -36,7 +30,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
@@ -49,20 +42,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
-import coil.compose.AsyncImage
-import androidx.compose.ui.layout.ContentScale
-import com.example.feature_chat.ui.components.input.AttachmentPreviewTray
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.feature_chat.model.ChatEvent
@@ -72,6 +60,7 @@ import com.example.feature_chat.ui.components.common.ConnectionStatusBar
 import com.example.feature_chat.ui.components.dialog.EditDeleteChatDialog
 import com.example.feature_chat.ui.components.dialog.ImageViewerDialog
 import com.example.feature_chat.ui.components.dialog.UserProfileDialog
+import com.example.feature_chat.ui.components.input.AttachmentPreviewTray
 import com.example.feature_chat.ui.components.input.MessageInput
 import com.example.feature_chat.ui.components.system.ChatMessagesList
 import com.example.feature_chat.viewmodel.WebSocketChatViewModel
@@ -108,7 +97,6 @@ fun ChatScreen(
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
-    var hasScrolledToInitialPosition by remember { mutableStateOf(false) }
 
     // 키보드 상태 관리
     var isKeyboardVisible by remember { mutableStateOf(false) }
@@ -134,8 +122,16 @@ fun ChatScreen(
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
                 is ChatEvent.ScrollToBottom -> {
-                    coroutineScope.launch {
-                        listState.animateScrollToItem(0)
+                    // 사용자 스크롤 위치가 하단 근처일 때만 자동 스크롤
+                    val isNearBottom = listState.firstVisibleItemIndex <= 2 &&
+                            listState.firstVisibleItemScrollOffset < 48
+                    if (isNearBottom) {
+                        coroutineScope.launch {
+                            listState.animateScrollToItem(0)
+                        }
+                    } else {
+                        // 하단에서 멀리 떨어져 있으면 자동 스크롤하지 않음
+                        Log.d("ChatScreen", "Skip auto-scroll, user not near bottom")
                     }
                 }
 
@@ -167,8 +163,7 @@ fun ChatScreen(
     // loadState 기반 추가 UI 반응 제거
 
     // 앵커 대상 메시지가 로드되면 해당 인덱스로 스크롤 (initialMessageId 케이스 포함)
-    var hasScrolledToAnchor by remember { mutableStateOf(false) }
-    
+
     // 앵커 관련 자동 스크롤 제거
 
     // 추가: isLoadingHistory 상태 모니터링
@@ -336,6 +331,7 @@ fun ChatScreen(
                             currentImageIndex = index
                             showImageViewer = true
                         },
+                        onJoinProject = viewModel::onJoinProject,
                         onAddMember = viewModel::onAddMember,
                         initialMessageId = viewModel.getInitialMessageId()
                     )

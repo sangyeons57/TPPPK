@@ -2,27 +2,23 @@ package com.example.websocket.service
 
 import android.util.Log
 import com.example.core_common.result.CustomResult
-import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.base.Message
 import com.example.domain.model.data.UserSession
 import com.example.domain.vo.ChannelId
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.UserId
-import com.example.domain.vo.message.MessageIsDeleted
 import com.example.domain.vo.message.MessagePayload
 import com.example.domain.vo.message.MessageType
 import com.example.domain_repository.base.MessageRepository
 import com.example.websocket.constant.OperationStatus
-import com.example.websocket.constant.WebSocketFieldConstants
 import com.example.websocket.constant.WebSocketEventTypes
+import com.example.websocket.constant.WebSocketFieldConstants
 import com.example.websocket.core.WebSocketConnectionState
 import com.example.websocket.core.WebSocketManager
 import com.example.websocket.core.WebSocketMessage
 import com.example.websocket.event.WebSocketDomainEvent
 import com.example.websocket.event.WebSocketDomainMapper
 import com.example.websocket.event.WebSocketEventFlow
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -35,6 +31,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -126,12 +124,15 @@ class WebSocketMessageService @Inject constructor(
                         return@onEach
                     }
 
-                    // 중복 저장 방지: 이미 존재하는 메시지인지 로컬 DB에서 확인
+                    // 중복 저장 체크: 동일 ID가 있어도 업서트하여 내용/채널을 최신화한다.
+                    // 이유: 전송 직후 로컬에 존재하더라도 서버 에코(payload/타임스탬프)가 더 정확하며,
+                    // 채널/정렬 키(createdAt) 동기화를 위해 항상 upsert가 안전함.
                     val existingMessage = messageRepository.findById(event.messageId)
-
                     if (existingMessage != null) {
-                        Log.d(TAG, "메시지 이미 존재함, 저장 스킵: ${event.messageId}")
-                        return@onEach
+                        Log.d(
+                            TAG,
+                            "메시지 이미 존재함, 업서트로 최신화 진행: ${event.messageId} (roomId=${event.roomId})"
+                        )
                     }
 
                     val message = webSocketDomainMapper.messageReceivedToDomainMessage(event)
@@ -142,8 +143,11 @@ class WebSocketMessageService @Inject constructor(
                             Log.d(TAG, "메시지 자동 저장 성공: ${event.messageId}")
 
                             // Paging3 새로고침 이벤트 발송 (해당 채널만)
-                            _messageRefreshEvents.emit(roomId)
-                            Log.d(TAG, "Paging3 새로고침 이벤트 발송: $roomId")
+                            // Room invalidation만으로도 갱신되지만, 신규 삽입일 때만 보조 신호 발송
+                            if (existingMessage == null) {
+                                _messageRefreshEvents.emit(roomId)
+                                Log.d(TAG, "Paging3 새로고침 이벤트 발송: $roomId (new)")
+                            }
                         }
 
                         is CustomResult.Failure -> {
@@ -247,11 +251,28 @@ class WebSocketMessageService @Inject constructor(
                                         "메시지 ACK 처리 완료 (OutBox DISPATCHED): ${event.messageId}"
                                     )
 
-                                    // Paging3 새로고침 이벤트 발송 (해당 채널만)
-                                    event.roomId?.let { channelId ->
-                                        _messageRefreshEvents.emit(channelId)
-                                        Log.d(TAG, "Paging3 새로고침 이벤트 발송: $channelId")
+                                    // ACK 수신 시, 로컬 payload의 업로딩 표식을 정리하여 로딩 인디케이터 재등장을 방지
+                                    try {
+                                        val existing = messageRepository.findById(event.messageId)
+                                        if (existing != null) {
+                                            var payload = existing.payload
+                                            payload = payload.updateValue(
+                                                MessagePayload.KEY_UPLOADING,
+                                                false
+                                            )
+                                            payload = payload.updateValue(
+                                                MessagePayload.KEY_UPLOAD_PROGRESS,
+                                                100
+                                            )
+                                            existing.updatePayload(payload)
+                                            messageRepository.save(existing)
+                                            Log.d(TAG, "ACK 후 업로딩 플래그 정리 완료: ${event.messageId}")
+                                        }
+                                    } catch (e: Exception) {
+                                        Log.w(TAG, "ACK 후 업로딩 플래그 정리 실패: ${event.messageId}", e)
                                     }
+
+                                    // Paging3 새로고침 이벤트는 Room invalidation으로 충분하므로 생략
                                 }
 
                                 is CustomResult.Failure -> {
@@ -659,13 +680,13 @@ class WebSocketMessageService @Inject constructor(
             val (typeString, wsMessage) = try {
                 val json = payload.asJsonObject()
                 val projectName =
-                    json[com.example.websocket.constant.WebSocketFieldConstants.FIELD_PROJECT_NAME]?.jsonPrimitive?.contentOrNull
+                    json[WebSocketFieldConstants.FIELD_PROJECT_NAME]?.jsonPrimitive?.contentOrNull
                 val inviterName =
-                    json[com.example.websocket.constant.WebSocketFieldConstants.FIELD_INVITER_NAME]?.jsonPrimitive?.contentOrNull
+                    json[WebSocketFieldConstants.FIELD_INVITER_NAME]?.jsonPrimitive?.contentOrNull
                 val invitationId =
-                    json[com.example.websocket.constant.WebSocketFieldConstants.FIELD_INVITATION_ID]?.jsonPrimitive?.contentOrNull
+                    json[WebSocketFieldConstants.FIELD_INVITATION_ID]?.jsonPrimitive?.contentOrNull
                 val projectIdInPayload =
-                    json[com.example.websocket.constant.WebSocketFieldConstants.FIELD_PROJECT_ID]?.jsonPrimitive?.contentOrNull
+                    json[WebSocketFieldConstants.FIELD_PROJECT_ID]?.jsonPrimitive?.contentOrNull
 
                 // PROJECT_INVITE 체크
                 if (!projectName.isNullOrBlank() && !inviterName.isNullOrBlank() && !invitationId.isNullOrBlank()) {
@@ -674,12 +695,12 @@ class WebSocketMessageService @Inject constructor(
                         senderId = senderId.value,
                         messagePayload = payload,
                         messageId = messageId.value,
-                        messageTypeString = com.example.websocket.constant.WebSocketFieldConstants.MESSAGE_TYPE_PROJECT_INVITE,
+                        messageTypeString = WebSocketFieldConstants.MESSAGE_TYPE_PROJECT_INVITE,
                         replyToMessageId = replyToMessageId?.value,
                         timestamp = Instant.now().epochSecond.toDouble(),
                         projectId = projectId ?: projectIdInPayload
                     )
-                    com.example.websocket.constant.WebSocketFieldConstants.MESSAGE_TYPE_PROJECT_INVITE to msg
+                    WebSocketFieldConstants.MESSAGE_TYPE_PROJECT_INVITE to msg
                 } else {
                     // SYSTEM_MEMBER_INVITATION 체크 (projectId, projectName, inviterName, targetUserId)
                     val pid = json["projectId"]?.jsonPrimitive?.contentOrNull
@@ -692,12 +713,12 @@ class WebSocketMessageService @Inject constructor(
                             senderId = senderId.value,
                             messagePayload = payload,
                             messageId = messageId.value,
-                            messageTypeString = com.example.websocket.constant.WebSocketFieldConstants.MESSAGE_TYPE_SYSTEM_MEMBER_INVITATION,
+                            messageTypeString = WebSocketFieldConstants.MESSAGE_TYPE_SYSTEM_MEMBER_INVITATION,
                             replyToMessageId = replyToMessageId?.value,
                             timestamp = Instant.now().epochSecond.toDouble(),
                             projectId = projectId ?: pid
                         )
-                        com.example.websocket.constant.WebSocketFieldConstants.MESSAGE_TYPE_SYSTEM_MEMBER_INVITATION to msg
+                        WebSocketFieldConstants.MESSAGE_TYPE_SYSTEM_MEMBER_INVITATION to msg
                     } else {
                         null to WebSocketMessage.createChatMessage(
                             roomId = roomId,

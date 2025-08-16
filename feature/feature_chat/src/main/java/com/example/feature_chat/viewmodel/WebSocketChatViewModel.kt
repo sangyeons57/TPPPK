@@ -15,9 +15,9 @@ import com.example.domain.vo.DocumentId
 import com.example.domain.vo.MentionType
 import com.example.domain.vo.UserId
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
-import com.example.core_common.util.SyncThrottler
-import com.example.domain_usecase.usecase.sync.SyncUseCase
+import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
 import com.example.domain_usecase.usecase.project.AcceptMemberInvitationUseCase
+import com.example.domain_usecase.usecase.sync.SyncUseCase
 import com.example.feature_chat.model.ChatEvent
 import com.example.feature_chat.model.ChatMessageUiModel
 import com.example.feature_chat.model.ChatUiState
@@ -31,7 +31,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,6 +40,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -62,9 +62,9 @@ class WebSocketChatViewModel @Inject constructor(
     private val authSessionUseCaseProvider: AuthSessionUseCaseProvider,
     private val webSocketUseCaseProvider: WebSocketUseCaseProvider,
     private val chatServiceProvider: ChatServiceProvider,
-    private val syncThrottler: SyncThrottler,
     private val syncUseCase: SyncUseCase,
-    private val acceptMemberInvitationUseCase: AcceptMemberInvitationUseCase
+    private val acceptMemberInvitationUseCase: AcceptMemberInvitationUseCase,
+    private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider
 ) : ViewModel() {
 
     private val channelId: String = savedStateHandle.getRequiredString(RouteArgs.CHANNEL_ID)
@@ -125,32 +125,17 @@ class WebSocketChatViewModel @Inject constructor(
                 if (joinResult.isSuccess) {
                     Log.d(TAG, "✅ 방 입장 성공: $channelId")
 
-                    // 채널 입장 시 초기 동기화 실행 (SyncMetadata 기반)
-                    if (syncThrottler.canSync(channelId, "Initial")) {
-                        Log.d(TAG, "🚀 채널 입장시 초기 동기화 시작: $channelId")
-                        try {
-                            val syncResult = syncUseCase.syncChannel(channelId)
-                            if (syncResult.isSuccess) {
-                                syncThrottler.markSynced(channelId, "Initial")
-                                Log.d(TAG, "✅ 초기 동기화 완료: $channelId")
-                            } else {
-                                when (syncResult) {
-                                    is CustomResult.Failure -> Log.w(
-                                        TAG,
-                                        "⚠️ 초기 동기화 실패: $channelId - ${syncResult.error.message}"
-                                    )
-
-                                    else -> Log.w(
-                                        TAG,
-                                        "⚠️ 초기 동기화 실패: $channelId - Unknown error"
-                                    )
-                                }
-                            }
-                        } catch (e: Exception) {
-                            Log.e(TAG, "💥 초기 동기화 예외: $channelId", e)
+                    // 채널 입장 시 초기 동기화 실행 (SyncMetadata 기반) - 커서 기준 멱등
+                    Log.d(TAG, "🚀 채널 입장시 초기 동기화 시작: $channelId")
+                    try {
+                        val result = syncUseCase.syncChannel(channelId)
+                        if (result.isSuccess) {
+                            Log.d(TAG, "✅ 초기 동기화 완료: $channelId")
+                        } else {
+                            Log.w(TAG, "⚠️ 초기 동기화 실패: $channelId")
                         }
-                    } else {
-                        Log.d(TAG, "🔥 채널 입장시 초기 동기화 쿨다운 중: $channelId")
+                    } catch (e: Exception) {
+                        Log.e(TAG, "💥 초기 동기화 예외: $channelId", e)
                     }
 
                     // 동기화 완료 후 추가 초기화 작업 (필요시)
@@ -1021,11 +1006,36 @@ class WebSocketChatViewModel @Inject constructor(
 
                             is CustomResult.Failure -> {
                                 Log.e(TAG, "❌ 멤버 초대 수락 실패", result.error)
-                                _eventFlow.emit(ChatEvent.ShowSnackbar("프로젝트 참여에 실패했습니다: ${result.error.message}"))
+
+                                // 권한 오류와 기타 오류에 따른 사용자 친화적 메시지 제공
+                                val userMessage = when {
+                                    result.error.message?.contains("프로젝트 접근 권한이 없습니다") == true -> {
+                                        "초대가 만료되었거나 유효하지 않습니다"
+                                    }
+
+                                    result.error.message?.contains("로그인이 필요합니다") == true -> {
+                                        "로그인이 만료되었습니다. 다시 로그인해 주세요"
+                                    }
+
+                                    result.error.message?.contains("네트워크 상태를 확인") == true -> {
+                                        "네트워크 연결을 확인하고 다시 시도해 주세요"
+                                    }
+
+                                    result.error.message?.contains("이미 멤버") == true -> {
+                                        "이미 프로젝트 멤버입니다"
+                                    }
+
+                                    else -> {
+                                        "프로젝트 참여에 실패했습니다. 잠시 후 다시 시도해 주세요"
+                                    }
+                                }
+
+                                _eventFlow.emit(ChatEvent.ShowSnackbar(userMessage))
                             }
 
                             is CustomResult.Loading -> {
                                 Log.d(TAG, "⏳ 멤버 초대 수락 중...")
+                                // UI에서 로딩 상태 표시 (SystemMessageComponents의 버튼 비활성화)
                             }
 
                             is CustomResult.Initial -> {
@@ -1039,6 +1049,44 @@ class WebSocketChatViewModel @Inject constructor(
                     }
             } catch (e: Exception) {
                 Log.e(TAG, "❌ 멤버 초대 수락 중 예외 발생", e)
+                _eventFlow.emit(ChatEvent.ShowSnackbar("프로젝트 참여 중 오류가 발생했습니다"))
+            }
+        }
+    }
+
+    /**
+     * 프로젝트 초대 메시지(프로젝트 참여) 수락 처리
+     */
+    fun onJoinProject(invitationId: String) {
+        viewModelScope.launch {
+            try {
+                Log.d(TAG, "👥 프로젝트 참여 요청: invitationId=$invitationId")
+                val projectContext = projectId ?: "temp-project"
+                val memberUseCases =
+                    projectMemberUseCaseProvider.createForProject(DocumentId(projectContext))
+                when (val result =
+                    memberUseCases.acceptProjectInviteFromMessageUseCase(invitationId)) {
+                    is CustomResult.Success -> {
+                        Log.d(TAG, "✅ 프로젝트 참여 성공")
+                        _eventFlow.emit(ChatEvent.ShowSnackbar("프로젝트에 참여했습니다!"))
+                    }
+
+                    is CustomResult.Failure -> {
+                        Log.e(TAG, "❌ 프로젝트 참여 실패", result.error)
+                        _eventFlow.emit(ChatEvent.ShowSnackbar("프로젝트 참여 실패: ${result.error.message}"))
+                    }
+
+                    is CustomResult.Loading -> {
+                        Log.d(TAG, "⏳ 프로젝트 참여 처리 중...")
+                    }
+
+                    else -> {
+                        Log.w(TAG, "⚠️ 프로젝트 참여 처리 알 수 없는 상태")
+                        _eventFlow.emit(ChatEvent.ShowSnackbar("프로젝트 참여 중 문제가 발생했습니다"))
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ 프로젝트 참여 처리 중 예외", e)
                 _eventFlow.emit(ChatEvent.ShowSnackbar("프로젝트 참여 중 오류가 발생했습니다"))
             }
         }

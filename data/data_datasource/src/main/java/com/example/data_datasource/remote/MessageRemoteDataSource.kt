@@ -13,6 +13,7 @@ import com.example.domain.model.sync.RemoteBatch
 import com.example.domain.vo.CollectionPath
 import com.example.mapper.message.MessageMapper
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.Dispatchers
@@ -149,8 +150,9 @@ open class MessageRemoteDataSourceImpl @Inject constructor(
     protected var currentChannelPath: String? = null
 
     private fun parseCursor(cursor: String?): Pair<Long?, String?> {
+        // Cursor format: "epochMillis:id"
         if (cursor.isNullOrEmpty()) return null to null
-        val p = cursor.split(":")
+        val p = cursor.split(":", limit = 2)
         return p.getOrNull(0)?.toLongOrNull() to p.getOrNull(1)
     }
 
@@ -163,18 +165,22 @@ open class MessageRemoteDataSourceImpl @Inject constructor(
 
         var q: Query = collection
             .orderBy(AggregateRoot.KEY_UPDATED_AT, Query.Direction.ASCENDING)
-            .orderBy(AggregateRoot.KEY_ID, Query.Direction.ASCENDING)
+            .orderBy(FieldPath.documentId(), Query.Direction.ASCENDING)
             .limit(limit.toLong())
 
+        // Firestore expects a Date/Timestamp for Timestamp-typed fields
         if (lastTs != null && lastId != null) {
-            q = q.startAfter(lastTs, lastId)
+            q = q.startAfter(java.util.Date(lastTs), lastId)
         }
 
         val snap = q.get().await()
         val items = snap.toObjects(MessageDTO::class.java)
 
         val hasMore = items.size == limit
-        val nextCursor = items.lastOrNull()?.let { "${it.updatedAt}:${it.id}" }
+        val nextCursor = items.lastOrNull()?.let { dto ->
+            val millis = dto.updatedAt?.time ?: return@let null
+            "$millis:${dto.id}"
+        }
 
         return RemoteBatch(
             items = items,

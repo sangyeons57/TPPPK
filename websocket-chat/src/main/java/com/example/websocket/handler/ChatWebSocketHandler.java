@@ -267,19 +267,7 @@ public class ChatWebSocketHandler {
             message.setTimestampFromInstant(Instant.now());
             message.setRoomId(currentRoomId);
 
-            // Normalize nested message fields for domain ownership
-            if (message.getMessage() == null) {
-                message.setMessage(new com.example.websocket.model.MessageData());
-            }
-            if (message.getMessage().getSenderId() == null) {
-                message.getMessage().setSenderId(userId);
-            }
-            if (message.getMessage().getTimestamp() == null) {
-                message.getMessage().setTimestamp((double) Instant.now().getEpochSecond());
-            }
-            if (message.getMessage().getId() == null) {
-                message.getMessage().setId(message.getMessageId());
-            }
+            // 평탄(Flat) 스키마를 기본으로 사용: 중첩(message.*)은 수신 시 읽기 전용으로만 지원
 
             // Ensure message has a non-empty id for persistence/broadcast
             String effectiveId = message.getEffectiveMessageId();
@@ -291,9 +279,7 @@ public class ChatWebSocketHandler {
                 }
                 logger.info("🆔 Generated messageId on server: {} for room {}", generatedId, currentRoomId);
             }
-            if (message.getMessage().getReplyToMessageId() == null) {
-                message.getMessage().setReplyToMessageId(message.getReplyToMessageId());
-            }
+            // replyToMessageId는 봉투(envelope) 필드 사용
             
             logger.info("📨 Processing message: projectId={}, roomId={}", 
                        message.getProjectId(), currentRoomId);
@@ -397,28 +383,14 @@ public class ChatWebSocketHandler {
             message.setTimestampFromInstant(Instant.now());
             message.setRoomId(currentRoomId);
 
-            // Normalize nested message fields for domain ownership
-            if (message.getMessage() == null) {
-                message.setMessage(new com.example.websocket.model.MessageData());
-            }
-            if (message.getMessage().getSenderId() == null) {
-                message.getMessage().setSenderId(userId);
-            }
-            if (message.getMessage().getTimestamp() == null) {
-                message.getMessage().setTimestamp((double) Instant.now().getEpochSecond());
-            }
-            if (message.getMessage().getId() == null) {
-                message.getMessage().setId(message.getMessageId());
-            }
+            // 편집 처리: 봉투(envelope) 기준으로 필수 필드(보낸이/타임스탬프/roomId)만 보정
 
             // Ensure non-empty id for edit operation as well
             String effectiveId = message.getEffectiveMessageId();
             if (effectiveId == null || effectiveId.trim().isEmpty()) {
                 String generatedId = java.util.UUID.randomUUID().toString();
                 message.setMessageId(generatedId);
-                if (message.getMessage() != null) {
-                    message.getMessage().setId(generatedId);
-                }
+                // 중첩(message.*)은 읽기 전용
                 logger.info("🆔 Generated messageId on server (edit): {} for room {}", generatedId, currentRoomId);
             }
             
@@ -466,28 +438,14 @@ public class ChatWebSocketHandler {
             message.setTimestampFromInstant(Instant.now());
             message.setRoomId(currentRoomId);
 
-            // Normalize nested message fields for domain ownership
-            if (message.getMessage() == null) {
-                message.setMessage(new com.example.websocket.model.MessageData());
-            }
-            if (message.getMessage().getSenderId() == null) {
-                message.getMessage().setSenderId(userId);
-            }
-            if (message.getMessage().getTimestamp() == null) {
-                message.getMessage().setTimestamp((double) Instant.now().getEpochSecond());
-            }
-            if (message.getMessage().getId() == null) {
-                message.getMessage().setId(message.getMessageId());
-            }
+            // 삭제 처리: 봉투(envelope) 기준으로 필수 필드(보낸이/타임스탬프/roomId)만 보정
             
             // Ensure non-empty id for delete operation as well
             String effectiveId = message.getEffectiveMessageId();
             if (effectiveId == null || effectiveId.trim().isEmpty()) {
                 String generatedId = java.util.UUID.randomUUID().toString();
                 message.setMessageId(generatedId);
-                if (message.getMessage() != null) {
-                    message.getMessage().setId(generatedId);
-                }
+                // 중첩(message.*)은 읽기 전용
                 logger.info("🆔 Generated messageId on server (delete): {} for room {}", generatedId, currentRoomId);
             }
 

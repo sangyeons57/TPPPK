@@ -10,6 +10,23 @@ import java.util.Map;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ChatMessage {
+    /**
+     * WebSocket 봉투(envelope) + (하위호환용) 중첩 메시지 구조를 모두 지원하는 서버 측 DTO.
+     *
+     * 도메인 Message ← ChatMessage 매핑 규칙(중요):
+     * - Message.id               ← message.id (우선) / (폴백) messageId
+     * - Message.senderId         ← message.senderId (우선) / (폴백) senderId
+     * - Message.messageType      ← message.messageType (우선) / (폴백) messageType (없으면 TEXT 등 기본값)
+     * - Message.payload          ← message.payload (우선) / (폴백) payload
+     * - Message.replyToMessageId ← message.replyToMessageId (우선) / (폴백) replyToMessageId
+     * - Message.createdAt        ← (message.timestamp 또는 timestamp) epoch seconds
+     * - Message.channelId        ← roomId (봉투)
+     * - Message.projectId        ← projectId (봉투, 선택)
+     *
+     * 전송/수신 원칙:
+     * - 클라이언트는 가능하면 평탄(Flat) 스키마를 사용: 봉투에 모든 필드(messageId, messageType, payload, senderId, replyToMessageId, timestamp)를 포함.
+     * - 서버는 중첩(message.*)을 우선 읽되, 없으면 봉투로 폴백하여 하위호환 유지.
+     */
     @JsonProperty(WebSocketEventConstants.FIELD_TYPE)
     private String type;
     
@@ -38,7 +55,7 @@ public class ChatMessage {
     private String projectId;
     
 
-    // Nested domain message wrapper (preferred new structure)
+    // Nested domain message wrapper (하위호환용, 수신 시 우선 참조)
     @JsonProperty(WebSocketEventConstants.FIELD_MESSAGE)
     private MessageData message;
 
@@ -116,7 +133,7 @@ public class ChatMessage {
     public MessageData getMessage() { return message; }
     public void setMessage(MessageData message) { this.message = message; }
 
-    // Effective getters (prefer nested message, fallback to envelope for legacy)
+    // Effective getters: nested(message.*) 우선, 없으면 봉투(envelope) 폴백
     public String getEffectiveMessageId() {
         if (message != null && message.getId() != null) return message.getId();
         return messageId;

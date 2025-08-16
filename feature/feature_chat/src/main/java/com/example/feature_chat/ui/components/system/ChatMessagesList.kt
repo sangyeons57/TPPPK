@@ -6,26 +6,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import com.example.core_common.constants.PagingConstants
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.paging.compose.LazyPagingItems
+import com.example.core_common.constants.PagingConstants
 import com.example.feature_chat.model.ChatMessageUiModel
 import com.example.feature_chat.model.ChatUiState
 import com.example.feature_chat.ui.components.message.ChatMessageItemComposable
@@ -45,114 +36,14 @@ fun ChatMessagesList(
     onMessageLongClick: (ChatMessageUiModel) -> Unit,
     onUserProfileClick: (String) -> Unit,
     onRetryMessage: (String) -> Unit = { _ -> },
+    onJoinProject: (String) -> Unit = { _ -> },
     onAddMember: (String, String) -> Unit = { _, _ -> }, // 멤버 추가 콜백 추가
     onImageClick: (String, List<String>, Int) -> Unit = { _, _, _ -> }, // 이미지 클릭 콜백 추가
     initialMessageId: String? = null
 ) {
-    val coroutineScope = rememberCoroutineScope()
-    
-    // LoadState 디바운싱을 위한 상태 관리
-    var debouncedAppendLoading by remember { mutableStateOf(false) }
-    var debouncedPrependLoading by remember { mutableStateOf(false) }
+    rememberCoroutineScope()
 
-    // 스크롤 위치 보존을 위한 상태 관리
-    var previousItemCount by remember { mutableStateOf(lazyPagingItems.itemCount) }
-    var shouldMaintainScrollPosition by remember { mutableStateOf(false) }
-    var previousFirstVisibleItemIndex by remember { mutableStateOf(0) }
-    var previousFirstVisibleItemScrollOffset by remember { mutableStateOf(0) }
-
-    // 로그 중복 방지를 위한 상태 추적
-    var lastRefreshState by remember { mutableStateOf<String?>(null) }
-    var lastAppendState by remember { mutableStateOf<String?>(null) }
-    var lastPrependState by remember { mutableStateOf<String?>(null) }
-
-    // 새 메시지 추가 시 스크롤 위치 관리 (양방향 Refresh 대응)
-    LaunchedEffect(lazyPagingItems.itemCount) {
-        val currentItemCount = lazyPagingItems.itemCount
-
-        if (previousItemCount > 0 && currentItemCount > previousItemCount) {
-            // 새 아이템이 추가된 경우
-            val newItemsAdded = currentItemCount - previousItemCount
-
-            // 사용자가 최하단에 있는지 확인 (reverseLayout=true에서는 index 0이 최하단)
-            val isAtBottom = listState.firstVisibleItemIndex <= 3 // 정말 최하단 근처에서만 자동 스크롤
-
-            android.util.Log.d(
-                "ChatMessagesList",
-                "🔄 새 아이템 추가됨: ${newItemsAdded}개, 이전: $previousItemCount, 현재: $currentItemCount, 최하단여부: $isAtBottom"
-            )
-
-            if (isAtBottom) {
-                // 사용자가 최하단에 있으면 새 메시지로 즉시 스크롤 (애니메이션 없이)
-                android.util.Log.d("ChatMessagesList", "⬇️ 최하단 즉시 스크롤")
-                coroutineScope.launch {
-                    listState.scrollToItem(0) // reverseLayout=true에서 0이 최신 메시지
-                }
-            } else {
-                // 사용자가 4개 이상 위에 있으면 위치 보존 (UX 개선)
-                android.util.Log.d(
-                    "ChatMessagesList",
-                    "📌 사용자가 위쪽에서 메시지 읽는 중, 스크롤 위치 보존 (index: $previousFirstVisibleItemIndex)"
-                )
-
-                val adjustedIndex = if (newItemsAdded <= 5) {
-                    // 소량 추가: 기존 로직 유지
-                    (previousFirstVisibleItemIndex + newItemsAdded).coerceAtMost(currentItemCount - 1)
-                } else {
-                    // 대량 추가 (Refresh): 상대적 위치 비율로 계산
-                    val relativePosition =
-                        previousFirstVisibleItemIndex.toFloat() / previousItemCount.toFloat()
-                    (relativePosition * currentItemCount).toInt().coerceAtMost(currentItemCount - 1)
-                }
-
-                android.util.Log.d(
-                    "ChatMessagesList",
-                    "📌 스크롤 위치 보존: index $adjustedIndex (이전: $previousFirstVisibleItemIndex)"
-                )
-                coroutineScope.launch {
-                    listState.scrollToItem(
-                        index = adjustedIndex,
-                        scrollOffset = previousFirstVisibleItemScrollOffset
-                    )
-                }
-            }
-        }
-
-        // 현재 상태 저장
-        previousItemCount = currentItemCount
-        if (currentItemCount > 0) {
-            previousFirstVisibleItemIndex = listState.firstVisibleItemIndex
-            previousFirstVisibleItemScrollOffset = listState.firstVisibleItemScrollOffset
-        }
-    }
-    
-    // Append LoadState 디바운싱
-    LaunchedEffect(lazyPagingItems.loadState.append) {
-        val isLoading = lazyPagingItems.loadState.append is androidx.paging.LoadState.Loading
-        if (isLoading != debouncedAppendLoading) {
-            if (isLoading) {
-                // 로딩 시작 시 즉시 반영
-                debouncedAppendLoading = true
-            } else {
-                // 로딩 종료 시 100ms 지연 후 반영 (깜빡임 방지)
-                delay(100L)
-                debouncedAppendLoading = false
-            }
-        }
-    }
-    
-    // Prepend LoadState 디바운싱
-    LaunchedEffect(lazyPagingItems.loadState.prepend) {
-        val isLoading = lazyPagingItems.loadState.prepend is androidx.paging.LoadState.Loading
-        if (isLoading != debouncedPrependLoading) {
-            if (isLoading) {
-                debouncedPrependLoading = true
-            } else {
-                delay(100L)
-                debouncedPrependLoading = false
-            }
-        }
-    }
+    // Note: Avoid manual scroll repositioning; rely on Paging3 + stable keys to prevent bounce.
     
     LazyColumn(
         modifier = modifier
@@ -166,14 +57,6 @@ fun ChatMessagesList(
         // Paging3 loading states + 로깅
         when (val loadState = lazyPagingItems.loadState.refresh) {
             is androidx.paging.LoadState.Loading -> {
-                val currentState = "refresh_loading_${lazyPagingItems.itemCount}"
-                if (currentState != lastRefreshState) {
-                    android.util.Log.d(
-                        "ChatMessagesList",
-                        "🔄 refresh Loading: items=${lazyPagingItems.itemCount}"
-                    )
-                    lastRefreshState = currentState
-                }
                 // Show skeleton UI instead of simple progress indicator
                 items(7) { // Show 5 skeleton items
                     MessageSkeletonItem()
@@ -198,14 +81,7 @@ fun ChatMessagesList(
             }
 
             else -> {
-                val currentState = "refresh_notloading_${lazyPagingItems.itemCount}"
-                if (currentState != lastRefreshState) {
-                    android.util.Log.d(
-                        "ChatMessagesList",
-                        "✅ refresh NotLoading: items=${lazyPagingItems.itemCount}"
-                    )
-                    lastRefreshState = currentState
-                }
+                // No-op
             }
         }
 
@@ -228,6 +104,10 @@ fun ChatMessagesList(
                         "actual_${message.messageId}_$timestamp"
                     }
                 }
+            },
+            contentType = { index ->
+                val item = lazyPagingItems[index]
+                item?.messageType ?: "loading"
             }
         ) { index ->
             val message = lazyPagingItems[index]
@@ -259,11 +139,7 @@ fun ChatMessagesList(
                         onLongClick = { onMessageLongClick(it) },
                         onUserProfileClick = { onUserProfileClick(it.userId) },
                         onRetryMessage = onRetryMessage,
-                        onJoinProject = { projectId ->
-                            // 프로젝트 참여 로직 - 추후 ViewModel에서 처리
-                            android.util.Log.d("ChatScreen", "프로젝트 참여 요청: $projectId")
-                            // TODO: 프로젝트 참여 이벤트 처리
-                        },
+                        onJoinProject = onJoinProject,
                         onAddMember = onAddMember,
                         onImageClick = onImageClick,
                         onMentionClick = { type, id ->

@@ -99,7 +99,23 @@ class AcceptMemberInvitationUseCase @Inject constructor(
 
                         is CustomResult.Failure -> {
                             Log.e(TAG, "프로젝트 조회 실패", projectResult.error)
-                            emit(CustomResult.Failure(Exception("프로젝트를 찾을 수 없습니다: ${projectResult.error.message}")))
+
+                            // 권한 오류와 기타 오류 구분하여 처리
+                            val errorMessage = when {
+                                projectResult.error.message?.contains("PERMISSION_DENIED") == true -> {
+                                    "프로젝트 접근 권한이 없습니다. 초대가 유효한지 확인해 주세요."
+                                }
+
+                                projectResult.error.message?.contains("UNAUTHENTICATED") == true -> {
+                                    "로그인이 필요합니다. 다시 로그인해 주세요."
+                                }
+
+                                else -> {
+                                    "프로젝트를 찾을 수 없습니다. 네트워크 상태를 확인해 주세요."
+                                }
+                            }
+
+                            emit(CustomResult.Failure(Exception(errorMessage)))
                         }
 
                         else -> {

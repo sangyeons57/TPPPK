@@ -2,6 +2,7 @@ package com.example.data_repository.di
 
 import androidx.room.RoomDatabase
 import com.example.data_datasource.database.AppDatabase
+import com.example.data_model.local.OutboxDao
 import com.example.data_model.local.RoomSyncCursorStore
 import com.example.domain.model.sync.SyncCoordinator
 import com.example.domain.model.sync.SyncCursorStore
@@ -64,33 +65,32 @@ object CommonModule {
     @Singleton
     fun provideMessageSyncPortFactory(
         messageRemoteDataSource: com.example.data_datasource.remote.MessageRemoteDataSource,
-        messageRepository: com.example.domain_repository.base.MessageRepository,
         messageDao: com.example.data_model.local.MessageDao,
-        messageMapper: com.example.mapper.message.MessageMapper
+        messageMapper: com.example.mapper.message.MessageMapper,
+        outboxDao: OutboxDao
     ): MessageSyncPortFactory {
         return MessageSyncPortFactory(
             messageRemoteDataSource,
-            messageRepository,
             messageDao,
-            messageMapper
+            messageMapper,
+            outboxDao,
         )
     }
 
     /**
-     * SyncCoordinator 제공
-     * DefaultSyncManager 구현체로 실제 증분 동기화 기능 제공
+     * SyncCoordinator 제공 (빈 포트)
+     * 런타임 동기화는 SyncManagerFactory에서 스트림별 포트를 구성해 실행합니다.
      */
     @Provides
     @Singleton
     fun provideSyncCoordinator(
         cursorStore: SyncCursorStore
     ): SyncCoordinator {
-        // 현재 MessageSyncPort는 런타임에 동적으로 생성되므로 빈 리스트로 초기화
-        // 실제 동기화는 SyncUseCase에서 채널별로 처리됨
+        // 현재 MessageSyncPort는 런타임에 SyncManagerFactory에서 동적으로 생성합니다
         return DefaultSyncManager(
             ports = emptyList(),
             cursorStore = cursorStore,
             pageSize = 50 // 한 번에 동기화할 메시지 수
         )
     }
-} 
+}

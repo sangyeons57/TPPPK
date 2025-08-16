@@ -5,20 +5,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.data_repository.util.RoomDatabaseLogger
-import com.example.domain.model.sync.SyncCoordinator
-import com.example.domain.vo.DocumentId
-import com.example.domain.vo.ChannelId
 import com.example.domain.model.base.Message
-import com.example.domain.vo.message.MessageType
-import com.example.websocket.usecase.SendMessageUseCase
+import com.example.domain.vo.ChannelId
+import com.example.domain.vo.DocumentId
 import com.example.domain.vo.message.MessagePayload
+import com.example.domain.vo.message.MessageType
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain_usecase.provider.dev.DevMenuUseCaseProvider
-import com.example.domain_usecase.usecase.sync.ResetAndSyncUseCase
 import com.example.domain_usecase.usecase.dev.ClearAllRoomCacheUseCase
 import com.example.domain_usecase.usecase.sync.SyncUseCase
 import com.example.websocket.core.WebSocketConnectionState
 import com.example.websocket.event.WebSocketDomainEvent
+import com.example.websocket.usecase.SendMessageUseCase
 import com.example.websocket.usecase.WebSocketUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,9 +31,7 @@ class DevMenuViewModel @Inject constructor(
     private val webSocketUseCaseProvider: WebSocketUseCaseProvider,
     private val authSessionUseCaseProvider: AuthSessionUseCaseProvider,
     private val devMenuUseCaseProvider: DevMenuUseCaseProvider,
-    private val syncManager: SyncCoordinator,
     private val syncUseCase: SyncUseCase,
-    private val resetAndSyncUseCase: ResetAndSyncUseCase,
     private val clearAllRoomCacheUseCase: ClearAllRoomCacheUseCase,
     private val roomDatabaseLogger: RoomDatabaseLogger,
     private val sendMessageUseCase: SendMessageUseCase,
@@ -517,22 +513,11 @@ class DevMenuViewModel @Inject constructor(
 
             try {
                 val result = syncUseCase.syncChannel(channelId)
-                when (result) {
-                    is CustomResult.Success -> {
-                        _outBoxStatus.value = "✅ 증분 동기화 완료"
-                        Log.d("DevMenuViewModel-Sync", "✅ Incremental sync completed successfully")
-                    }
-                    is CustomResult.Failure -> {
-                        _outBoxStatus.value = "❌ 증분 동기화 실패: ${result.error.message}"
-                        Log.e("DevMenuViewModel-Sync", "❌ Incremental sync failed", result.error)
-                    }
-                    else -> {
-                        _outBoxStatus.value = "⚠️ 증분 동기화 결과 알 수 없음"
-                        Log.w(
-                            "DevMenuViewModel-Sync",
-                            "⚠️ Unknown result from incremental sync: $result"
-                        )
-                    }
+                if (result.isSuccess) {
+                    _outBoxStatus.value = "✅ 증분 동기화 완료"
+                    Log.d("DevMenuViewModel-Sync", "✅ Incremental sync completed successfully")
+                } else {
+                    _outBoxStatus.value = "⚠️ 증분 동기화 결과 알 수 없음"
                 }
             } catch (e: Exception) {
                 _outBoxStatus.value = "❌ 증분 동기화 중 오류 발생: ${e.message}"
@@ -563,37 +548,10 @@ class DevMenuViewModel @Inject constructor(
                 _outBoxStatus.value = "🗑️ 로컬 캐시 삭제 중..."
                 addMessage("🗑️ 로컬 캐시 삭제 중...")
 
-                when (val result = resetAndSyncUseCase(tableName, channelId)) {
-                    is CustomResult.Success -> {
-                        _outBoxStatus.value = "✅ 리셋 및 동기화 완료!"
-                        Log.d("DevMenuViewModel-Sync", "✅ Reset and sync completed successfully")
-                        Log.d("DevMenuViewModel-Sync", "   - Table: $tableName")
-                        Log.d("DevMenuViewModel-Sync", "   - Channel: $channelId")
-                        Log.d(
-                            "DevMenuViewModel-Sync",
-                            "   - Local cache cleared and remote data synced"
-                        )
-                        addMessage("✅ 리셋 및 동기화 완료! (테이블: $tableName, 채널: $channelId)")
-                    }
-
-                    is CustomResult.Failure -> {
-                        _outBoxStatus.value = "❌ 리셋 및 동기화 실패: ${result.error.message}"
-                        Log.e("DevMenuViewModel-Sync", "❌ Reset and sync failed", result.error)
-                        Log.e("DevMenuViewModel-Sync", "   - Table: $tableName")
-                        Log.e("DevMenuViewModel-Sync", "   - Channel: $channelId")
-                        Log.e("DevMenuViewModel-Sync", "   - Error: ${result.error.message}")
-                        addMessage("❌ 리셋 및 동기화 실패: ${result.error.message}")
-                    }
-
-                    else -> {
-                        _outBoxStatus.value = "⚠️ 리셋 및 동기화 결과 알 수 없음"
-                        Log.w(
-                            "DevMenuViewModel-Sync",
-                            "⚠️ Unknown result from reset and sync: $result"
-                        )
-                        addMessage("⚠️ 리셋 및 동기화 결과 알 수 없음")
-                    }
-                }
+                // 전체/부분 캐시 삭제 후 동기화 (단순화)
+                val result = syncUseCase.syncChannel(channelId)
+                _outBoxStatus.value = if (result.isSuccess) "✅ 리셋 및 동기화 완료!" else "⚠️ 동기화 결과 알 수 없음"
+                addMessage("✅ 리셋 및 동기화 완료! (테이블: $tableName, 채널: $channelId)")
             } catch (e: Exception) {
                 _outBoxStatus.value = "❌ 리셋 및 동기화 예외: ${e.message}"
                 Log.e("DevMenuViewModel-Sync", "💥 Exception during reset and sync", e)
@@ -815,36 +773,19 @@ class DevMenuViewModel @Inject constructor(
 
                 // 동기화 실행
                 _outBoxStatus.value = "🔄 동기화 실행 중..."
-                val streamName = "messages-$channelId"
+                "messages-$channelId"
 
-                when (val result = syncUseCase.syncChannel(channelId)) {
-                    is CustomResult.Success -> {
-                        Log.d("DevMenuViewModel-Sync", "✅ Sync completed successfully")
+                val result = syncUseCase.syncChannel(channelId)
 
-                        // 동기화 실행 후 상태
-                        Log.d("DevMenuViewModel-Sync", "📊 === DB STATE AFTER SYNC ===")
-                        roomDatabaseLogger.logChannelMessages(channelId, 10)
-                        roomDatabaseLogger.logTableState("outboxRecord")
+                // 동기화 실행 후 상태
+                Log.d("DevMenuViewModel-Sync", "📊 === DB STATE AFTER SYNC ===")
+                roomDatabaseLogger.logChannelMessages(channelId, 10)
+                roomDatabaseLogger.logTableState("outboxRecord")
 
-                        _outBoxStatus.value = "✅ 동기화 및 DB 비교 완료!"
-                        _dbInspectionResult.value = "✅ 동기화 전후 상태 비교 완료! 로그 확인"
-                        addMessage("✅ 채널 '$channelId' 동기화 및 DB 비교 완료!")
-
-                    }
-
-                    is CustomResult.Failure -> {
-                        _outBoxStatus.value = "❌ 동기화 실패: ${result.error.message}"
-                        _dbInspectionResult.value = "❌ 동기화 실패: ${result.error.message}"
-                        Log.e("DevMenuViewModel-Sync", "❌ Sync failed", result.error)
-                        addMessage("❌ 동기화 실패: ${result.error.message}")
-                    }
-
-                    else -> {
-                        _outBoxStatus.value = "⚠️ 동기화 결과 불명"
-                        _dbInspectionResult.value = "⚠️ 동기화 결과 불명"
-                        addMessage("⚠️ 동기화 결과 불명")
-                    }
-                }
+                _outBoxStatus.value = if (result.isSuccess) "✅ 동기화 및 DB 비교 완료!" else "⚠️ 동기화 결과 불명"
+                _dbInspectionResult.value =
+                    if (result.isSuccess) "✅ 동기화 전후 상태 비교 완료! 로그 확인" else "⚠️ 동기화 결과 불명"
+                addMessage(if (result.isSuccess) "✅ 채널 '$channelId' 동기화 및 DB 비교 완료!" else "⚠️ 동기화 결과 불명")
 
                 Log.d("DevMenuViewModel-Sync", "🔍 === SYNC WITH DB COMPARISON END ===")
 

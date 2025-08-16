@@ -59,26 +59,14 @@ class SendMessageUseCase @Inject constructor(
                 Log.e(TAG, "Failed to set repository collection", e)
             }
 
-            // 1) Local save
+            // 1) Local save (also enqueues OutBox inside repository transaction)
             when (val saveResult = messageRepository.save(messageToSave)) {
                 is CustomResult.Failure -> {
                     return CustomResult.Failure(saveResult.error)
                 }
                 is CustomResult.Success -> {
                     val messageId = saveResult.data
-
-                    // 2) OutBox enqueue (PENDING)
-                    try {
-                        messageRepository.createOutBoxRecord(
-                            messageId = messageId.value,
-                            channelId = channelId,
-                            payload = message.payload.value
-                        )
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Failed to enqueue OutBox record: ${messageId.value}", e)
-                    }
-
-                    // 3) WebSocket send (best-effort; return success on local save)
+                    // 2) WebSocket send (best-effort; return success on local save)
                     try {
                         val roomUseCases = webSocketUseCaseProvider.createForRoom(channelId)
                         val wsResult = roomUseCases.sendMessageUseCase(

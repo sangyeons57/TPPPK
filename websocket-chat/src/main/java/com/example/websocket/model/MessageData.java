@@ -6,8 +6,18 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Map;
 
 /**
- * Nested domain message wrapper for WebSocket transport.
- * Holds messageType and payload only, leaving transport fields at envelope level.
+ * Nested domain message wrapper for WebSocket transport (legacy/compat only).
+ *
+ * Mapping to domain Message (server reads these first, then falls back to envelope):
+ * - id                → Message.id
+ * - messageType       → Message.messageType (string ↔ enum handled elsewhere)
+ * - payload           → Message.payload (full JSON)
+ * - senderId          → Message.senderId
+ * - replyToMessageId  → Message.replyToMessageId
+ * - timestamp         → Message.createdAt (epoch seconds → Instant)
+ *
+ * Note: Newer clients are encouraged to send flat (envelope-only) fields; server will still
+ * parse this nested object if provided for backward compatibility.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MessageData {

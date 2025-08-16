@@ -49,7 +49,7 @@ class RoomDatabaseLogger @Inject constructor(
         TABLE_SYNC_METADATA to TableInfo(
             name = TABLE_SYNC_METADATA,
             description = "동기화 메타데이터",
-            sampleFields = listOf("stream", "lastCursor", "lastSyncAt")
+            sampleFields = listOf("stream", "cursor")
         )
     )
 
@@ -250,7 +250,7 @@ class RoomDatabaseLogger @Inject constructor(
         val results = mutableListOf<String>()
 
         // 전체 개수 확인
-        val countCursor = appDatabase.query("SELECT COUNT(*) FROM sync_metadata", emptyArray())
+        val countCursor = appDatabase.query("SELECT COUNT(*) FROM syncMetadata", emptyArray())
         val totalCount = if (countCursor.moveToFirst()) countCursor.getInt(0) else 0
         countCursor.close()
 
@@ -260,12 +260,12 @@ class RoomDatabaseLogger @Inject constructor(
 
         // 과거 3개
         val oldestCursor = appDatabase.query(
-            "SELECT * FROM sync_metadata ORDER BY lastSyncAt ASC LIMIT 3",
+            "SELECT stream, cursor FROM syncMetadata ORDER BY stream ASC LIMIT 3",
             emptyArray()
         )
         results.add("📝 과거 3개:")
         while (oldestCursor.moveToNext()) {
-            val rowData = formatGenericRow(oldestCursor)
+            val rowData = formatSyncMetadataRow(oldestCursor)
             results.add("   {$rowData}")
         }
         oldestCursor.close()
@@ -274,29 +274,52 @@ class RoomDatabaseLogger @Inject constructor(
             // 중간 3개
             val middleOffset = (totalCount / 2) - 1
             val middleCursor = appDatabase.query(
-                "SELECT * FROM sync_metadata ORDER BY lastSyncAt ASC LIMIT 3 OFFSET $middleOffset",
+                "SELECT stream, cursor FROM syncMetadata ORDER BY stream ASC LIMIT 3 OFFSET $middleOffset",
                 emptyArray()
             )
             results.add("📝 중간 3개:")
             while (middleCursor.moveToNext()) {
-                val rowData = formatGenericRow(middleCursor)
+                val rowData = formatSyncMetadataRow(middleCursor)
                 results.add("   {$rowData}")
             }
             middleCursor.close()
         }
         // 최근 3개
         val recentCursor = appDatabase.query(
-            "SELECT * FROM sync_metadata ORDER BY lastSyncAt DESC LIMIT 3",
+            "SELECT stream, cursor FROM syncMetadata ORDER BY stream DESC LIMIT 3",
             emptyArray()
         )
         results.add("📝 최근 3개:")
         while (recentCursor.moveToNext()) {
-            val rowData = formatGenericRow(recentCursor)
+            val rowData = formatSyncMetadataRow(recentCursor)
             results.add("   {$rowData}")
         }
         recentCursor.close()
 
         return results
+    }
+
+    /**
+     * SyncMetadata 한 행을 읽기 좋게 포맷팅
+     * 컬럼 순서: stream(0), cursor(1)
+     */
+    private fun formatSyncMetadataRow(cursor: Cursor): String {
+        val stream = cursor.getString(0) ?: "NULL"
+        val rawCursor = cursor.getString(1)
+        if (rawCursor.isNullOrEmpty()) {
+            return "stream=$stream, cursor=NULL (full resync)"
+        }
+        val (tsPart, idPart) = parseCursor(rawCursor)
+        val tsPretty = tsPart?.let { "${it} (${formatTimestamp(it)})" } ?: "-"
+        val idPretty = idPart ?: "-"
+        return "stream=$stream, cursor=\"$rawCursor\", ts=$tsPretty, id=$idPretty"
+    }
+
+    private fun parseCursor(cursor: String): Pair<Long?, String?> {
+        val parts = cursor.split(":")
+        val ts = parts.getOrNull(0)?.toLongOrNull()
+        val id = parts.getOrNull(1)
+        return ts to id
     }
 
     /**
@@ -494,6 +517,9 @@ class RoomDatabaseLogger @Inject constructor(
             if (tableInfo != null) {
                 logTableStateInternal(tableName, tableInfo)
                 logTableSchema(tableName)
+                if (tableName == TABLE_SYNC_METADATA) {
+                    logAllSyncMetadata()
+                }
             } else {
                 Log.w(TAG, "⚠️ Unknown table: $tableName")
             }
@@ -510,6 +536,47 @@ class RoomDatabaseLogger @Inject constructor(
                 logTableStateInternal(tableName, tableInfo)
             } else {
                 Log.w(TAG, "⚠️ Unknown table: $tableName")
+            }
+        }
+    }
+
+    /**
+     * SyncMetadata 전체 레코드를 예쁘게 출력
+     */
+    private suspend fun logAllSyncMetadata() {
+        withContext(Dispatchers.IO) {
+            try {
+                Log.i(TAG, "")
+                Log.i(TAG, "🧭 SYNC METADATA DETAILS")
+                Log.i(TAG, "┌" + "─".repeat(80) + "┐")
+                Log.i(
+                    TAG,
+                    "│ ${"Stream".padEnd(28)} │ ${"Cursor".padEnd(22)} │ ${"Timestamp".padEnd(22)} │"
+                )
+                Log.i(TAG, "├" + "─".repeat(80) + "┤")
+
+                val cursor = appDatabase.query(
+                    "SELECT stream, cursor FROM syncMetadata ORDER BY stream ASC",
+                    emptyArray()
+                )
+                var rows = 0
+                while (cursor.moveToNext()) {
+                    val stream = cursor.getString(0) ?: ""
+                    val rawCursor = cursor.getString(1) ?: ""
+                    val (ts, _) = if (rawCursor.isNotEmpty()) parseCursor(rawCursor) else (null to null)
+                    val tsPretty = ts?.let { "${it} (${formatTimestamp(it)})" } ?: "-"
+
+                    Log.i(
+                        TAG,
+                        "│ ${stream.padEnd(28)} │ ${rawCursor.padEnd(22)} │ ${tsPretty.padEnd(22)} │"
+                    )
+                    rows++
+                }
+                cursor.close()
+                Log.i(TAG, "└" + "─".repeat(80) + "┘")
+                Log.i(TAG, "(rows=$rows)")
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Failed to log sync metadata details: ${e.message}")
             }
         }
     }

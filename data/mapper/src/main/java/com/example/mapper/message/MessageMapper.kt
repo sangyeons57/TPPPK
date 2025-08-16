@@ -15,11 +15,11 @@ import com.example.domain.vo.message.MessagePayload
 import com.example.domain.vo.message.MessageType
 import com.example.mapper.DtoMapper
 import com.example.mapper.Mapper
+import org.json.JSONArray
+import org.json.JSONObject
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
-import org.json.JSONArray
-import org.json.JSONObject
 
 /**
  * Message 관련 Entity, Domain, DTO 간의 매핑을 담당하는 Mapper
@@ -137,16 +137,8 @@ class MessageMapper @Inject constructor() : Mapper<MessageEntity, Message, Messa
                 }
             }
 
-            null -> {
-                if (dto.content.isNotEmpty()) MessagePayload.forText(dto.content) else MessagePayload.forText(
-                    ""
-                )
-            }
-            else -> {
-                if (dto.content.isNotEmpty()) MessagePayload.forText(dto.content) else MessagePayload.forText(
-                    ""
-                )
-            }
+            null -> MessagePayload.forText("")
+            else -> MessagePayload.forText("")
         }
 
         return Message.fromDataSource(
@@ -164,7 +156,7 @@ class MessageMapper @Inject constructor() : Mapper<MessageEntity, Message, Messa
     }
 
     override fun domainToDto(domain: Message): MessageDTO {
-        val dtoMentions = domain.mentions.map { mention ->
+        domain.mentions.map { mention ->
             mapOf(
                 MentionInfo.KEY_TYPE to mention.type.name,
                 MentionInfo.KEY_ID to mention.id,
@@ -188,8 +180,7 @@ class MessageMapper @Inject constructor() : Mapper<MessageEntity, Message, Messa
             messageType = domain.messageType.name,
             payload = payloadMap,
             createdAt = null,
-            updatedAt = null,
-            content = ""
+            updatedAt = null
         )
     }
 
@@ -258,4 +249,3 @@ class MessageMapper @Inject constructor() : Mapper<MessageEntity, Message, Messa
         return arr
     }
 }
-

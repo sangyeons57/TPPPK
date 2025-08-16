@@ -30,11 +30,7 @@ data class MessageDTO(
     @get:PropertyName(AggregateRoot.KEY_CREATED_AT)
     @get:ServerTimestamp override val createdAt: Date? = null,
     @get:PropertyName(AggregateRoot.KEY_UPDATED_AT)
-    @get:ServerTimestamp override val updatedAt: Date? = null,
-
-    // Backward compatibility - 기존 content 필드 (읽기 전용)
-    @get:PropertyName(SEND_MESSAGE)
-    val content: String = "" // 하위 호환성을 위해 유지, 쓰기 시에는 사용하지 않음
+    @get:ServerTimestamp override val updatedAt: Date? = null
 ) : DTO {
 
     companion object {
@@ -46,10 +42,6 @@ data class MessageDTO(
         const val REPLY_TO_MESSAGE_ID = Message.KEY_REPLY_TO_MESSAGE_ID
         const val IS_DELETED = Message.KEY_IS_DELETED
         const val MENTIONS = Message.KEY_MENTIONS
-
-        // Backward compatibility
-        @Deprecated("Use PAYLOAD instead")
-        const val SEND_MESSAGE = Message.KEY_SEND_MESSAGE
     }
 
 }

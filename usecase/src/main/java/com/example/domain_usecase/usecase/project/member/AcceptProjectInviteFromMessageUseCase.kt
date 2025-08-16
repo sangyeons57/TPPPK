@@ -38,7 +38,6 @@ class AcceptProjectInviteFromMessageUseCaseImpl @Inject constructor(
     override suspend operator fun invoke(
         invitationId: String
     ): CustomResult<Unit, Exception> {
-        
         Log.d(TAG, "프로젝트 초대 참여 처리 시작: invitationId=$invitationId")
 
         try {
@@ -46,7 +45,7 @@ class AcceptProjectInviteFromMessageUseCaseImpl @Inject constructor(
                 return CustomResult.Failure(Exception("초대 ID가 유효하지 않습니다."))
             }
 
-            // 1. 초대 정보 조회
+            // 1) 초대 정보 조회 (읽기는 rules에서 허용됨)
             val invitationResult = projectInvitationRepository.findById(DocumentId(invitationId))
             val invitation = when (invitationResult) {
                 is CustomResult.Success -> invitationResult.data
@@ -59,38 +58,26 @@ class AcceptProjectInviteFromMessageUseCaseImpl @Inject constructor(
                 }
             }
 
-            // 2. 초대 유효성 검증 (만료, 이미 사용됨 등)
-            // TODO: Add expiry and usage check methods to ProjectInvitation domain model
-            // if (invitation.isExpired()) {
-            //     Log.e(TAG, "만료된 초대: $invitationId")
-            //     return CustomResult.Failure(Exception("만료된 초대입니다."))
-            // }
-
-            // if (invitation.isAlreadyUsed()) {
-            //     Log.e(TAG, "이미 사용된 초대: $invitationId")
-            //     return CustomResult.Failure(Exception("이미 사용된 초대입니다."))
-            // }
-
-            // 3. 기존 AcceptProjectInvitationUseCase 활용하여 참여 처리
-            Log.d(TAG, "프로젝트 참여 처리 중: projectId=${invitation.projectId.value}")
-            val acceptResult = acceptProjectInvitationUseCase(
-                invitationId = DocumentId(invitation.id.value)
+            // 2) 서버(Cloud Functions)로 참여 처리 위임
+            //    - Admin 권한으로 멤버 추가, 초대 사용 처리, 레이스컨디션 방지
+            Log.d(
+                TAG,
+                "초대 코드로 서버 참여 처리 호출: inviteCode=${invitation.inviteCode.value}, projectId=${invitation.projectId.value}"
             )
-
-            return when (acceptResult) {
+            val joinResult =
+                projectInvitationRepository.joinProjectWithInvite(invitation.inviteCode.value)
+            return when (joinResult) {
                 is CustomResult.Success -> {
-                    Log.d(TAG, "프로젝트 참여 완료: projectId=${invitation.projectId.value}")
+                    Log.d(TAG, "프로젝트 참여 완료(Functions): projectId=${invitation.projectId.value}")
                     CustomResult.Success(Unit)
                 }
                 is CustomResult.Failure -> {
-                    Log.e(TAG, "프로젝트 참여 실패", acceptResult.error)
-                    CustomResult.Failure(acceptResult.error)
+                    Log.e(TAG, "프로젝트 참여 실패(Functions)", joinResult.error)
+                    CustomResult.Failure(Exception(joinResult.error.message ?: "프로젝트 참여에 실패했습니다."))
                 }
-                else -> {
-                    CustomResult.Failure(Exception("참여 처리 중 알 수 없는 오류가 발생했습니다."))
-                }
-            }
 
+                else -> CustomResult.Failure(Exception("참여 처리 중 알 수 없는 오류가 발생했습니다."))
+            }
         } catch (e: Exception) {
             Log.e(TAG, "프로젝트 초대 참여 처리 중 예외 발생", e)
             return CustomResult.Failure(e)
