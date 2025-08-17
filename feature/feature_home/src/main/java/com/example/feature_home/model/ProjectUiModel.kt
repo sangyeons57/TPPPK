@@ -56,6 +56,6 @@ fun com.example.domain.model.base.ProjectsWrapper.toProjectUiModel(): ProjectUiM
     return ProjectUiModel(
         id = this.id,
         name = this.projectName,
-        imageUrl = this.projectImageUrl
+        imageUrl = null // 고정 경로 방식 사용: project_profile/{project_id}/profile.webp
     )
 }

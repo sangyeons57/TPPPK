@@ -201,33 +201,18 @@ interface FunctionsRemoteDataSource {
      */
     suspend fun unblockDMChannelByUserName(targetUserName: String): CustomResult<Map<String, Any?>, Exception>
 
+
+    // invite link/code flow removed
+
+    // createProjectInvitation removed (no longer used)
+
     /**
-     * 프로젝트 초대 링크를 생성합니다.
+     * projectId를 사용하여 프로젝트에 참여합니다.
      *
      * @param projectId 프로젝트 ID
-     * @param expiresInHours 만료 시간 (시간 단위, 기본 24시간)
-     * @return 성공 시 초대 링크 정보, 실패 시 Exception을 담은 CustomResult
+     * @return 성공 시 참여 결과 맵, 실패 시 Exception을 담은 CustomResult
      */
-    suspend fun generateInviteLink(
-        projectId: String,
-        expiresInHours: Int = 24
-    ): CustomResult<Map<String, Any?>, Exception>
-
-    /**
-     * 초대 코드를 검증합니다.
-     *
-     * @param inviteCode 초대 코드
-     * @return 성공 시 초대 정보, 실패 시 Exception을 담은 CustomResult
-     */
-    suspend fun validateInviteCode(inviteCode: String): CustomResult<Map<String, Any?>, Exception>
-
-    /**
-     * 초대 코드를 사용하여 프로젝트에 참여합니다.
-     *
-     * @param inviteCode 초대 코드
-     * @return 성공 시 참여 결과, 실패 시 Exception을 담은 CustomResult
-     */
-    suspend fun joinProjectWithInvite(inviteCode: String): CustomResult<Map<String, Any?>, Exception>
+    suspend fun joinProject(projectId: String): CustomResult<Map<String, Any?>, Exception>
 
     /**
      * 프로젝트를 삭제합니다 (soft delete).
@@ -317,6 +302,36 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
     companion object {
         private const val DEFAULT_TIMEOUT_MS = 30000L
     }
+
+    override suspend fun joinProject(projectId: String): CustomResult<Map<String, Any?>, Exception> =
+        withContext(Dispatchers.IO) {
+            try {
+                auth.currentUser ?: throw Exception("User not authenticated")
+
+                val requestData = mapOf(
+                    FirebaseFunctionParameters.Project.PROJECT_ID to projectId
+                )
+
+                val callable =
+                    functions.getHttpsCallable(FirebaseFunctionParameters.Functions.JOIN_PROJECT)
+
+                val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
+                    callable.call(requestData).await()
+                }
+
+                if (result != null) {
+                    @Suppress("UNCHECKED_CAST")
+                    val resultData =
+                        result.data as? Map<String, Any?> ?: mapOf("result" to result.data)
+                    CustomResult.Success(resultData)
+                } else {
+                    CustomResult.Failure(Exception("Join project function call timed out"))
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                CustomResult.Failure(e)
+            }
+        }
 
     override suspend fun callFunction(
         functionName: String,
@@ -879,91 +894,7 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    override suspend fun generateInviteLink(
-        projectId: String,
-        expiresInHours: Int
-    ): CustomResult<Map<String, Any?>, Exception> = withContext(Dispatchers.IO) {
-        try {
-            val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
-            
-            val requestData = mutableMapOf<String, Any?>(
-                FirebaseFunctionParameters.Project.PROJECT_ID to projectId,
-                FirebaseFunctionParameters.Project.INVITER_ID to currentUser.uid,
-                FirebaseFunctionParameters.Project.EXPIRES_IN_HOURS to expiresInHours
-            )
-            // maxUses 파라미터는 제거됨 (글로벌 초대 링크에서는 사용하지 않음)
-
-            val callable = functions.getHttpsCallable(FirebaseFunctionParameters.Functions.GENERATE_INVITE_LINK)
-            
-            val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
-                callable.call(requestData).await()
-            }
-
-            if (result != null) {
-                @Suppress("UNCHECKED_CAST")
-                val resultData = result.data as? Map<String, Any?> ?: mapOf("result" to result.data)
-                CustomResult.Success(resultData)
-            } else {
-                CustomResult.Failure(Exception("Generate invite link function call timed out"))
-            }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            CustomResult.Failure(e)
-        }
-    }
-
-    override suspend fun validateInviteCode(inviteCode: String): CustomResult<Map<String, Any?>, Exception> = withContext(Dispatchers.IO) {
-        try {
-            val requestData = mutableMapOf<String, Any?>(FirebaseFunctionParameters.Project.INVITE_CODE to inviteCode)
-            val currentUser = auth.currentUser
-            currentUser?.let { requestData[FirebaseFunctionParameters.User.USER_ID] = it.uid }
-
-            val callable = functions.getHttpsCallable(FirebaseFunctionParameters.Functions.VALIDATE_INVITE_CODE)
-            
-            val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
-                callable.call(requestData).await()
-            }
-
-            if (result != null) {
-                @Suppress("UNCHECKED_CAST")
-                val resultData = result.data as? Map<String, Any?> ?: mapOf("result" to result.data)
-                CustomResult.Success(resultData)
-            } else {
-                CustomResult.Failure(Exception("Validate invite code function call timed out"))
-            }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            CustomResult.Failure(e)
-        }
-    }
-
-    override suspend fun joinProjectWithInvite(inviteCode: String): CustomResult<Map<String, Any?>, Exception> = withContext(Dispatchers.IO) {
-        try {
-            val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
-            
-            val requestData = mapOf(
-                FirebaseFunctionParameters.Project.INVITE_CODE to inviteCode,
-                FirebaseFunctionParameters.User.USER_ID to currentUser.uid
-            )
-
-            val callable = functions.getHttpsCallable(FirebaseFunctionParameters.Functions.JOIN_PROJECT_WITH_INVITE)
-            
-            val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
-                callable.call(requestData).await()
-            }
-
-            if (result != null) {
-                @Suppress("UNCHECKED_CAST")
-                val resultData = result.data as? Map<String, Any?> ?: mapOf("result" to result.data)
-                CustomResult.Success(resultData)
-            } else {
-                CustomResult.Failure(Exception("Join project with invite function call timed out"))
-            }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            CustomResult.Failure(e)
-        }
-    }
+    // invite link/code flow removed
 
     override suspend fun deleteProject(projectId: String): CustomResult<Map<String, Any?>, Exception> = withContext(Dispatchers.IO) {
         try {

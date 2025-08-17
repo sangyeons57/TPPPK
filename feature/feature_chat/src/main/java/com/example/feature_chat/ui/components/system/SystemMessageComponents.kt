@@ -256,8 +256,9 @@ fun MemberInvitationSystemMessage(
     val inviterName = messagePayload.getValue("inviterName") ?: "사용자"
     val targetUserId = messagePayload.getValue("targetUserId") ?: ""
     val actionText = messagePayload.getValue("actionText") ?: "멤버로 추가"
-    val projectImageUrl =
-        messagePayload.getValue("projectImageUrl") ?: messagePayload.getValue("imageUrl")
+    // 고정 경로 방식 사용: project_profile/{project_id}/profile.webp
+    // projectImageUrl 필드는 제거되었으므로 null로 설정
+    val projectImageUrl: String? = null
 
     // 1:1 채널이므로 전송자가 아니면 항상 액션 표시 (수신자)
     val shouldShowActions = !isSender

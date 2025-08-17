@@ -40,8 +40,6 @@ interface SyncPort<T> {
     //배치 성공시 커서 갱신
     suspend fun commitCursor(newCursor: String)
 
-    suspend fun resetAndFullResync() {}
-
 }
 
 

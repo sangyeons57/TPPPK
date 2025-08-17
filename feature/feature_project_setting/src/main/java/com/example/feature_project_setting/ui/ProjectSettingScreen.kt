@@ -415,7 +415,7 @@ fun ProjectProfileSection(
                     )
                     Text(
                         text = if (uiState.selectedImageUri != null) "새 이미지 선택됨"
-                        else if (uiState.projectImageUrl != null) "현재 이미지"
+                        else if (uiState.hasProjectImage) "현재 이미지"
                         else "이미지 없음",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant

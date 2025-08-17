@@ -36,18 +36,7 @@ class ProjectInvitationRepositoryImpl @Inject constructor(
     override suspend fun getInvitationByCode(
         inviteCode: InviteCode
     ): CustomResult<ProjectInvitation, Exception> {
-        return when (val result = projectInvitationRemoteDataSource.validateInviteCodeViaFunction(inviteCode.value)) {
-            is CustomResult.Success -> {
-                try {
-                    val invitation = mapToProjectInvitation(result.data)
-                    CustomResult.Success(invitation)
-                } catch (e: Exception) {
-                    CustomResult.Failure(e)
-                }
-            }
-            is CustomResult.Failure -> CustomResult.Failure(result.error)
-            else -> result as CustomResult<ProjectInvitation, Exception>
-        }
+        return CustomResult.Failure(Exception("Deprecated: invite-code based flow is removed"))
     }
 
     /**
@@ -57,7 +46,7 @@ class ProjectInvitationRepositoryImpl @Inject constructor(
         inviteCode: InviteCode,
         userId: UserId?,
     ): CustomResult<Map<String, Any?>, Exception> {
-        return projectInvitationRemoteDataSource.validateInviteCodeViaFunction(inviteCode.value)
+        return CustomResult.Failure(Exception("Deprecated: invite-code based flow is removed"))
     }
 
     /**
@@ -103,19 +92,21 @@ class ProjectInvitationRepositoryImpl @Inject constructor(
     override suspend fun generateInviteLink(
         projectId: DocumentId,
         expiresInHours: Int
-    ): CustomResult<Map<String, Any?>, Exception> {
-        return projectInvitationRemoteDataSource.generateInviteLinkViaFunction(
-            projectId.value,
-            expiresInHours,
-        )
-    }
+    ): CustomResult<Map<String, Any?>, Exception> =
+        CustomResult.Failure(Exception("Deprecated: invite link flow removed"))
 
     /**
      * Firebase Functions를 통해 초대 코드로 프로젝트 참여를 수행합니다.
      */
     override suspend fun joinProjectWithInvite(inviteCode: String): CustomResult<Map<String, Any?>, Exception> {
-        return projectInvitationRemoteDataSource.joinProjectWithInviteViaFunction(inviteCode)
+        return CustomResult.Failure(Exception("Deprecated: invite-code based flow is removed"))
     }
+
+    override suspend fun createInvitation(
+        projectId: DocumentId,
+        expiresInHours: Int
+    ): CustomResult<Map<String, Any?>, Exception> =
+        CustomResult.Failure(Exception("Deprecated: invitation creation removed"))
 
     /**
      * Firebase Functions의 응답을 ProjectInvitation 도메인 객체로 변환합니다.

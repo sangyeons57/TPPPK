@@ -4,6 +4,7 @@ import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.vo.DocumentId
 import com.example.domain_repository.base.ProjectInvitationRepository
+import com.example.domain_repository.base.ProjectRepository
 import com.example.domain_usecase.usecase.project.invitation.AcceptProjectInvitationUseCase
 import javax.inject.Inject
 
@@ -30,6 +31,7 @@ interface AcceptProjectInviteFromMessageUseCase {
  */
 class AcceptProjectInviteFromMessageUseCaseImpl @Inject constructor(
     private val projectInvitationRepository: ProjectInvitationRepository,
+    private val projectRepository: ProjectRepository,
     private val acceptProjectInvitationUseCase: AcceptProjectInvitationUseCase
 ) : AcceptProjectInviteFromMessageUseCase {
 
@@ -58,14 +60,9 @@ class AcceptProjectInviteFromMessageUseCaseImpl @Inject constructor(
                 }
             }
 
-            // 2) 서버(Cloud Functions)로 참여 처리 위임
-            //    - Admin 권한으로 멤버 추가, 초대 사용 처리, 레이스컨디션 방지
-            Log.d(
-                TAG,
-                "초대 코드로 서버 참여 처리 호출: inviteCode=${invitation.inviteCode.value}, projectId=${invitation.projectId.value}"
-            )
-            val joinResult =
-                projectInvitationRepository.joinProjectWithInvite(invitation.inviteCode.value)
+            // 2) 서버(Cloud Functions)로 참여 처리 위임 (projectId 기반)
+            Log.d(TAG, "서버 참여 처리 호출(projectId 기반): projectId=${invitation.projectId.value}")
+            val joinResult = projectRepository.joinProject(invitation.projectId.toDocumentId())
             return when (joinResult) {
                 is CustomResult.Success -> {
                     Log.d(TAG, "프로젝트 참여 완료(Functions): projectId=${invitation.projectId.value}")
@@ -75,8 +72,9 @@ class AcceptProjectInviteFromMessageUseCaseImpl @Inject constructor(
                     Log.e(TAG, "프로젝트 참여 실패(Functions)", joinResult.error)
                     CustomResult.Failure(Exception(joinResult.error.message ?: "프로젝트 참여에 실패했습니다."))
                 }
-
-                else -> CustomResult.Failure(Exception("참여 처리 중 알 수 없는 오류가 발생했습니다."))
+                is CustomResult.Initial -> CustomResult.Failure(Exception("초기 상태: 참여 처리 실패"))
+                is CustomResult.Loading -> CustomResult.Failure(Exception("로딩 상태: 참여 처리 실패"))
+                is CustomResult.Progress -> CustomResult.Failure(Exception("진행 상태: 참여 처리 실패"))
             }
         } catch (e: Exception) {
             Log.e(TAG, "프로젝트 초대 참여 처리 중 예외 발생", e)

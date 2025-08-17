@@ -203,6 +203,10 @@ class HomeViewModel @Inject constructor(
                     
                     is CustomResult.Success -> {
                         val projects = result.data
+                        Log.d(
+                            "HomeViewModel",
+                            "Projects loaded: ${projects.size} ${projects.forEach { it.name }}"
+                        )
                         _uiState.update { state ->
                             state.copy(
                                 projects = projects,

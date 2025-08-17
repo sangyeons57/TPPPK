@@ -145,7 +145,8 @@ service cloud.firestore {
         match /projects/{projectId} {
             // 프로젝트 정보 읽기: 프로젝트 멤버 또는 멤버 초대 수락 중인 사용자
             // 멤버 초대 수락 시 프로젝트 존재 확인을 위해 모든 인증된 사용자에게 읽기 권한 부여
-            allow read: if isProjectMember(projectId)  || true;
+            // TEMP: 로그인 사용자에 한해 읽기 허용 (임시 완화)
+            allow read: if isAuthenticated();
             // 프로젝트 생성: 인증된 사용자이고, 생성자가 소유자
             allow create: if isAuthenticated() && request.resource.data.ownerId == request.auth.uid;
             // 프로젝트 업데이트/삭제: 프로젝트 멤버만
@@ -157,7 +158,8 @@ service cloud.firestore {
             // 멤버 (members)
             match /members/{memberUserId} {
                 // 멤버 목록/정보 읽기: 프로젝트 멤버만
-                allow read: if isProjectMember(projectId) || true;
+                // TEMP: 로그인 사용자에 한해 읽기 허용 (임시 완화)
+                allow read: if isAuthenticated();
                 // 멤버 추가/역할 수정: 프로젝트 소유자만
                 allow create, update: if isProjectOwner(projectId);
                 // 멤버 삭제 (추방/탈퇴): 프로젝트 소유자 또는 본인 탈퇴
@@ -188,7 +190,7 @@ service cloud.firestore {
                 // 카테고리 읽기: 프로젝트 멤버만
                 allow read: if isProjectMember(projectId);
                 // 카테고리 생성/수정/삭제: 프로젝트 소유자만 (또는 특정 역할)
-                allow write: if isProjectOwner(projectId);
+                allow write: if isProjectMember(projectId);
             }
 
             // 프로젝트 채널 (project_channels) - 프로젝트 직속 서브컬렉션

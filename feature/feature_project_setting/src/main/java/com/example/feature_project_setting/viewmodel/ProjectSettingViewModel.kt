@@ -43,9 +43,9 @@ import javax.inject.Inject
 data class ProjectSettingUiState(
     val projectId: DocumentId,
     val projectName: ProjectName = ProjectName.EMPTY,
-    val projectImageUrl: String? = null,
     val selectedImageUri: Uri? = null,
     val hasImageChanges: Boolean = false,
+    val hasProjectImage: Boolean = false, // 고정 경로에 프로젝트 이미지가 존재하는지 여부
     val categories: List<CategoryUiModel> = emptyList(), // Changed to CategoryUiModel
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -121,6 +121,29 @@ class ProjectSettingViewModel @Inject constructor(
 
                 else -> {
                     println("Unknown result for project details")
+                }
+            }
+
+            // Check if project image exists at fixed path
+            when (val imageExistsResult =
+                projectAssetsUseCases.checkProjectProfileImageExistsUseCase(projectId)) {
+                is CustomResult.Success -> {
+                    _uiState.update {
+                        it.copy(hasProjectImage = imageExistsResult.data)
+                    }
+                }
+
+                is CustomResult.Failure -> {
+                    println("Failed to check project image existence: ${imageExistsResult.error}")
+                    _uiState.update {
+                        it.copy(hasProjectImage = false)
+                    }
+                }
+
+                else -> {
+                    _uiState.update {
+                        it.copy(hasProjectImage = false)
+                    }
                 }
             }
 
@@ -582,7 +605,7 @@ class ProjectSettingViewModel @Inject constructor(
                                 isLoading = false,
                                 selectedImageUri = null,
                                 hasImageChanges = false,
-                                projectImageUrl = null
+                                hasProjectImage = false // 제거 성공 시 이미지 없음으로 설정
                             )
                         }
 
@@ -639,7 +662,7 @@ class ProjectSettingViewModel @Inject constructor(
                                 isRemovingImage = false,
                                 selectedImageUri = null,
                                 hasImageChanges = false,
-                                projectImageUrl = null
+                                hasProjectImage = false // 기본 프로필 설정(이미지 제거) 성공 시 이미지 없음으로 설정
                             )
                         }
 

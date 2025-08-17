@@ -369,7 +369,7 @@ private fun ProjectInviteMessage(
                     ?: "알 수 없음"),
                 "actionText" to (payloadJson["actionText"]?.toString()?.removeSurrounding("\"")
                     ?: "참여하기"),
-                "invitationId" to (payloadJson["invitationId"]?.toString()?.removeSurrounding("\"")
+                "projectId" to (payloadJson["projectId"]?.toString()?.removeSurrounding("\"")
                     ?: ""),
                 "isValid" to true
             )
@@ -383,7 +383,7 @@ private fun ProjectInviteMessage(
             projectName = payloadData["projectName"] as String,
             inviterName = payloadData["inviterName"] as String,
             actionText = payloadData["actionText"] as String,
-            onJoinProject = { onJoinProject(payloadData["invitationId"] as String) },
+            onJoinProject = { onJoinProject(payloadData["projectId"] as String) },
             modifier = modifier
         )
     } else {

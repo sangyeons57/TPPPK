@@ -3,7 +3,6 @@ package com.example.data_converter
 import com.example.domain.AggregateRoot
 import com.example.domain.model.base.ProjectsWrapper
 import com.example.domain.vo.DocumentId
-import com.example.domain.vo.ImageUrl
 import com.example.domain.vo.project.ProjectName
 import com.example.domain.vo.projectwrapper.ProjectWrapperOrder
 import com.google.gson.Gson
@@ -27,7 +26,6 @@ class ProjectsWrapperJsonConverter @Inject constructor(
                 AggregateRoot.KEY_ID to data.id.value,
                 ProjectsWrapper.KEY_ORDER to data.order.value,
                 ProjectsWrapper.KEY_PROJECT_NAME to data.projectName.value,
-                ProjectsWrapper.KEY_PROJECT_IMAGE_URL to data.projectImageUrl?.value,
                 AggregateRoot.KEY_CREATED_AT to data.createdAt.toEpochMilli(),
                 AggregateRoot.KEY_UPDATED_AT to data.updatedAt.toEpochMilli()
             )
@@ -49,11 +47,6 @@ class ProjectsWrapperJsonConverter @Inject constructor(
                 id = DocumentId(wrapperData[AggregateRoot.KEY_ID] as String),
                 order = ProjectWrapperOrder((wrapperData[ProjectsWrapper.KEY_ORDER] as Double).toInt()),
                 projectName = ProjectName(wrapperData[ProjectsWrapper.KEY_PROJECT_NAME] as String),
-                projectImageUrl = (wrapperData[ProjectsWrapper.KEY_PROJECT_IMAGE_URL] as? String)?.let {
-                    ImageUrl(
-                        it
-                    )
-                },
                 createdAt = (wrapperData[AggregateRoot.KEY_CREATED_AT] as? Double)?.toLong()
                     ?.let { Instant.ofEpochMilli(it) },
                 updatedAt = (wrapperData[AggregateRoot.KEY_UPDATED_AT] as? Double)?.toLong()

@@ -9,6 +9,7 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import com.example.domain.enum.OutBoxStatus
 import com.example.domain.model.sync.OutBoxRecord
+import kotlinx.coroutines.flow.Flow
 
 @Entity(tableName = "outboxRecord")
 data class OutboxRecordEntity(
@@ -103,6 +104,40 @@ interface OutboxDao {
     suspend fun getDispatchedMessagesByChannel(channelId: String): List<OutboxRecordEntity>
 
     // ================================
+    // OutBox 상태 관찰용 Flow API
+    // ================================
+
+    /**
+     * 특정 메시지의 OutBox 상태를 관찰 (없으면 null)
+     */
+    @Query("SELECT status FROM outboxRecord WHERE aggregateId = :messageId AND stream = 'messages' LIMIT 1")
+    fun observeStatusByMessageId(messageId: String): Flow<String?>
+
+    /**
+     * 특정 채널의 PENDING 상태 개수를 관찰
+     */
+    @Query(
+        """
+        SELECT COUNT(*) FROM outboxRecord
+        WHERE stream = 'messages' AND status = 'PENDING'
+          AND payload LIKE '%' || :channelId || '%'
+        """
+    )
+    fun observePendingCountByChannel(channelId: String): Flow<Int>
+
+    /**
+     * 특정 채널의 메시지별 OutBox 상태 리스트 관찰
+     */
+    @Query(
+        """
+        SELECT aggregateId as messageId, status
+        FROM outboxRecord
+        WHERE stream = 'messages' AND payload LIKE '%' || :channelId || '%'
+        """
+    )
+    fun observeStatusesByChannel(channelId: String): Flow<List<OutBoxMessageStatus>>
+
+    // ================================
     // 캐시 관리 관련 쿼리
     // ================================
 
@@ -154,6 +189,14 @@ interface OutboxDao {
 data class OutBoxStatusCount(
     val status: String,
     val count: Int
+)
+
+/**
+ * 채널 내 메시지별 OutBox 상태 행
+ */
+data class OutBoxMessageStatus(
+    val messageId: String,
+    val status: String
 )
 
 fun OutboxRecordEntity.toModel(): OutBoxRecord {

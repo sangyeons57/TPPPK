@@ -7,6 +7,7 @@ import com.example.domain.model.base.Message
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.message.MessagePayload
 import com.example.domain_repository.DefaultRepository
+import kotlinx.coroutines.flow.Flow
 
 // 메시지 전송 시 사용할 첨부파일 모델 (도메인 모델 MessageAttachment와 구분)
 data class MessageAttachmentToSend(
@@ -96,6 +97,11 @@ interface MessageRepository : DefaultRepository<Message> {
     suspend fun getMessageOutBoxStatus(messageId: DocumentId): CustomResult<OutBoxStatus, Exception>
 
     /**
+     * 메시지 OutBox 상태를 관찰 (PENDING/DISPATCHED/FAILED)
+     */
+    fun observeMessageOutBoxStatus(messageId: DocumentId): Flow<OutBoxStatus>
+
+    /**
      * 메시지 ACK 처리 (WebSocket ACK 수신 시)
      * @param messageId 메시지 ID
      * @return 처리 결과
@@ -116,6 +122,16 @@ interface MessageRepository : DefaultRepository<Message> {
      * @return 동기화 상태별 메시지 개수 맵
      */
     suspend fun getChannelOutBoxStatusCounts(channelId: String): CustomResult<Map<OutBoxStatus, Int>, Exception>
+
+    /**
+     * 채널 내 PENDING 메시지 개수 관찰 (상단 진행 인디케이터용)
+     */
+    fun observeChannelPendingCount(channelId: String): Flow<Int>
+
+    /**
+     * 채널 내 메시지별 OutBox 상태 맵 관찰 (messageId -> status)
+     */
+    fun observeChannelOutBoxStatuses(channelId: String): Flow<Map<String, OutBoxStatus>>
 
     // ================================
     // 캐시 관리 기능

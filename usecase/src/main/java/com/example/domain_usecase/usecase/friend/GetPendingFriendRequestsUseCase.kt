@@ -1,6 +1,7 @@
 package com.example.domain_usecase.usecase.friend
 
 
+import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Friend
 import com.example.domain.model.enum.FriendStatus
@@ -29,8 +30,8 @@ class GetPendingFriendRequestsUseCase @Inject constructor(
             when (result) {
                 is CustomResult.Success -> {
                     // PENDING 상태인 친구 요청만 필터링
-                    val friends : List<Friend> = result.data.map { it as Friend }
-
+                    val friends: List<Friend> = result.data
+                    Log.d("GetPendingFriendRequestsUseCase", "friends: $friends")
                     val pendingRequests = friends.filter { it.status == FriendStatus.PENDING }
                     CustomResult.Success(pendingRequests)
                 }

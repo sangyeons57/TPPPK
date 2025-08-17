@@ -198,13 +198,6 @@ class MessageSyncPort @Inject constructor(
         }
     }
 
-    /**
-     * 전체 동기화 리셋 (필요시 구현)
-     */
-    override suspend fun resetAndFullResync() {
-        Log.d(TAG, "🔄 Performing full reset and resync for channel: $channelId")
-        // TODO: 채널별 전체 리셋 로직 구현
-    }
 }
 
 /**

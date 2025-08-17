@@ -16,7 +16,6 @@ import com.example.domain.vo.MentionType
 import com.example.domain.vo.UserId
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
-import com.example.domain_usecase.usecase.project.AcceptMemberInvitationUseCase
 import com.example.domain_usecase.usecase.sync.SyncUseCase
 import com.example.feature_chat.model.ChatEvent
 import com.example.feature_chat.model.ChatMessageUiModel
@@ -63,7 +62,6 @@ class WebSocketChatViewModel @Inject constructor(
     private val webSocketUseCaseProvider: WebSocketUseCaseProvider,
     private val chatServiceProvider: ChatServiceProvider,
     private val syncUseCase: SyncUseCase,
-    private val acceptMemberInvitationUseCase: AcceptMemberInvitationUseCase,
     private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider
 ) : ViewModel() {
 
@@ -989,64 +987,30 @@ class WebSocketChatViewModel @Inject constructor(
     }
 
     /**
-     * 멤버 초대 수락 처리
+     * 멤버 초대 수락 처리 (projectId 기반 Functions 호출)
      */
     fun onAddMember(projectId: String, targetUserId: String) {
         viewModelScope.launch {
             try {
-                Log.d(TAG, "👥 멤버 초대 수락: projectId=$projectId, targetUserId=$targetUserId")
-
-                acceptMemberInvitationUseCase(projectId = projectId, targetUserId = targetUserId)
-                    .collect { result ->
-                        when (result) {
-                            is CustomResult.Success -> {
-                                Log.d(TAG, "✅ 멤버 초대 수락 성공")
-                                _eventFlow.emit(ChatEvent.ShowSnackbar("프로젝트에 성공적으로 참여했습니다!"))
-                            }
-
-                            is CustomResult.Failure -> {
-                                Log.e(TAG, "❌ 멤버 초대 수락 실패", result.error)
-
-                                // 권한 오류와 기타 오류에 따른 사용자 친화적 메시지 제공
-                                val userMessage = when {
-                                    result.error.message?.contains("프로젝트 접근 권한이 없습니다") == true -> {
-                                        "초대가 만료되었거나 유효하지 않습니다"
-                                    }
-
-                                    result.error.message?.contains("로그인이 필요합니다") == true -> {
-                                        "로그인이 만료되었습니다. 다시 로그인해 주세요"
-                                    }
-
-                                    result.error.message?.contains("네트워크 상태를 확인") == true -> {
-                                        "네트워크 연결을 확인하고 다시 시도해 주세요"
-                                    }
-
-                                    result.error.message?.contains("이미 멤버") == true -> {
-                                        "이미 프로젝트 멤버입니다"
-                                    }
-
-                                    else -> {
-                                        "프로젝트 참여에 실패했습니다. 잠시 후 다시 시도해 주세요"
-                                    }
-                                }
-
-                                _eventFlow.emit(ChatEvent.ShowSnackbar(userMessage))
-                            }
-
-                            is CustomResult.Loading -> {
-                                Log.d(TAG, "⏳ 멤버 초대 수락 중...")
-                                // UI에서 로딩 상태 표시 (SystemMessageComponents의 버튼 비활성화)
-                            }
-
-                            is CustomResult.Initial -> {
-                                Log.d(TAG, "🔄 멤버 초대 수락 초기 상태")
-                            }
-
-                            is CustomResult.Progress -> {
-                                Log.d(TAG, "📊 멤버 초대 수락 진행 중: ${result.progress}")
-                            }
-                        }
+                Log.d(TAG, "👥 멤버 초대 수락: projectId=$projectId (target=$targetUserId)")
+                val memberUseCases =
+                    projectMemberUseCaseProvider.createForProject(DocumentId(projectId))
+                when (val result = memberUseCases.joinProjectByIdUseCase(projectId)) {
+                    is CustomResult.Success -> {
+                        Log.d(TAG, "✅ 멤버 초대 수락 성공")
+                        _eventFlow.emit(ChatEvent.ShowSnackbar("프로젝트에 성공적으로 참여했습니다!"))
                     }
+
+                    is CustomResult.Failure -> {
+                        Log.e(TAG, "❌ 멤버 초대 수락 실패", result.error)
+                        val msg = result.error.message ?: "프로젝트 참여에 실패했습니다. 잠시 후 다시 시도해 주세요"
+                        _eventFlow.emit(ChatEvent.ShowSnackbar(msg))
+                    }
+
+                    is CustomResult.Loading, is CustomResult.Initial, is CustomResult.Progress -> {
+                        Log.d(TAG, "⏳ 멤버 초대 수락 처리 중...")
+                    }
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "❌ 멤버 초대 수락 중 예외 발생", e)
                 _eventFlow.emit(ChatEvent.ShowSnackbar("프로젝트 참여 중 오류가 발생했습니다"))
@@ -1057,15 +1021,14 @@ class WebSocketChatViewModel @Inject constructor(
     /**
      * 프로젝트 초대 메시지(프로젝트 참여) 수락 처리
      */
-    fun onJoinProject(invitationId: String) {
+    fun onJoinProject(projectId: String) {
         viewModelScope.launch {
             try {
-                Log.d(TAG, "👥 프로젝트 참여 요청: invitationId=$invitationId")
-                val projectContext = projectId ?: "temp-project"
+                Log.d(TAG, "👥 프로젝트 참여 요청: projectId=$projectId")
                 val memberUseCases =
-                    projectMemberUseCaseProvider.createForProject(DocumentId(projectContext))
-                when (val result =
-                    memberUseCases.acceptProjectInviteFromMessageUseCase(invitationId)) {
+                    projectMemberUseCaseProvider.createForProject(DocumentId(projectId))
+                val result = memberUseCases.joinProjectByIdUseCase(projectId)
+                when (result) {
                     is CustomResult.Success -> {
                         Log.d(TAG, "✅ 프로젝트 참여 성공")
                         _eventFlow.emit(ChatEvent.ShowSnackbar("프로젝트에 참여했습니다!"))
@@ -1074,10 +1037,6 @@ class WebSocketChatViewModel @Inject constructor(
                     is CustomResult.Failure -> {
                         Log.e(TAG, "❌ 프로젝트 참여 실패", result.error)
                         _eventFlow.emit(ChatEvent.ShowSnackbar("프로젝트 참여 실패: ${result.error.message}"))
-                    }
-
-                    is CustomResult.Loading -> {
-                        Log.d(TAG, "⏳ 프로젝트 참여 처리 중...")
                     }
 
                     else -> {

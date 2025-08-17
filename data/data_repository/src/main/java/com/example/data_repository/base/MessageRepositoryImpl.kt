@@ -27,6 +27,8 @@ import com.example.domain_repository.base.MessageRepository
 import com.example.mapper.DtoMapper
 import com.example.mapper.message.MessageMapper
 import com.google.firebase.firestore.Source
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
 import java.util.UUID
 import javax.inject.Inject
@@ -255,6 +257,25 @@ class MessageRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             Log.e("MessageRepository", "Failed to handle message failure: $messageId", e)
             CustomResult.Failure(e)
+        }
+    }
+
+    // ================================
+    // OutBox 상태 관찰 Flow API
+    // ================================
+
+    override fun observeMessageOutBoxStatus(messageId: DocumentId): Flow<OutBoxStatus> {
+        return outboxDao.observeStatusByMessageId(messageId.value)
+            .map { status -> OutBoxStatus.fromString(status) }
+    }
+
+    override fun observeChannelPendingCount(channelId: String): Flow<Int> {
+        return outboxDao.observePendingCountByChannel(channelId)
+    }
+
+    override fun observeChannelOutBoxStatuses(channelId: String): Flow<Map<String, OutBoxStatus>> {
+        return outboxDao.observeStatusesByChannel(channelId).map { rows ->
+            rows.associate { it.messageId to OutBoxStatus.fromString(it.status) }
         }
     }
 

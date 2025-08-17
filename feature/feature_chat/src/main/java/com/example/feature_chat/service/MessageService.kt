@@ -10,13 +10,9 @@ import androidx.paging.map
 import com.example.core_common.constants.PagingConstants
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.CustomResult.Success
-import com.example.core_common.result.CustomResult.Failure
 import com.example.core_common.util.AuthUtil
 import com.example.core_common.util.DateTimeUtil
 import com.example.core_common.util.ImageCompressor
-import com.example.core_common.util.LogThrottler
-import com.example.websocket.util.MessageTypeDetector
-import com.example.websocket.constant.WebSocketFieldConstants
 import com.example.domain.enum.OutBoxStatus
 import com.example.domain.model.base.Message
 import com.example.domain.vo.ChannelId
@@ -25,37 +21,26 @@ import com.example.domain.vo.DocumentId
 import com.example.domain.vo.UserId
 import com.example.domain.vo.message.MessagePayload
 import com.example.domain.vo.message.MessageType
-import com.example.domain.vo.user.UserName
 import com.example.domain_repository.base.MessageRepository
 import com.example.domain_usecase.provider.dm.DMUseCaseProvider
 import com.example.domain_usecase.provider.file.FileManagementUseCases
 import com.example.feature_chat.model.ChatMessageUiModel
 import com.example.feature_chat.model.MessageDeliveryState
 import com.example.feature_chat.queue.OfflineMessageQueue
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonNull
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.put
-import com.example.websocket.usecase.WebSocketUseCaseProvider
 import com.example.websocket.usecase.SendMessageUseCase
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
+import com.example.websocket.usecase.WebSocketUseCaseProvider
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import javax.inject.Inject
 
 /**
@@ -295,6 +280,25 @@ class MessageService @Inject constructor(
         )
     }
 
+    // ================================
+    // OutBox 기반 상태 관찰 헬퍼 (UI 바인딩용)
+    // ================================
+
+    fun observeMessageDeliveryStatus(messageId: String): Flow<MessageDeliveryState> {
+        return messageRepository
+            .observeMessageOutBoxStatus(DocumentId(messageId))
+            .map { status ->
+                when (status) {
+                    OutBoxStatus.PENDING -> MessageDeliveryState.Sending
+                    OutBoxStatus.DISPATCHED -> MessageDeliveryState.Sent
+                    OutBoxStatus.FAILED -> MessageDeliveryState.Failed("send_failed")
+                }
+            }
+    }
+
+    fun observeChannelPendingCount(): Flow<Int> =
+        messageRepository.observeChannelPendingCount(roomId)
+
     private suspend fun loadWithTimeout(userId: String) {
         // 150ms 내에 프로필 불러오기 시도 (캐시 미스 시만)
         try {
@@ -485,7 +489,7 @@ class MessageService @Inject constructor(
                 projectId = projectId?.let { com.example.domain.vo.ProjectId(it) }
             )
 
-            if (result is CustomResult.Success) {
+            if (result is Success) {
                 updateOutBoxStatusCache(result.data.value, OutBoxStatus.PENDING)
             }
 
@@ -567,7 +571,7 @@ class MessageService @Inject constructor(
             imageUris.forEachIndexed { index, uri ->
                 val storagePath = uriToPathMapping[uri.toString()] ?: return@forEachIndexed
                 val uploadResult = fileUseCases.uploadFileUseCase(uri, storagePath)
-                if (uploadResult is CustomResult.Success) {
+                if (uploadResult is Success) {
                     val ext = ImageCompressor.getExtension(context, uri) ?: "jpg"
                     val mime = if (ext == "jpg") "image/jpeg" else "image/$ext"
                     uploadedImages.add(
@@ -666,7 +670,7 @@ class MessageService @Inject constructor(
                     val uploadResult = fileUseCases.uploadFileUseCase(compressedUri, storagePath)
 
                     when (uploadResult) {
-                        is CustomResult.Success -> {
+                        is Success -> {
                             Log.d(
                                 TAG,
                                 "✅ [Firebase저장] 이미지 ${index + 1}/${imageUris.size} Firebase Storage 저장 완료"
@@ -775,7 +779,7 @@ class MessageService @Inject constructor(
     suspend fun handleMessageAck(messageId: String) {
         try {
             val result = messageRepository.handleMessageAck(messageId)
-            if (result is CustomResult.Success) {
+            if (result is Success) {
                 updateOutBoxStatusCache(messageId, OutBoxStatus.DISPATCHED)
 
                 // Room이 자동으로 invalidation을 처리하므로 수동 invalidation 불필요
@@ -795,7 +799,7 @@ class MessageService @Inject constructor(
     suspend fun handleMessageFailure(messageId: String) {
         try {
             val result = messageRepository.handleMessageFailure(messageId)
-            if (result is CustomResult.Success) {
+            if (result is Success) {
                 updateOutBoxStatusCache(messageId, OutBoxStatus.FAILED)
 
                 // Room이 자동으로 invalidation을 처리하므로 수동 invalidation 불필요
@@ -836,7 +840,7 @@ class MessageService @Inject constructor(
                 projectId = projectId?.let { com.example.domain.vo.ProjectId(it) }
             )
 
-            if (result is CustomResult.Success) {
+            if (result is Success) {
                 updateOutBoxStatusCache(result.data.value, OutBoxStatus.PENDING)
             }
 
@@ -877,7 +881,7 @@ class MessageService @Inject constructor(
                 projectId = projectId?.let { com.example.domain.vo.ProjectId(it) }
             )
 
-            if (result is CustomResult.Success) {
+            if (result is Success) {
                 updateOutBoxStatusCache(result.data.value, OutBoxStatus.PENDING)
             }
 
@@ -935,7 +939,7 @@ class MessageService @Inject constructor(
 
             if (editResult.isSuccess) {
                 Log.d(TAG, "메시지 수정 전송 성공(ACK 대기): ${messageId.value}")
-                CustomResult.Success(Unit)
+                Success(Unit)
             } else {
                 Log.e(TAG, "메시지 수정 전송 실패: ${editResult.exceptionOrNull()?.message}")
                 // 즉시 롤백
@@ -968,7 +972,7 @@ class MessageService @Inject constructor(
 
             if (deleteResult.isSuccess) {
                 Log.d(TAG, "메시지 삭제 전송 성공(ACK 대기): ${messageId.value}")
-                CustomResult.Success(Unit)
+                Success(Unit)
             } else {
                 Log.e(TAG, "메시지 삭제 전송 실패: ${deleteResult.exceptionOrNull()?.message}")
                 // 즉시 롤백
@@ -1275,14 +1279,14 @@ class MessageService @Inject constructor(
                         replyToMessageId = message.replyToMessageId
                     )
 
-                    if (result is CustomResult.Success) {
+                    if (result is Success) {
                         // 기존 실패한 메시지 삭제
                         messageRepository.delete(DocumentId(messageId))
                         updateOutBoxStatusCache(messageId, OutBoxStatus.DISPATCHED)
                     }
 
                     when (result) {
-                        is CustomResult.Success -> Success(Unit)
+                        is Success -> Success(Unit)
                         is CustomResult.Failure -> result
                         is CustomResult.Loading -> result
                         is CustomResult.Initial -> result
@@ -1297,14 +1301,14 @@ class MessageService @Inject constructor(
                         replyToMessageId = message.replyToMessageId
                     )
 
-                    if (result is CustomResult.Success) {
+                    if (result is Success) {
                         // 기존 실패한 메시지 삭제
                         messageRepository.delete(DocumentId(messageId))
                         updateOutBoxStatusCache(messageId, OutBoxStatus.DISPATCHED)
                     }
 
                     when (result) {
-                        is CustomResult.Success -> CustomResult.Success(Unit)
+                        is Success -> Success(Unit)
                         is CustomResult.Failure -> result
                         is CustomResult.Progress -> result
                         is CustomResult.Initial -> result
@@ -1384,7 +1388,7 @@ class MessageService @Inject constructor(
                                 textContent = payload.getTextContent() ?: ""
                             )
 
-                            CustomResult.Success(Unit)
+                            Success(Unit)
                         } else {
                             CustomResult.Failure(Exception("재전송할 로컬 이미지를 찾을 수 없습니다"))
                         }
@@ -1397,9 +1401,9 @@ class MessageService @Inject constructor(
                             replyToMessageId = message.replyToMessageId
                         )
                         when (result) {
-                            is CustomResult.Success -> {
+                            is Success -> {
                                 updateOutBoxStatusCache(messageId.value, OutBoxStatus.DISPATCHED)
-                                CustomResult.Success(Unit)
+                                Success(Unit)
                             }
 
                             is CustomResult.Failure -> result

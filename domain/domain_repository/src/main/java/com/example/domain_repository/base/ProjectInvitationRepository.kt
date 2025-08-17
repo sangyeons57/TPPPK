@@ -102,4 +102,12 @@ interface ProjectInvitationRepository : DefaultRepository<ProjectInvitation> {
      * @return 참여 결과 데이터 맵
      */
     suspend fun joinProjectWithInvite(inviteCode: String): CustomResult<Map<String, Any?>, Exception>
+
+    /**
+     * projectId로 초대 문서를 생성합니다 (서버 권한 검증 포함).
+     */
+    suspend fun createInvitation(
+        projectId: DocumentId,
+        expiresInHours: Int = 72
+    ): CustomResult<Map<String, Any?>, Exception>
 }

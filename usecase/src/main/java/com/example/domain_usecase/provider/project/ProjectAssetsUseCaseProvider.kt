@@ -3,6 +3,8 @@ package com.example.domain_usecase.provider.project
 import com.example.domain.vo.CollectionPath
 import com.example.domain_repository.base.FileRepository
 import com.example.domain_repository.base.ProjectRepository
+import com.example.domain_usecase.usecase.project.assets.CheckProjectProfileImageExistsUseCase
+import com.example.domain_usecase.usecase.project.assets.CheckProjectProfileImageExistsUseCaseImpl
 import com.example.domain_usecase.usecase.project.assets.RemoveProjectProfileImageUseCase
 import com.example.domain_usecase.usecase.project.assets.RemoveProjectProfileImageUseCaseImpl
 import com.example.domain_usecase.usecase.project.assets.UploadProjectProfileImageUseCase
@@ -36,6 +38,9 @@ class ProjectAssetsUseCaseProvider @Inject constructor(
             ),
             removeProjectProfileImageUseCase = RemoveProjectProfileImageUseCaseImpl(
                 projectRepository = this.projectRepository
+            ),
+            checkProjectProfileImageExistsUseCase = CheckProjectProfileImageExistsUseCaseImpl(
+                fileRepository = this.fileRepository
             )
         )
     }
@@ -57,5 +62,6 @@ class ProjectAssetsUseCaseProvider @Inject constructor(
 data class ProjectAssetsUseCases(
     // 프로젝트 이미지/파일 관리
     val uploadProjectProfileImageUseCase: UploadProjectProfileImageUseCase,
-    val removeProjectProfileImageUseCase: RemoveProjectProfileImageUseCase
+    val removeProjectProfileImageUseCase: RemoveProjectProfileImageUseCase,
+    val checkProjectProfileImageExistsUseCase: CheckProjectProfileImageExistsUseCase
 )

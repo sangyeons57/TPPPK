@@ -1,10 +1,8 @@
 package com.example.feature_join_project.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.core_common.result.CustomResult
 import com.example.core_navigation.core.MainContainerRoute
 import com.example.core_navigation.core.NavigationManger
 import com.example.domain_usecase.provider.project.CoreProjectUseCaseProvider
@@ -83,47 +81,9 @@ class JoinProjectViewModel @Inject constructor(
      * '프로젝트 참여하기' 버튼 클릭 시 호출
      */
     fun joinProject() {
-        val codeOrLink = _uiState.value.inviteCodeOrLink.trim()
-
-        if (codeOrLink.isBlank()) {
-            _uiState.update { it.copy(error = "초대 링크 또는 코드를 입력해주세요.") }
-            return
-        }
-
-        // 간단한 URL 또는 코드 형식 검사 (선택적)
-        // val isLikelyUrl = codeOrLink.startsWith("http://") || codeOrLink.startsWith("https://")
-        // val isValidFormat = isLikelyUrl || codeOrLink.length > 5 // 예시: 코드는 5자리 이상이라고 가정
-
-        if (_uiState.value.isLoading) return // 로딩 중 중복 방지
-
+        // TODO: 이 화면은 더 이상 사용하지 않습니다. (프로젝트ID 기반 다이얼로그 사용)
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
-            _eventFlow.emit(JoinProjectEvent.ClearFocus) // 키보드 숨기기 요청
-            println("ViewModel: Attempting to join project with code/link: $codeOrLink")
-
-            // 프로젝트 참여 로직
-            val result = coreProjectUseCases.joinProjectWithCodeUseCase(codeOrLink)
-
-            when (result){
-                is CustomResult.Success -> {
-                    val joinedProjectId = result.data // 성공 시 ID 가져오기
-                    _eventFlow.emit(JoinProjectEvent.ShowSnackbar("프로젝트에 참여했습니다!"))
-                    _eventFlow.emit(JoinProjectEvent.JoinSuccess(joinedProjectId)) // 성공 이벤트 발생
-                    _uiState.update { it.copy(isLoading = false) } // 로딩 해제 (네비게이션은 Screen에서 처리)
-                }
-                is CustomResult.Failure -> {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            error = "유효하지 않은 초대 코드 또는 링크입니다: ${result.error}"
-                        )
-                    }
-                }
-                else  ->{
-                    _uiState.update { it.copy(isLoading = false) }
-                    Log.e("JoinProjectViewModel", "Unknown result type: $result")
-                }
-            }
+            _eventFlow.emit(JoinProjectEvent.ShowSnackbar("TODO: 이 화면은 비활성화되었습니다."))
         }
     }
 }

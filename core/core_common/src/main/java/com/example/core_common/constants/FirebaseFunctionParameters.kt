@@ -32,9 +32,7 @@ object FirebaseFunctionParameters {
         const val UNBLOCK_DM_CHANNEL_BY_USER_NAME = "unblockDMChannelByUserName"
         
         // Project Management
-        const val GENERATE_INVITE_LINK = "generateInviteLink"
-        const val VALIDATE_INVITE_CODE = "validateInviteCode"
-        const val JOIN_PROJECT_WITH_INVITE = "joinProjectWithInvite"
+        const val JOIN_PROJECT = "joinProject"
         const val DELETE_PROJECT = "deleteProject"
         const val LEAVE_PROJECT = "leaveProject"
         const val REMOVE_PROJECT_PROFILE_IMAGE = "removeProjectProfileImage"

@@ -11,6 +11,10 @@ value class ProjectId(val value: String) {
 //        require(value.length <= MAX_LENGTH) { "ProjectId cannot exceed $MAX_LENGTH characters." }
     }
 
+    fun toDocumentId(): DocumentId {
+        return DocumentId(value)
+    }
+
     companion object {
         const val MAX_LENGTH = 128
 

@@ -2,7 +2,6 @@ package com.example.teamnovapersonalprojectprojectingkotlin
 
 import android.app.ActivityManager
 import android.app.Application
-import android.content.Context
 import android.util.Log
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleObserver
@@ -13,7 +12,6 @@ import com.example.teamnovapersonalprojectprojectingkotlin.fcm.FcmTokenManager
 import com.example.teamnovapersonalprojectprojectingkotlin.notification.NotificationChannelManager
 import com.example.websocket.core.WebSocketManager
 import com.example.websocket.service.GlobalWebSocketService
-import com.google.firebase.BuildConfig
 import com.google.firebase.FirebaseApp
 import com.google.firebase.appcheck.FirebaseAppCheck
 import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
@@ -262,6 +260,20 @@ class MyApp : Application(), LifecycleObserver {
                     DebugAppCheckProviderFactory.getInstance()
                 )
                 Log.d(TAG, "DebugAppCheckProviderFactory installed successfully")
+
+                // local.properties에 appCheckDebugSecret을 설정한 경우, 해당 값을 로그로 안내
+                // app/build.gradle.kts에서 BuildConfig.APP_CHECK_DEBUG_SECRET을 debug에만 주입함
+                val configuredSecret = BuildConfig.APP_CHECK_DEBUG_SECRET
+                if (!configuredSecret.isNullOrBlank() && configuredSecret.lowercase() != "null") {
+                    Log.w(
+                        TAG,
+                        "[AppCheck] Configured debug secret detected in BuildConfig.APP_CHECK_DEBUG_SECRET"
+                    )
+                    Log.w(
+                        TAG,
+                        "[AppCheck] Use this secret in Firebase Console (Manage debug tokens): $configuredSecret"
+                    )
+                }
                 
                 // Firebase 서비스 호출을 통해 디버그 토큰 생성 유도
                 // 이렇게 하면 로그에 실제 디버그 토큰이 출력됩니다

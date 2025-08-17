@@ -5,8 +5,6 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Message
 import com.example.domain.vo.ChannelId
 import com.example.domain.vo.DocumentId
-import com.example.domain.vo.ProjectId
-import com.example.domain.vo.UserId
 import com.example.domain.vo.message.MessagePayload
 import com.example.domain.vo.message.MessageType
 import com.example.domain.vo.user.UserName
@@ -14,8 +12,6 @@ import com.example.domain_repository.base.AuthRepository
 import com.example.domain_repository.base.MessageRepository
 import com.example.domain_repository.base.ProjectRepository
 import com.example.domain_usecase.usecase.dm.AddDmChannelUseCase
-import com.example.domain_repository.base.ProjectInvitationRepository
-import com.example.domain.model.base.ProjectInvitation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -49,7 +45,6 @@ interface SendProjectInviteMessageUseCase {
  */
 class SendProjectInviteMessageUseCaseImpl @Inject constructor(
     private val addDmChannelUseCase: AddDmChannelUseCase,
-    private val projectInvitationRepository: ProjectInvitationRepository,
     private val messageRepository: MessageRepository,
     private val projectRepository: ProjectRepository,
     private val authRepository: AuthRepository
@@ -86,18 +81,7 @@ class SendProjectInviteMessageUseCaseImpl @Inject constructor(
                 }
             }
 
-            // 3. 프로젝트 초대 생성 (Repository를 직접 사용)
-            val invitation = ProjectInvitation.createNew(
-                projectId = ProjectId.from(project.id),
-                inviterId = inviterId,
-                expiresInHours = 72L
-            )
-            
-            val invitationSaveResult = projectInvitationRepository.save(invitation)
-            if (invitationSaveResult !is CustomResult.Success) {
-                emit(CustomResult.Failure(Exception("프로젝트 초대 생성에 실패했습니다.")))
-                return@flow
-            }
+            // 3. 별도 초대 문서 없이, projectId로만 참여하는 메시지 구성
 
             // 4. DM 채널 생성/확인
             Log.d(TAG, "DM 채널 생성/확인 중...")
@@ -121,7 +105,7 @@ class SendProjectInviteMessageUseCaseImpl @Inject constructor(
                 projectId = project.id.value,
                 projectName = project.name.value,
                 inviterName = currentUser.displayName?.value ?: currentUser.email?.value ?: "알 수 없음",
-                invitationId = invitation.id.value
+                invitationId = ""
             )
 
             // 6. 메시지를 Repository에 저장 (WebSocket 전송은 MessageRepository 내부에서 처리)

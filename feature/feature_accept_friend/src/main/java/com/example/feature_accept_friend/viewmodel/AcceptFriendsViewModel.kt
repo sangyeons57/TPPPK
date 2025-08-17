@@ -83,19 +83,14 @@ class AcceptFriendsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
-            Log.d("AcceptFriendsViewModel", "1")
             try {
                 authUtil.getCurrentUserId()
-                Log.d("AcceptFriendsViewModel", "2")
                 friendUseCases.getPendingFriendRequestsUseCase().collect { result ->
-                    Log.d("AcceptFriendsViewModel", "3")
                     when (result) {
                         is CustomResult.Success -> {
-                            Log.d("AcceptFriendsViewModel", "4")
                             val friends = result.data
                             // Friend 객체를 UI 모델로 변환
                             val requests = friends.map { friend ->
-                                Log.d("AcceptFriendsViewModel", "5")
                                 FriendRequestItem(
                                     friendRequestId = UserId.from(friend.id.value), // 친구 요청 문서 ID
                                     requesterId = UserId.from(friend.id.value), // TODO: 실제 요청자 ID로 수정 필요
@@ -110,10 +105,8 @@ class AcceptFriendsViewModel @Inject constructor(
                                     friendRequests = requests
                                 )
                             }
-                            Log.d("AcceptFriendsViewModel", "6")
                         }
                         is CustomResult.Failure -> {
-                            Log.d("AcceptFriendsViewModel", "7")
                             val error = result.error
                             _uiState.update { 
                                 it.copy(
@@ -122,7 +115,6 @@ class AcceptFriendsViewModel @Inject constructor(
                                 )
                             }
                             _eventFlow.emit(AcceptFriendsEvent.ShowSnackbar("친구 요청을 불러오는데 실패했습니다."))
-                            Log.d("AcceptFriendsViewModel", "8")
                         }
                         is CustomResult.Loading -> {
                             // Loading 상태 유지

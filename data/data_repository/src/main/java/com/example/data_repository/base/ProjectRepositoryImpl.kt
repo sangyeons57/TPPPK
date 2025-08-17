@@ -38,6 +38,10 @@ class ProjectRepositoryImpl @Inject constructor(
         return functionsRemoteDataSource.leaveProject(projectId.value)
     }
 
+    override suspend fun joinProject(projectId: DocumentId): CustomResult<Map<String, Any?>, Exception> {
+        return functionsRemoteDataSource.joinProject(projectId.value)
+    }
+
     override suspend fun transferOwnership(projectId: DocumentId, newOwnerId: String): CustomResult<Unit, Exception> {
         return resultTry {
             // 프로젝트 소유자 필드만 업데이트 (멤버 역할은 UseCase에서 처리)

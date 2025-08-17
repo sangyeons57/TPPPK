@@ -19,6 +19,7 @@ import com.google.firebase.firestore.Query
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -157,7 +158,64 @@ open class MessageRemoteDataSourceImpl @Inject constructor(
     }
 
     override suspend fun push(events: List<OutBoxRecord>): PushResult {
-        return PushResult(successIds = events.map { it.stream }, failIds = emptyList())
+        val success = mutableListOf<String>()
+        val failed = mutableListOf<com.example.domain.model.sync.FailedEvent>()
+
+        // Best-effort per event to avoid whole-batch failure
+        for (e in events) {
+            try {
+                val payloadJson = JSONObject(e.payload)
+                val id = payloadJson.optString("id")
+                    .takeIf { it.isNotEmpty() }
+                    ?: throw IllegalArgumentException("Missing id in payload")
+                val channelId = payloadJson.optString("channelId")
+                    .takeIf { it.isNotEmpty() }
+                    ?: throw IllegalArgumentException("Missing channelId in payload")
+
+                // Map payload to DTO
+                val dto = MessageDTO(
+                    id = id,
+                    channelId = channelId,
+                    senderId = payloadJson.optString("senderId", ""),
+                    messageType = payloadJson.optString("messageType", "TEXT"),
+                    payload = payloadJson.optString("payload", "{}"),
+                    replyToMessageId = payloadJson.optString("replyToMessageId")
+                        .takeIf { it.isNotEmpty() },
+                    isDeleted = payloadJson.optBoolean("isDeleted", false),
+                    mentions = emptyList(),
+                    createdAt = payloadJson.optLong("createdAt").takeIf { it > 0 }
+                        ?.let { java.util.Date(it) },
+                    updatedAt = payloadJson.optLong("updatedAt").takeIf { it > 0 }
+                        ?.let { java.util.Date(it) }
+                )
+
+                // Set the collection path from channel
+                val path = CollectionPath.dmChannelMessages(channelId)
+                setCollection(path)
+
+                when (e.op) {
+                    OutBoxRecord.Op.UPSERT -> {
+                        collection.document(dto.id).set(dto).await()
+                        success.add(e.id)
+                    }
+
+                    OutBoxRecord.Op.DELETE -> {
+                        collection.document(dto.id).delete().await()
+                        success.add(e.id)
+                    }
+                }
+            } catch (ex: Exception) {
+                failed.add(
+                    com.example.domain.model.sync.FailedEvent(
+                        id = e.id,
+                        reason = ex.message ?: "Unknown",
+                        retryAfterMillis = 5000
+                    )
+                )
+            }
+        }
+
+        return PushResult(successIds = success, failIds = failed)
     }
 
     override suspend fun pullSince(cursor: String?, limit: Int): RemoteBatch<MessageDTO> {

@@ -37,4 +37,8 @@ class FileRepositoryImpl @Inject constructor(
             else -> false
         }
     }
+
+    override suspend fun fileExists(path: String): CustomResult<Boolean, Exception> {
+        return fileDataSource.checkFileExists(path)
+    }
 }

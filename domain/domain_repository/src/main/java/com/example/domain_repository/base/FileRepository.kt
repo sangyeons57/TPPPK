@@ -55,4 +55,11 @@ interface FileRepository : Repository {
      * @return True if the file exists, false otherwise.
      */
     suspend fun checkFileExists(path: String): Boolean
+
+    /**
+     * Checks if a file exists at the given path in the remote storage.
+     * @param path The full path of the file in storage (e.g., "user_profiles/userId/profile.webp").
+     * @return A [CustomResult] containing true if the file exists, false otherwise, or an [Exception] on failure.
+     */
+    suspend fun fileExists(path: String): CustomResult<Boolean, Exception>
 }

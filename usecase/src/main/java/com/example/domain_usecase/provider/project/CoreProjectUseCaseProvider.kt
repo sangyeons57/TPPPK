@@ -11,7 +11,6 @@ import com.example.domain_repository.base.ProjectInvitationRepository
 import com.example.domain_repository.base.ProjectRepository
 import com.example.domain_repository.base.ProjectRoleRepository
 import com.example.domain_repository.base.ProjectsWrapperRepository
-import com.example.domain_usecase.usecase.project.JoinProjectWithCodeUseCase
 import com.example.domain_usecase.usecase.project.core.CreateProjectUseCase
 import com.example.domain_usecase.usecase.project.core.DeleteProjectUseCase
 import com.example.domain_usecase.usecase.project.core.DeleteProjectUseCaseImpl
@@ -21,6 +20,7 @@ import com.example.domain_usecase.usecase.project.core.GenerateInviteLinkFromIdU
 import com.example.domain_usecase.usecase.project.core.GenerateInviteLinkUseCase
 import com.example.domain_usecase.usecase.project.core.GetProjectDetailsStreamUseCase
 import com.example.domain_usecase.usecase.project.core.GetUserParticipatingProjectsUseCaseImpl
+import com.example.domain_usecase.usecase.project.core.JoinProjectByIdUseCase
 import com.example.domain_usecase.usecase.project.core.JoinProjectWithTokenUseCase
 import com.example.domain_usecase.usecase.project.core.RenameProjectUseCaseImpl
 import com.example.domain_usecase.usecase.project.core.ValidateInviteCodeUseCase
@@ -90,12 +90,14 @@ class CoreProjectUseCaseProvider @Inject constructor(
                 projectsWrapperRepository = projectsWrapperRepository,
                 projectRepository = projectRepository
             ),
-            
-            joinProjectWithCodeUseCase = JoinProjectWithCodeUseCase(
-                projectInvitationRepository = projectInvitationRepository
-            ),
+
+            // join by code removed
             
             joinProjectWithTokenUseCase = JoinProjectWithTokenUseCase(
+                projectRepository = projectRepository
+            ),
+
+            joinProjectByIdUseCase = JoinProjectByIdUseCase(
                 projectRepository = projectRepository
             ),
             
@@ -162,11 +164,13 @@ class CoreProjectUseCaseProvider @Inject constructor(
                 projectRepository = projectRepository
             ),
 
-            joinProjectWithCodeUseCase = JoinProjectWithCodeUseCase(
-                projectInvitationRepository = projectInvitationRepository
-            ),
+            // join by code removed
 
             joinProjectWithTokenUseCase = JoinProjectWithTokenUseCase(
+                projectRepository = projectRepository
+            ),
+
+            joinProjectByIdUseCase = JoinProjectByIdUseCase(
                 projectRepository = projectRepository
             ),
 
@@ -195,8 +199,8 @@ data class CoreProjectUseCases(
     val renameProjectUseCase: RenameProjectUseCaseImpl,
     val getProjectDetailsStreamUseCase: GetProjectDetailsStreamUseCase,
     val getUserParticipatingProjectsUseCase: GetUserParticipatingProjectsUseCaseImpl,
-    val joinProjectWithCodeUseCase: JoinProjectWithCodeUseCase,
     val joinProjectWithTokenUseCase: JoinProjectWithTokenUseCase,
+    val joinProjectByIdUseCase: JoinProjectByIdUseCase,
     val generateInviteLinkUseCase: GenerateInviteLinkUseCase,
     val validateInviteCodeUseCase: ValidateInviteCodeUseCase,
     val deleteProjectsWrapperUseCase: DeleteProjectsWrapperUseCase,
