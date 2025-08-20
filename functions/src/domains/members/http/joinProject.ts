@@ -67,25 +67,39 @@ export const joinProject = onCall(
           }
           const project = projectSnap.data() as any;
 
-          // Idempotent: if already member (nested under project), return success
+          // Check if user is blocked/banned or already a member
           const existingMemberRef = projectRef.collection(COLLECTIONS.MEMBERS).doc(userId);
           const existingMemberSnap = await existingMemberRef.get();
           if (existingMemberSnap.exists) {
-            logger.info("User already a project member", { projectId, userId });
-            return {
-              success: true,
-              projectId,
-              memberId: existingMemberSnap.id,
-              role: "member",
-            };
+            const memberData = existingMemberSnap.data() as any;
+            const memberStatus = memberData.status || 'active';
+            
+            if (memberStatus === 'banned') {
+              throw new AppError("permission-denied", "User is permanently banned from this project");
+            }
+            
+            if (memberStatus === 'blocked') {
+              throw new AppError("permission-denied", "User is blocked from this project");
+            }
+            
+            // If status is 'active', user is already a member
+            if (memberStatus === 'active') {
+              logger.info("User already a project member", { projectId, userId });
+              return {
+                success: true,
+                projectId,
+                memberId: existingMemberSnap.id,
+                role: "member",
+              };
+            }
           }
 
           // Create member at /projects/{projectId}/members/{userId}
           const role = "member";
           const memberRef = projectRef.collection(COLLECTIONS.MEMBERS).doc(userId);
           await memberRef.set({
-            id: userId,
             roleIds: [],
+            status: 'active', // Set default status for new members
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
           });

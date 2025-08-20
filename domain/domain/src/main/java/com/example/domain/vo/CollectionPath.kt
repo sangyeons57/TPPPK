@@ -95,9 +95,22 @@ value class CollectionPath(val value: String) {
             CollectionPath("${project(projectId).value}/${ProjectChannel.COLLECTION_NAME}")
         fun projectChannel(projectId: String, channelId: String): CollectionPath = 
             CollectionPath("${projectChannels(projectId).value}/$channelId")
-        
-        fun projectChannelMessages(projectId: String, channelId: String): CollectionPath =
+
+        fun projectChannelMessages(projectId: String, channelId: String): CollectionPath = 
             CollectionPath("${projectChannel(projectId, channelId).value}/${Message.COLLECTION_NAME}")
+
+        /**
+         * Overload: Build messages path from ChannelId (supports composite "projectId:channelId").
+         */
+        fun messages(channelId: ChannelId): CollectionPath =
+            if (channelId.hasDelimiter()) {
+                val projectId = channelId.firstOrNull()
+                    ?: throw IllegalArgumentException("Invalid composite channelId: ${channelId.value}")
+                val leaf = channelId.last()
+                projectChannelMessages(projectId, leaf)
+            } else {
+                dmChannelMessages(channelId.value)
+            }
         fun projectChannelMessage(projectId: String, channelId: String, messageId: String): CollectionPath =
             CollectionPath("${projectChannelMessages(projectId, channelId).value}/$messageId")
 
@@ -121,10 +134,31 @@ value class CollectionPath(val value: String) {
             CollectionPath("${storageMessageAttachments(channelId, messageId).value}/$fileName")
         
         /* -------------------- Task Paths -------------------- */
-        fun tasks(projectId: String, channelId: String): CollectionPath =
-            CollectionPath("${projectChannel(projectId, channelId).value}/${Task.COLLECTION_NAME}")
-        fun task(projectId: String, channelId: String, taskId: String): CollectionPath =
-            CollectionPath("${tasks(projectId, channelId).value}/$taskId")
+        fun tasks(projectId: String, projectChannelId: String): CollectionPath =
+            CollectionPath(
+                "${
+                    projectChannel(
+                        projectId,
+                        projectChannelId
+                    ).value
+                }/${Task.COLLECTION_NAME}"
+            )
+
+        /**
+         * Overload: Build task path from composite ChannelId (project channels only).
+         */
+        fun tasks(channelId: ChannelId): CollectionPath =
+            if (channelId.hasDelimiter()) {
+                val projectId = channelId.firstOrNull()
+                    ?: throw IllegalArgumentException("Invalid composite channelId: ${channelId.value}")
+                val leaf = channelId.last()
+                tasks(projectId, leaf)
+            } else {
+                throw IllegalArgumentException("Tasks require project channel; got DM channelId=${channelId.value}")
+            }
+
+        fun task(projectId: String, projectChannelId: String, taskId: String): CollectionPath =
+            CollectionPath("${tasks(projectId, projectChannelId).value}/$taskId")
         
         /* -------------------- Schedule Paths -------------------- */
         fun schedule(scheduleId: String): CollectionPath = 

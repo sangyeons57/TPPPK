@@ -8,11 +8,12 @@ import {
   createLogger, 
   getOrCreateRequestId,
   withTracing,
-  AppError
+  AppError,
+  FRIEND_SUBCOLLECTION_STATUS
 } from "../../../shared";
 
 interface RemoveFriendRequest {
-  friendId: string;
+  friendUserId: string; // 제거할 친구의 사용자 ID
 }
 
 interface RemoveFriendResponse {
@@ -45,48 +46,53 @@ export const removeFriend = onCall(
         },
         async () => {
           const userId = validateAuth(request.auth);
-          const { friendId } = request.data as RemoveFriendRequest;
+          const { friendUserId } = request.data as RemoveFriendRequest;
 
-          validateRequired(friendId, "friendId");
-          validateUserId(friendId);
+          validateRequired(friendUserId, "friendUserId");
+          validateUserId(friendUserId);
 
-          if (userId === friendId) {
+          if (userId === friendUserId) {
             throw new AppError("invalid-argument", "Cannot remove yourself as friend");
           }
 
           const firestore = admin.firestore();
 
-          // 양방향 친구 관계 조회 및 삭제
-          const friendshipsQuery = await firestore
-            .collection("friends")
-            .where("status", "==", "accepted")
-            .get();
+          // Subcollection에서 친구 관계 확인 (현재 사용자 측)
+          const userFriendRef = firestore
+            .collection(`users/${userId}/friends`)
+            .doc(friendUserId);
+          
+          const userFriendDoc = await userFriendRef.get();
 
-          const friendshipsToDelete: admin.firestore.DocumentReference[] = [];
-
-          friendshipsQuery.docs.forEach(doc => {
-            const data = doc.data();
-            if (
-              (data.userId === userId && data.friendId === friendId) ||
-              (data.userId === friendId && data.friendId === userId)
-            ) {
-              friendshipsToDelete.push(doc.ref);
-            }
-          });
-
-          if (friendshipsToDelete.length === 0) {
+          if (!userFriendDoc.exists) {
             throw new AppError("not-found", "Friendship not found");
           }
 
-          // 배치로 양방향 친구 관계 삭제
+          const userFriendData = userFriendDoc.data()!;
+
+          if (userFriendData.status !== FRIEND_SUBCOLLECTION_STATUS.ACCEPTED) {
+            throw new AppError("invalid-argument", "Users are not friends");
+          }
+
+          // 친구 측 문서도 확인
+          const friendUserRef = firestore
+            .collection(`users/${friendUserId}/friends`)
+            .doc(userId);
+
+          const friendUserDoc = await friendUserRef.get();
+
+          if (!friendUserDoc.exists) {
+            throw new AppError("not-found", "Corresponding friendship not found");
+          }
+
+          // 양방향 친구 관계 삭제
           const batch = firestore.batch();
-          friendshipsToDelete.forEach(ref => {
-            batch.delete(ref);
-          });
+          batch.delete(userFriendRef);
+          batch.delete(friendUserRef);
 
           await batch.commit();
 
-          logger.info("Friend removed successfully", { userId, friendId, deletedCount: friendshipsToDelete.length });
+          logger.info("Friend removed successfully", { userId, friendUserId });
 
           return {
             success: true,

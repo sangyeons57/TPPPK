@@ -8,6 +8,9 @@ import java.time.Instant
 
 class Member private constructor(
     initialRoleIds: List<DocumentId>,
+    initialStatus: MemberStatus,
+    initialBlockedAt: Instant?,
+    initialBlockedBy: DocumentId?,
     override val id: DocumentId,
     override var isNew: Boolean,
     override val createdAt: Instant,
@@ -19,6 +22,15 @@ class Member private constructor(
     var roleIds: List<DocumentId> = initialRoleIds
         private set
 
+    var status: MemberStatus = initialStatus
+        private set
+
+    var blockedAt: Instant? = initialBlockedAt
+        private set
+
+    var blockedBy: DocumentId? = initialBlockedBy
+        private set
+
     init {
         setOriginalState()
     }
@@ -26,6 +38,9 @@ class Member private constructor(
     override fun getCurrentStateMap(): Map<String, Any?> {
         return mapOf(
             KEY_ROLE_ID to this.roleIds.map { it.value },
+            KEY_STATUS to MemberStatus.toString(this.status),
+            KEY_BLOCKED_AT to this.blockedAt,
+            KEY_BLOCKED_BY to this.blockedBy?.value,
             KEY_CREATED_AT to this.createdAt,
             KEY_UPDATED_AT to this.updatedAt
         )
@@ -56,9 +71,54 @@ class Member private constructor(
         pushDomainEvent(MemberRolesUpdatedEvent(this.id, this.roleIds, DateTimeUtil.nowInstant()))
     }
 
+    /**
+     * 멤버를 차단합니다.
+     */
+    fun block(blockedBy: DocumentId) {
+        this.status = MemberStatus.BLOCKED
+        this.blockedAt = DateTimeUtil.nowInstant()
+        this.blockedBy = blockedBy
+    }
+
+    /**
+     * 멤버를 영구 차단합니다.
+     */
+    fun ban(bannedBy: DocumentId) {
+        this.status = MemberStatus.BANNED
+        this.blockedAt = DateTimeUtil.nowInstant()
+        this.blockedBy = bannedBy
+    }
+
+    /**
+     * 멤버의 차단 상태를 해제합니다.
+     */
+    fun unblock() {
+        this.status = MemberStatus.ACTIVE
+        this.blockedAt = null
+        this.blockedBy = null
+    }
+
+    /**
+     * 멤버가 활성 상태인지 확인합니다.
+     */
+    fun isActive(): Boolean = status == MemberStatus.ACTIVE
+
+    /**
+     * 멤버가 차단된 상태인지 확인합니다.
+     */
+    fun isBlocked(): Boolean = status == MemberStatus.BLOCKED
+
+    /**
+     * 멤버가 영구 차단된 상태인지 확인합니다.
+     */
+    fun isBanned(): Boolean = status == MemberStatus.BANNED
+
     companion object {
         const val COLLECTION_NAME = "members"
         const val KEY_ROLE_ID = "roleIds" // List<String>
+        const val KEY_STATUS = "status" // String
+        const val KEY_BLOCKED_AT = "blockedAt" // Timestamp
+        const val KEY_BLOCKED_BY = "blockedBy" // String
 
 
         /**
@@ -72,6 +132,9 @@ class Member private constructor(
             val member = Member(
                 id = id,
                 initialRoleIds = roleIds,
+                initialStatus = MemberStatus.ACTIVE,
+                initialBlockedAt = null,
+                initialBlockedBy = null,
                 createdAt = DateTimeUtil.nowInstant(),
                 updatedAt = DateTimeUtil.nowInstant(),
                 isNew = true
@@ -85,11 +148,17 @@ class Member private constructor(
         fun fromDataSource(
             id: DocumentId,
             roleIds: List<DocumentId>,
+            status: MemberStatus? = null,
+            blockedAt: Instant? = null,
+            blockedBy: DocumentId? = null,
             createdAt: Instant?,
             updatedAt: Instant?
         ): Member {
             return Member(
                 initialRoleIds = roleIds,
+                initialStatus = status ?: MemberStatus.ACTIVE, // 기존 데이터 호환성
+                initialBlockedAt = blockedAt,
+                initialBlockedBy = blockedBy,
                 createdAt = createdAt ?: DateTimeUtil.nowInstant(),
                 updatedAt = updatedAt ?: DateTimeUtil.nowInstant(),
                 id = id,

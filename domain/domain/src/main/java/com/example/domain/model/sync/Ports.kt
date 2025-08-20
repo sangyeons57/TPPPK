@@ -37,9 +37,6 @@ interface SyncPort<T> {
 
     suspend fun applyRemote(batch: RemoteBatch<T>, resolver: ConflictResolver<T>): ApplyOutcome
 
-    //배치 성공시 커서 갱신
-    suspend fun commitCursor(newCursor: String)
-
 }
 
 

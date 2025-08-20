@@ -14,7 +14,13 @@ import com.example.domain.vo.category.IsCategoryFlag
 import com.example.domain_usecase.provider.project.ProjectChannelUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectStructureUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
+import com.example.domain_usecase.provider.user.UserUseCaseProvider
+import com.example.domain_usecase.provider.dm.DMUseCaseProvider
 import com.example.domain.vo.user.UserName
+import com.example.domain.vo.UserId
+import com.example.domain.vo.ChannelId
+import com.example.domain_repository.base.AuthRepository
+import kotlinx.coroutines.flow.first
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,7 +44,10 @@ import java.time.Instant
 class AddProjectElementDialogViewModel @Inject constructor(
     private val projectStructureUseCaseProvider: ProjectStructureUseCaseProvider,
     private val projectChannelUseCaseProvider: ProjectChannelUseCaseProvider,
-    private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider
+    private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider,
+    private val userUseCaseProvider: UserUseCaseProvider,
+    private val dmUseCaseProvider: DMUseCaseProvider,
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddProjectElementDialogUiState())
@@ -391,10 +400,110 @@ class AddProjectElementDialogViewModel @Inject constructor(
             )
 
             try {
-                val memberUseCases = projectMemberUseCaseProvider.createForProject(projectId)
-                val userNameVO = UserName(userName)
+                // 1. userName → userId 변환
+                val userUseCases = userUseCaseProvider.createForUser()
+                val userIdResult = userUseCases.findUserIdByUserNameUseCase(UserName(userName))
+                val targetUserId = when (userIdResult) {
+                    is CustomResult.Success -> userIdResult.data
+                    is CustomResult.Failure -> {
+                        _uiState.value = _uiState.value.copy(
+                            isSendingInvite = false,
+                            memberInviteUserNameError = "사용자를 찾을 수 없습니다: ${userIdResult.error.message}"
+                        )
+                        return@launch
+                    }
 
-                memberUseCases.sendProjectInviteMessageUseCase(userNameVO, projectId.value)
+                    else -> {
+                        _uiState.value = _uiState.value.copy(
+                            isSendingInvite = false,
+                            memberInviteUserNameError = "사용자 검색 중 오류가 발생했습니다."
+                        )
+                        return@launch
+                    }
+                }
+
+                // 2. 현재 사용자 세션 가져오기
+                val currentUserSession = authRepository.getCurrentUserSession()
+                val currentUserId = when (currentUserSession) {
+                    is CustomResult.Success -> currentUserSession.data.userId
+                    else -> {
+                        _uiState.value = _uiState.value.copy(
+                            isSendingInvite = false,
+                            memberInviteUserNameError = "로그인이 필요합니다."
+                        )
+                        return@launch
+                    }
+                }
+
+                // 3. DM 채널 존재 확인
+                val dmUseCases = dmUseCaseProvider.createForUser(UserId(currentUserId.value))
+                val channelExistsResult = dmUseCases.checkDmChannelExistsUseCase(targetUserId)
+
+                val channelId = when (channelExistsResult) {
+                    is CustomResult.Success -> {
+                        if (channelExistsResult.data != null) {
+                            // 3-a. 기존 채널 사용
+                            channelExistsResult.data
+                        } else {
+                            // 3-b. 새 채널 생성
+                            val addChannelResult = dmUseCases.addDmChannelUseCase(targetUserId)
+                                .first { it is CustomResult.Success || it is CustomResult.Failure }
+
+                            when (addChannelResult) {
+                                is CustomResult.Success -> addChannelResult.data.value
+                                is CustomResult.Failure -> {
+                                    _uiState.value = _uiState.value.copy(
+                                        isSendingInvite = false,
+                                        memberInviteUserNameError = "DM 채널 생성에 실패했습니다: ${addChannelResult.error.message}"
+                                    )
+                                    return@launch
+                                }
+
+                                else -> {
+                                    _uiState.value = _uiState.value.copy(
+                                        isSendingInvite = false,
+                                        memberInviteUserNameError = "DM 채널 생성 중 오류가 발생했습니다."
+                                    )
+                                    return@launch
+                                }
+                            }
+                        }
+                    }
+
+                    is CustomResult.Failure -> {
+                        _uiState.value = _uiState.value.copy(
+                            isSendingInvite = false,
+                            memberInviteUserNameError = "DM 채널 확인에 실패했습니다: ${channelExistsResult.error.message}"
+                        )
+                        return@launch
+                    }
+
+                    else -> {
+                        _uiState.value = _uiState.value.copy(
+                            isSendingInvite = false,
+                            memberInviteUserNameError = "DM 채널 확인 중 오류가 발생했습니다."
+                        )
+                        return@launch
+                    }
+                }
+
+                // 4. 프로젝트 초대 메시지 전송
+                val memberUseCases = projectMemberUseCaseProvider.createForProject(projectId)
+
+                // channelId가 null이 아닌지 확인
+                if (channelId == null) {
+                    _uiState.value = _uiState.value.copy(
+                        isSendingInvite = false,
+                        memberInviteUserNameError = "DM 채널 ID를 가져올 수 없습니다."
+                    )
+                    return@launch
+                }
+
+                memberUseCases.sendProjectInviteMessageUseCase(
+                    channelId = ChannelId(channelId),
+                    projectId = projectId,
+                    targetUserId = UserId(targetUserId)
+                )
                     .collect { result ->
                         when (result) {
                             is CustomResult.Loading -> {

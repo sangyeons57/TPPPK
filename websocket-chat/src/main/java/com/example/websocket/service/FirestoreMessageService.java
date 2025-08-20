@@ -2,7 +2,6 @@ package com.example.websocket.service;
 
 import com.example.websocket.config.FirebaseConfig;
 import com.example.websocket.constants.FirestoreConstants;
-import com.example.websocket.constants.PayloadConstants;
 import com.example.websocket.constants.WebSocketEventConstants;
 import com.example.websocket.model.ChatMessage;
 import com.google.api.core.ApiFuture;
@@ -65,7 +64,7 @@ public class FirestoreMessageService {
      */
     public CompletableFuture<Boolean> saveMessage(String roomId, ChatMessage message) {
         if (firestore == null) {
-            logger.warn("⚠️ Firestore not available, skipping message save: {}", message.getMessageId());
+            logger.warn("⚠️ Firestore not available, skipping message save: {}", message.getId());
             return CompletableFuture.completedFuture(false);
         }
         
@@ -73,14 +72,23 @@ public class FirestoreMessageService {
             String collectionPath;
             String logInfo;
             
-            logger.info("💾 Processing message: roomId={}, projectId={}", 
-                       roomId, message.getProjectId());
+            logger.info("💾 Processing message: roomId={}", roomId);
             
-            // 채널 유형은 projectId 존재 여부로 결정
-            if (message.getProjectId() != null && !message.getProjectId().trim().isEmpty()) {
-                collectionPath = FirestoreConstants.COLLECTION_PROJECTS + "/" + message.getProjectId() + "/" + FirestoreConstants.COLLECTION_CHANNELS + "/" + roomId + "/" + FirestoreConstants.COLLECTION_MESSAGES;
-                logInfo = "projectId=" + message.getProjectId() + ", channelId=" + roomId;
-                logger.info("💾 Project channel detected: projectId={}, channelId={}", message.getProjectId(), roomId);
+            // 채널 유형은 roomId 패턴으로 결정 (project_ 또는 dm_ 접두어)
+            if (roomId.startsWith("project_")) {
+                // roomId에서 projectId 추출: "project_{projectId}_{channelId}" 형식
+                String[] parts = roomId.split("_", 3);
+                if (parts.length >= 2) {
+                    String projectId = parts[1];
+                    collectionPath = FirestoreConstants.COLLECTION_PROJECTS + "/" + projectId + "/" + FirestoreConstants.COLLECTION_CHANNELS + "/" + roomId + "/" + FirestoreConstants.COLLECTION_MESSAGES;
+                    logInfo = "projectId=" + projectId + ", channelId=" + roomId;
+                    logger.info("💾 Project channel detected: projectId={}, channelId={}", projectId, roomId);
+                } else {
+                    // 비정상적인 project roomId 형식, DM으로 폴백
+                    collectionPath = "dm_channels/" + roomId + "/" + FirestoreConstants.COLLECTION_MESSAGES;
+                    logInfo = "dmChannelId=" + roomId;
+                    logger.warn("⚠️ Invalid project roomId format, falling back to DM: {}", roomId);
+                }
             } else {
                 collectionPath = "dm_channels/" + roomId + "/" + FirestoreConstants.COLLECTION_MESSAGES;
                 logInfo = "dmChannelId=" + roomId;
@@ -91,72 +99,66 @@ public class FirestoreMessageService {
             // 메시지 데이터 구성 (payload + messageType 사용)
             // 도메인 소유 필드는 nested(message.*) 우선, 없으면 봉투(envelope)에서 폴백
             Map<String, Object> messageData = new HashMap<>();
-            String effectiveSenderId = (message.getMessage() != null && message.getMessage().getSenderId() != null)
-                    ? message.getMessage().getSenderId() : message.getSenderId();
-            String effectiveMessageId = (message.getMessage() != null && message.getMessage().getId() != null)
-                    ? message.getMessage().getId() : message.getMessageId();
-            String effectiveReplyTo = (message.getMessage() != null && message.getMessage().getReplyToMessageId() != null)
-                    ? message.getMessage().getReplyToMessageId() : message.getReplyToMessageId();
-            java.time.Instant effectiveCreatedAt = message.getEffectiveTimestampAsInstant();
+            String senderId = message.getSenderId();
+            String messageId = message.getId();
+            String replyTo = message.getReplyToMessageId();
+            java.time.Instant createdAt = message.getTimestampAsInstant();
 
-            messageData.put(FirestoreConstants.FIELD_SENDER_ID, effectiveSenderId);
-            // Prefer nested message.messageType if present
-            String effectiveMessageType = (message.getMessage() != null && message.getMessage().getMessageType() != null)
-                    ? message.getMessage().getMessageType()
-                    : (message.getMessageType() != null ? message.getMessageType() : WebSocketEventConstants.MESSAGE_TYPE_TEXT);
-            messageData.put(FirestoreConstants.FIELD_MESSAGE_TYPE, effectiveMessageType);
+            messageData.put(FirestoreConstants.FIELD_SENDER_ID, senderId);
+            String messageType = message.getMessageType() != null 
+                ? message.getMessageType() 
+                : WebSocketEventConstants.MESSAGE_TYPE_TEXT;
+            messageData.put(FirestoreConstants.FIELD_MESSAGE_TYPE, messageType);
             
             // payload 전용 처리 (전체 JSON 원형 보존)
             String payloadJson;
-            Map<String, Object> effectivePayload = (message.getMessage() != null && message.getMessage().getPayload() != null)
-                    ? message.getMessage().getPayload()
-                    : message.getPayload();
-            if (effectivePayload != null && !effectivePayload.isEmpty()) {
-                payloadJson = convertMapToJson(effectivePayload);
+            Map<String, Object> payload = message.getPayload();
+            if (payload != null && !payload.isEmpty()) {
+                payloadJson = convertMapToJson(payload);
             } else {
                 // 빈 payload
                 payloadJson = "{}";
             }
             messageData.put(FirestoreConstants.FIELD_PAYLOAD, payloadJson);
             
-            messageData.put(FirestoreConstants.FIELD_CHANNEL_ID, roomId); // ✅ channelId 필드 추가
-            messageData.put(FirestoreConstants.FIELD_CREATED_AT, effectiveCreatedAt);
-            messageData.put(FirestoreConstants.FIELD_UPDATED_AT, effectiveCreatedAt);
+            messageData.put(FirestoreConstants.FIELD_CHANNEL_ID, roomId);
+            messageData.put(FirestoreConstants.FIELD_CREATED_AT, createdAt);
+            messageData.put(FirestoreConstants.FIELD_UPDATED_AT, createdAt);
             messageData.put(FirestoreConstants.FIELD_IS_DELETED, false);
-            messageData.put(FirestoreConstants.FIELD_REPLY_TO_MESSAGE_ID, effectiveReplyTo);
+            messageData.put(FirestoreConstants.FIELD_REPLY_TO_MESSAGE_ID, replyTo);
             messageData.put(FirestoreConstants.FIELD_MENTIONS, new java.util.ArrayList<>()); // 빈 배열로 초기화
             
-            logger.info("💾 Saving message to Firestore: {}, messageId(effective)={}, senderId={}", 
-                       logInfo, effectiveMessageId, effectiveSenderId);
+            logger.info("💾 Saving message to Firestore: {}, messageId={}, senderId={}", 
+                       logInfo, messageId, senderId);
 
-            logger.info("💾 Collection Path detected: collectionPath={}, messageId(effective)={}, messageData={}", collectionPath, effectiveMessageId, messageData);
+            logger.info("💾 Collection Path detected: collectionPath={}, messageId={}, messageData={}", collectionPath, messageId, messageData);
 
             // Ensure non-empty document id; auto-generate if missing
             DocumentReference docRef;
-            if (effectiveMessageId == null || effectiveMessageId.trim().isEmpty()) {
+            if (messageId == null || messageId.trim().isEmpty()) {
                 docRef = firestore.collection(collectionPath).document();
-                effectiveMessageId = docRef.getId();
-                logger.warn("⚠️ Missing messageId; auto-generated Firestore doc id: {}", effectiveMessageId);
+                messageId = docRef.getId();
+                logger.warn("⚠️ Missing messageId; auto-generated Firestore doc id: {}", messageId);
             } else {
-                docRef = firestore.collection(collectionPath).document(effectiveMessageId);
+                docRef = firestore.collection(collectionPath).document(messageId);
             }
 
             ApiFuture<WriteResult> future = docRef.set(messageData);
 
             return toCompletableFuture(future)
                 .thenApply(result -> {
-                    logger.info("✅ Message saved to Firestore successfully: {}", message.getMessageId());
+                    logger.info("✅ Message saved to Firestore successfully: {}", message.getId());
                     return true;
                 })
                 .exceptionally(throwable -> {
                     logger.error("❌ Failed to save message to Firestore: {} - {}", 
-                               message.getMessageId(), throwable.getMessage());
+                               message.getId(), throwable.getMessage());
                     return false;
                 });
                 
         } catch (Exception e) {
             logger.error("❌ Error preparing message for Firestore save: {} - {}", 
-                       message.getMessageId(), e.getMessage(), e);
+                       message.getId(), e.getMessage(), e);
             return CompletableFuture.completedFuture(false);
         }
     }
@@ -166,7 +168,7 @@ public class FirestoreMessageService {
      */
     public CompletableFuture<Boolean> updateMessage(String roomId, ChatMessage message) {
         if (firestore == null) {
-            logger.warn("⚠️ Firestore not available, skipping message update: {}", message.getMessageId());
+            logger.warn("⚠️ Firestore not available, skipping message update: {}", message.getId());
             return CompletableFuture.completedFuture(false);
         }
         
@@ -174,16 +176,23 @@ public class FirestoreMessageService {
             String collectionPath;
             String logInfo;
             
-            // 채널 유형은 projectId 존재 여부로 결정
-            if (message.getProjectId() != null && !message.getProjectId().trim().isEmpty()) {
-                collectionPath = "projects/" + message.getProjectId() + "/channels/" + roomId + "/messages";
-                logInfo = "projectId=" + message.getProjectId() + ", channelId=" + roomId;
+            // 채널 유형은 roomId 패턴으로 결정
+            if (roomId.startsWith("project_")) {
+                String[] parts = roomId.split("_", 3);
+                if (parts.length >= 2) {
+                    String projectId = parts[1];
+                    collectionPath = "projects/" + projectId + "/channels/" + roomId + "/messages";
+                    logInfo = "projectId=" + projectId + ", channelId=" + roomId;
+                } else {
+                    collectionPath = "dm_channels/" + roomId + "/messages";
+                    logInfo = "dmChannelId=" + roomId;
+                }
             } else {
                 collectionPath = "dm_channels/" + roomId + "/messages";
                 logInfo = "dmChannelId=" + roomId;
             }
             
-            DocumentReference docRef = firestore.collection(collectionPath).document(message.getMessageId());
+            DocumentReference docRef = firestore.collection(collectionPath).document(message.getId());
             
             // 먼저 기존 문서 조회하여 createdAt 확인
             return toCompletableFuture(docRef.get())
@@ -191,27 +200,20 @@ public class FirestoreMessageService {
                     Map<String, Object> upsertData = new HashMap<>();
                     
                     // 기본 필드들
-                    String effectiveSenderId = (message.getMessage() != null && message.getMessage().getSenderId() != null)
-                            ? message.getMessage().getSenderId() : message.getSenderId();
-                    upsertData.put(FirestoreConstants.FIELD_SENDER_ID, effectiveSenderId);
-                    // Prefer nested message.messageType if present
-                    String effectiveMessageType = (message.getMessage() != null && message.getMessage().getMessageType() != null)
-                            ? message.getMessage().getMessageType()
-                            : (message.getMessageType() != null ? message.getMessageType() : WebSocketEventConstants.MESSAGE_TYPE_TEXT);
-                    upsertData.put(FirestoreConstants.FIELD_MESSAGE_TYPE, effectiveMessageType);
+                    upsertData.put(FirestoreConstants.FIELD_SENDER_ID, message.getSenderId());
+                    String messageType = message.getMessageType() != null 
+                        ? message.getMessageType() 
+                        : WebSocketEventConstants.MESSAGE_TYPE_TEXT;
+                    upsertData.put(FirestoreConstants.FIELD_MESSAGE_TYPE, messageType);
                     upsertData.put(FirestoreConstants.FIELD_CHANNEL_ID, roomId);
-                    String effectiveReplyTo = (message.getMessage() != null && message.getMessage().getReplyToMessageId() != null)
-                            ? message.getMessage().getReplyToMessageId() : message.getReplyToMessageId();
-                    upsertData.put(FirestoreConstants.FIELD_REPLY_TO_MESSAGE_ID, effectiveReplyTo);
+                    upsertData.put(FirestoreConstants.FIELD_REPLY_TO_MESSAGE_ID, message.getReplyToMessageId());
                     upsertData.put(FirestoreConstants.FIELD_IS_DELETED, false);
                     
                     // payload 처리
                     String payloadJson;
-                    Map<String, Object> effectivePayload = (message.getMessage() != null && message.getMessage().getPayload() != null)
-                            ? message.getMessage().getPayload()
-                            : message.getPayload();
-                    if (effectivePayload != null && !effectivePayload.isEmpty()) {
-                        payloadJson = convertMapToJson(effectivePayload);
+                    Map<String, Object> payload = message.getPayload();
+                    if (payload != null && !payload.isEmpty()) {
+                        payloadJson = convertMapToJson(payload);
                     } else {
                         payloadJson = "{}";
                     }
@@ -222,37 +224,37 @@ public class FirestoreMessageService {
                         // 기존 createdAt 유지
                         Object existingCreatedAt = documentSnapshot.get(FirestoreConstants.FIELD_CREATED_AT);
                         upsertData.put(FirestoreConstants.FIELD_CREATED_AT, existingCreatedAt);
-                        logger.info("✏️ Updating existing message, preserving createdAt: {}", message.getMessageId());
+                        logger.info("✏️ Updating existing message, preserving createdAt: {}", message.getId());
                     } else {
                         // 새 문서 생성 시 현재 시간으로 createdAt 설정
-                        upsertData.put(FirestoreConstants.FIELD_CREATED_AT, message.getEffectiveTimestampAsInstant());
+                        upsertData.put(FirestoreConstants.FIELD_CREATED_AT, message.getTimestampAsInstant());
                         upsertData.put(FirestoreConstants.FIELD_MENTIONS, new java.util.ArrayList<>());
-                        logger.info("✏️ Creating new message during edit operation: {}", message.getMessageId());
+                        logger.info("✏️ Creating new message during edit operation: {}", message.getId());
                     }
                     
                     // updatedAt는 항상 현재 시간
-                    upsertData.put(FirestoreConstants.FIELD_UPDATED_AT, message.getEffectiveTimestampAsInstant());
+                    upsertData.put(FirestoreConstants.FIELD_UPDATED_AT, message.getTimestampAsInstant());
                     
                     logger.info("✏️ Upserting message in Firestore: {}, messageId={}", 
-                               logInfo, message.getMessageId());
+                               logInfo, message.getId());
                     
                     // SetOptions.merge()를 사용하여 upsert 수행
                     ApiFuture<WriteResult> future = docRef.set(upsertData, SetOptions.merge());
                     return toCompletableFuture(future);
                 })
                 .thenApply(result -> {
-                    logger.info("✅ Message upserted in Firestore successfully: {}", message.getMessageId());
+                    logger.info("✅ Message upserted in Firestore successfully: {}", message.getId());
                     return true;
                 })
                 .exceptionally(throwable -> {
                     logger.error("❌ Failed to upsert message in Firestore: {} - {}", 
-                               message.getMessageId(), throwable.getMessage());
+                               message.getId(), throwable.getMessage());
                     return false;
                 });
                 
         } catch (Exception e) {
             logger.error("❌ Error preparing message for Firestore upsert: {} - {}", 
-                       message.getMessageId(), e.getMessage(), e);
+                       message.getId(), e.getMessage(), e);
             return CompletableFuture.completedFuture(false);
         }
     }
@@ -262,7 +264,7 @@ public class FirestoreMessageService {
      */
     public CompletableFuture<Boolean> deleteMessage(String roomId, ChatMessage message) {
         if (firestore == null) {
-            logger.warn("⚠️ Firestore not available, skipping message delete: {}", message.getMessageId());
+            logger.warn("⚠️ Firestore not available, skipping message delete: {}", message.getId());
             return CompletableFuture.completedFuture(false);
         }
         
@@ -270,39 +272,46 @@ public class FirestoreMessageService {
             String collectionPath;
             String logInfo;
             
-            // 채널 유형은 projectId 존재 여부로 결정
-            if (message.getProjectId() != null && !message.getProjectId().trim().isEmpty()) {
-                collectionPath = "projects/" + message.getProjectId() + "/channels/" + roomId + "/messages";
-                logInfo = "projectId=" + message.getProjectId() + ", channelId=" + roomId;
+            // 채널 유형은 roomId 패턴으로 결정
+            if (roomId.startsWith("project_")) {
+                String[] parts = roomId.split("_", 3);
+                if (parts.length >= 2) {
+                    String projectId = parts[1];
+                    collectionPath = "projects/" + projectId + "/channels/" + roomId + "/messages";
+                    logInfo = "projectId=" + projectId + ", channelId=" + roomId;
+                } else {
+                    collectionPath = "dm_channels/" + roomId + "/messages";
+                    logInfo = "dmChannelId=" + roomId;
+                }
             } else {
                 collectionPath = "dm_channels/" + roomId + "/messages";
                 logInfo = "dmChannelId=" + roomId;
             }
             
-            DocumentReference docRef = firestore.collection(collectionPath).document(message.getMessageId());
+            DocumentReference docRef = firestore.collection(collectionPath).document(message.getId());
             
             Map<String, Object> deleteData = new HashMap<>();
             deleteData.put(FirestoreConstants.FIELD_IS_DELETED, true);
             deleteData.put(FirestoreConstants.FIELD_UPDATED_AT, message.getTimestampAsInstant());
             
             logger.info("🗑️ Marking message as deleted in Firestore: {}, messageId={}", 
-                       logInfo, message.getMessageId());
+                       logInfo, message.getId());
             
             ApiFuture<WriteResult> future = docRef.update(deleteData);
             return toCompletableFuture(future)
                 .thenApply(result -> {
-                    logger.info("✅ Message marked as deleted in Firestore successfully: {}", message.getMessageId());
+                    logger.info("✅ Message marked as deleted in Firestore successfully: {}", message.getId());
                     return true;
                 })
                 .exceptionally(throwable -> {
                     logger.error("❌ Failed to delete message in Firestore: {} - {}", 
-                               message.getMessageId(), throwable.getMessage());
+                               message.getId(), throwable.getMessage());
                     return false;
                 });
                 
         } catch (Exception e) {
             logger.error("❌ Error preparing message for Firestore delete: {} - {}", 
-                       message.getMessageId(), e.getMessage(), e);
+                       message.getId(), e.getMessage(), e);
             return CompletableFuture.completedFuture(false);
         }
     }

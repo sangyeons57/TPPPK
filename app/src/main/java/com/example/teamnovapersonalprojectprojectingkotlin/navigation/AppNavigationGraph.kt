@@ -79,7 +79,7 @@ import com.example.feature_main.MainContainerScreen
 import com.example.feature_member_list.ui.MemberListScreen
 import com.example.feature_privacy_policy.ui.PrivacyPolicyScreen
 import com.example.feature_profile.ui.EditProfileScreen
-import com.example.feature_project_setting.viewmodel.ui.ProjectSettingScreen
+import com.example.feature_project_setting.ui.ProjectSettingScreen
 import com.example.feature_role_list.ui.RoleListScreen
 import com.example.feature_schedule_detail.ui.ScheduleDetailScreen
 import com.example.feature_settings.ui.SettingsScreen
@@ -313,7 +313,7 @@ fun NavGraphBuilder.projectGraph(navigationManger: NavigationManger) {
             route = MemberListRoute.ROUTE_PATTERN,
             arguments = MemberListRoute.arguments
         ) {
-            MemberListScreen(navigationManger = navigationManger)
+            MemberListScreen()
         }
         
         // 역할 관리 화면
@@ -321,7 +321,7 @@ fun NavGraphBuilder.projectGraph(navigationManger: NavigationManger) {
             route = RoleListRoute.ROUTE_PATTERN,
             arguments = RoleListRoute.arguments
         ) {
-            RoleListScreen(navigationManger = navigationManger)
+            RoleListScreen()
         }
         
         // 역할 추가 화면

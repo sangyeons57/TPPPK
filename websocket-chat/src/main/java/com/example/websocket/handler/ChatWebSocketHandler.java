@@ -5,10 +5,10 @@ import com.example.websocket.constants.WebSocketEventConstants;
 import com.example.websocket.model.ChatMessage;
 import com.example.websocket.service.ChatRoomManager;
 import com.example.websocket.service.FirestoreMessageService;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.example.websocket.constants.PayloadConstants;
 import com.example.websocket.fcm.MentionNotificationService;
 import jakarta.websocket.*;
 import jakarta.websocket.server.ServerEndpoint;
@@ -49,6 +49,9 @@ public class ChatWebSocketHandler {
     public ChatWebSocketHandler() {
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
+        // Configure ObjectMapper to ignore unknown properties and handle null values
+        this.objectMapper.configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        this.objectMapper.configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, false);
         this.firestoreService = new FirestoreMessageService();
     }
 
@@ -65,7 +68,7 @@ public class ChatWebSocketHandler {
 
     @OnOpen
     public void onOpen(Session session, EndpointConfig config) {
-        logger.debug("🔌 [AUTO-PING-PONG] WebSocket connection opened - ping/pong will start automatically");
+        // WebSocket connection opened
         this.session = session;
         logger.info("🔌 WebSocket connection opened for session: {}", session.getId());
 
@@ -81,7 +84,7 @@ public class ChatWebSocketHandler {
             closeWithError("Server configuration error");
             return;
         }
-        logger.debug("✅ Services injected successfully - authService and roomManager are ready");
+        // Services injected successfully
 
         // Extract Bearer token from Authorization header
         String authHeader = (String) session.getUserProperties().get("Authorization");
@@ -90,7 +93,7 @@ public class ChatWebSocketHandler {
         String token = null;
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             token = authHeader.substring(7);
-            logger.info("🔑 Extracted token (first 20 chars): {}...", token.substring(0, Math.min(20, token.length())));
+            // Token extracted
         }
 
         if (token == null || token.trim().isEmpty()) {
@@ -123,20 +126,28 @@ public class ChatWebSocketHandler {
 
     @OnMessage
     public void onMessage(String message) {
-        // 모든 원본 메시지(문자열) 로깅 (문제가 있는 메시지도 포함)
-        logger.info("[WS-RAW] 수신 메시지 원본 (String):\n{}", message);
+        // 수신 JSON 로그
+        logger.info("📥 [WS_RECV_JSON]");
+        logPrettyJson(message);
+        
         if (userId == null) {
-            logger.warn("Received message from unauthenticated user");
+            logger.warn("❌ 인증되지 않은 사용자로부터 메시지 수신");
             closeWithError("Not authenticated");
             return;
         }
 
         try {
-            ChatMessage chatMessage = objectMapper.readValue(message, ChatMessage.class);
-            handleChatMessage(chatMessage);
+            // WebSocketEnvelope 파싱 (필수)
+            WebSocketEnvelope envelope = parseWebSocketEnvelope(message);
+            
+            logger.info("✅ [WS_RECV_ENVELOPE] type={}, roomId={}", 
+                       envelope.getType(), envelope.getRoomId());
+            handleWebSocketEnvelope(envelope);
+            
         } catch (Exception e) {
-            logger.error("[WS-RAW] 메시지 파싱 실패: {}", e.getMessage(), e);
-            sendErrorMessage("Invalid message format");
+            logger.error("❌ [WS_RECV_ERROR] 메시지 처리 실패: {}", e.getMessage());
+            logPrettyJson(message);
+            sendErrorMessage("Invalid message format: WebSocketEnvelope with 'type' field required");
         }
     }
 
@@ -167,41 +178,92 @@ public class ChatWebSocketHandler {
         logger.error("WebSocket error for user {}: {}", userId, error.getMessage());
     }
 
-    private void handleChatMessage(ChatMessage message) {
-        // 들어온 메시지(ChatMessage 객체)를 pretty print로 보기 좋게 출력
+    /**
+     * WebSocketEnvelope 파싱
+     * 필수: JSON에 type 필드 존재, 파싱 실패 시 예외 발생
+     */
+    private WebSocketEnvelope parseWebSocketEnvelope(String jsonMessage) throws Exception {
         try {
-            String prettyJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(message);
-            logger.info("[WS-PARSED] 수신 메시지 객체 (Pretty JSON):\n{}", prettyJson);
-        } catch (JsonProcessingException e) {
-            logger.warn("[WS-PARSED] 메시지 객체 JSON 변환 실패: {}", e.getMessage());
-        }
-        // 각 필드별 값 요약 로그
-        logger.info("[WS-FIELDS] {}", message.toSummaryString());
-        switch (message.getType()) {
-            case WebSocketEventConstants.AUTH:
-                // Skip AUTH messages - authentication is handled during handshake
-                logger.debug("Ignoring AUTH message - authentication already handled during handshake");
-                break;
-            case WebSocketEventConstants.JOIN_ROOM:
-                handleJoinRoom(message.getRoomId());
-                break;
-            case WebSocketEventConstants.LEAVE_ROOM:
-                handleLeaveRoom(message.getRoomId());
-                break;
-            case WebSocketEventConstants.MESSAGE:
-                handleMessage(message);
-                break;
-            case WebSocketEventConstants.EDIT_MESSAGE:
-                handleEditMessage(message);
-                break;
-            case WebSocketEventConstants.DELETE_MESSAGE:
-                handleDeleteMessage(message);
-                break;
-            default:
-                logger.warn("Unknown message type: {}", message.getType());
-                sendErrorMessage("Unknown message type: " + message.getType());
+            // JSON을 Map으로 파싱해서 구조 확인
+            Map<String, Object> jsonMap = objectMapper.readValue(jsonMessage, Map.class);
+            
+            // type 필드 필수 확인
+            String type = (String) jsonMap.get("type");
+            if (type == null) {
+                throw new Exception("Missing required 'type' field in WebSocket message");
+            }
+            
+            // WebSocket envelope로 파싱
+            WebSocketEnvelope envelope = objectMapper.readValue(jsonMessage, WebSocketEnvelope.class);
+            return envelope;
+            
+        } catch (Exception e) {
+            logger.error("❌ WebSocketEnvelope 파싱 실패: {}", e.getMessage());
+            throw new Exception("Invalid WebSocket message format: " + e.getMessage());
         }
     }
+
+    /**
+     * WebSocketEnvelope 기반 메시지 처리
+     */
+    private void handleWebSocketEnvelope(WebSocketEnvelope envelope) {
+        String type = envelope.getType();
+        String roomId = envelope.getRoomId();
+        
+        switch (type) {
+            case WebSocketEventConstants.AUTH:
+                logger.debug("Ignoring AUTH message - authentication already handled during handshake");
+                break;
+                
+            case WebSocketEventConstants.JOIN_ROOM:
+                if (roomId != null) {
+                    handleJoinRoom(roomId);
+                } else {
+                    sendErrorMessage("Room ID is required for JOIN_ROOM");
+                }
+                break;
+                
+            case WebSocketEventConstants.LEAVE_ROOM:
+                if (roomId != null) {
+                    handleLeaveRoom(roomId);
+                } else {
+                    sendErrorMessage("Room ID is required for LEAVE_ROOM");
+                }
+                break;
+                
+            case WebSocketEventConstants.MESSAGE:
+                ChatMessage message = envelope.getMessage();
+                if (message != null) {
+                    handleMessage(message);
+                } else {
+                    sendErrorMessage("Message data is required for MESSAGE");
+                }
+                break;
+                
+            case WebSocketEventConstants.EDIT_MESSAGE:
+                ChatMessage editMessage = envelope.getMessage();
+                if (editMessage != null) {
+                    handleEditMessage(editMessage);
+                } else {
+                    sendErrorMessage("Message data is required for EDIT_MESSAGE");
+                }
+                break;
+                
+            case WebSocketEventConstants.DELETE_MESSAGE:
+                ChatMessage deleteMessage = envelope.getMessage();
+                if (deleteMessage != null) {
+                    handleDeleteMessage(deleteMessage);
+                } else {
+                    sendErrorMessage("Message data is required for DELETE_MESSAGE");
+                }
+                break;
+                
+            default:
+                logger.warn("Unknown WebSocket message type: {}", type);
+                sendErrorMessage("Unknown message type: " + type);
+        }
+    }
+
 
     private void handleJoinRoom(String roomId) {
         if (roomId == null || roomId.trim().isEmpty()) {
@@ -221,15 +283,8 @@ public class ChatWebSocketHandler {
         currentRoomId = roomId;
         roomManager.joinRoom(roomId, userId, this);
         
-        // Send join confirmation (standardized type name)
-        ChatMessage joinConfirmation = ChatMessage.createSystemMessage(
-                WebSocketEventConstants.JOINED_ROOM,
-                roomId,
-                userId,
-                "Successfully joined room: " + roomId,
-                Instant.now()
-        );
-        sendMessage(joinConfirmation);
+        // Send join confirmation with correct JOINED_ROOM type
+        sendJoinedRoomResponse(roomId);
         logger.info("✅ User {} successfully joined room {}", userId, roomId);
     }
 
@@ -239,15 +294,8 @@ public class ChatWebSocketHandler {
             roomManager.leaveRoom(roomId, userId, this);
             currentRoomId = null;
             
-            // Send successful leave confirmation (standardized type name)
-            ChatMessage leaveConfirmation = ChatMessage.createSystemMessage(
-                    WebSocketEventConstants.LEFT_ROOM,
-                    roomId,
-                    userId,
-                    "Successfully left room: " + roomId,
-                    Instant.now()
-            );
-            sendMessage(leaveConfirmation);
+            // Send successful leave confirmation with correct LEFT_ROOM type
+            sendLeftRoomResponse(roomId);
         } else {
             logger.warn("❌ User {} attempted to leave room {} but is in room {}", 
                        userId, roomId, currentRoomId);
@@ -265,37 +313,32 @@ public class ChatWebSocketHandler {
             // Set server-side fields
             message.setSenderId(userId);
             message.setTimestampFromInstant(Instant.now());
-            message.setRoomId(currentRoomId);
 
             // 평탄(Flat) 스키마를 기본으로 사용: 중첩(message.*)은 수신 시 읽기 전용으로만 지원
 
             // Ensure message has a non-empty id for persistence/broadcast
-            String effectiveId = message.getEffectiveMessageId();
-            if (effectiveId == null || effectiveId.trim().isEmpty()) {
+            String messageId = message.getId();
+            if (messageId == null || messageId.trim().isEmpty()) {
                 String generatedId = java.util.UUID.randomUUID().toString();
-                message.setMessageId(generatedId);
-                if (message.getMessage() != null) {
-                    message.getMessage().setId(generatedId);
-                }
+                message.setId(generatedId);
                 logger.info("🆔 Generated messageId on server: {} for room {}", generatedId, currentRoomId);
             }
             // replyToMessageId는 봉투(envelope) 필드 사용
             
-            logger.info("📨 Processing message: projectId={}, roomId={}", 
-                       message.getProjectId(), currentRoomId);
+            logger.info("📨 Processing message: roomId={}", currentRoomId);
 
             // 1. 먼저 Firestore에 저장
             firestoreService.saveMessage(currentRoomId, message)
                 .thenAccept(success -> {
                     if (success) {
-                        logger.info("✅ Message saved to Firestore: {}", message.getMessageId());
+                        logger.info("✅ Message saved to Firestore: {}", message.getId());
                         // After persistence, trigger mention notifications asynchronously
                         try {
                             List<String> mentionedUserIds = extractMentionedUserIds(message);
                             if (mentionNotificationService != null && mentionedUserIds != null && !mentionedUserIds.isEmpty()) {
-                                String channelType = (message.getProjectId() != null && !message.getProjectId().trim().isEmpty()) ? "project" : "dm";
+                                String channelType = currentRoomId.startsWith("project_") ? "project" : "dm";
                                 String channelId = currentRoomId;
-                                String messageId = message.getEffectiveMessageId();
+                                String notificationMessageId = message.getId();
                                 String senderId = userId;
                                 String senderName = userId;
                                 String fullText = safeGetTextFromPayload(message);
@@ -307,7 +350,7 @@ public class ChatWebSocketHandler {
                             logger.warn("⚠️ Failed to schedule mention notifications: {}", ex.getMessage());
                         }
                     } else {
-                        logger.warn("⚠️ Failed to save message to Firestore: {}", message.getMessageId());
+                        logger.warn("⚠️ Failed to save message to Firestore: {}", message.getId());
                     }
                 })
                 .exceptionally(throwable -> {
@@ -318,14 +361,11 @@ public class ChatWebSocketHandler {
             // 2. WebSocket으로 다른 클라이언트들에게 브로드캐스트
             roomManager.broadcastToRoom(currentRoomId, message, userId);
             logger.info("📤 Message broadcast to room {} by user {} (messageId: {}) - echo prevented", 
-                       currentRoomId, userId, message.getMessageId());
+                       currentRoomId, userId, message.getId());
             
             // 3. 송신자에게 ACK 전송
-            ChatMessage ack = ChatMessage.createSystemMessage(WebSocketEventConstants.ACK, currentRoomId, "server", 
-                                            "Message delivered", Instant.now());
-            ack.setReplyToMessageId(message.getEffectiveMessageId());
-            sendMessage(ack);
-            logger.info("📩 ACK sent to sender {} for message {}", userId, message.getMessageId());
+            sendAckResponse(message.getId(), WebSocketEventConstants.MESSAGE_ACK);
+            logger.info("📩 ACK sent to sender {} for message {}", userId, message.getId());
 
         } catch (Exception e) {
             logger.error("💥 Error processing message: {}", e.getMessage(), e);
@@ -339,9 +379,9 @@ public class ChatWebSocketHandler {
     // - payload["mentions"] = List<Map> with key "userId"
     private List<String> extractMentionedUserIds(ChatMessage message) {
         try {
-            Map<String, Object> payload = message != null ? message.getEffectivePayload() : null;
+            Map<String, Object> payload = message != null ? message.getPayload() : null;
             if (payload == null) return java.util.Collections.emptyList();
-            Object raw = payload.get(PayloadConstants.MENTIONS);
+            Object raw = payload.get(ChatMessage.PayloadKeys.MENTIONS);
             if (!(raw instanceof java.util.List)) return java.util.Collections.emptyList();
             java.util.List<?> arr = (java.util.List<?>) raw;
             java.util.Set<String> ids = new java.util.HashSet<>();
@@ -363,9 +403,9 @@ public class ChatWebSocketHandler {
 
     private String safeGetTextFromPayload(ChatMessage message) {
         try {
-            Map<String, Object> payload = message != null ? message.getEffectivePayload() : null;
+            Map<String, Object> payload = message != null ? message.getPayload() : null;
             if (payload == null) return "";
-            Object v = payload.get(PayloadConstants.CONTENT);
+            Object v = payload.get(ChatMessage.PayloadKeys.CONTENT);
             return v != null ? String.valueOf(v) : "";
         } catch (Exception e) {
             return "";
@@ -381,29 +421,27 @@ public class ChatWebSocketHandler {
         try {
             message.setSenderId(userId);
             message.setTimestampFromInstant(Instant.now());
-            message.setRoomId(currentRoomId);
 
             // 편집 처리: 봉투(envelope) 기준으로 필수 필드(보낸이/타임스탬프/roomId)만 보정
 
             // Ensure non-empty id for edit operation as well
-            String effectiveId = message.getEffectiveMessageId();
-            if (effectiveId == null || effectiveId.trim().isEmpty()) {
+            String messageId = message.getId();
+            if (messageId == null || messageId.trim().isEmpty()) {
                 String generatedId = java.util.UUID.randomUUID().toString();
-                message.setMessageId(generatedId);
-                // 중첩(message.*)은 읽기 전용
+                message.setId(generatedId);
                 logger.info("🆔 Generated messageId on server (edit): {} for room {}", generatedId, currentRoomId);
             }
             
             logger.info("✏️ Processing message edit: messageId={}, roomId={}", 
-                       message.getMessageId(), currentRoomId);
+                       message.getId(), currentRoomId);
 
             // Update in Firestore
             firestoreService.updateMessage(currentRoomId, message)
                 .thenAccept(success -> {
                     if (success) {
-                        logger.info("✅ Message updated in Firestore: {}", message.getMessageId());
+                        logger.info("✅ Message updated in Firestore: {}", message.getId());
                     } else {
-                        logger.warn("⚠️ Failed to update message in Firestore: {}", message.getMessageId());
+                        logger.warn("⚠️ Failed to update message in Firestore: {}", message.getId());
                     }
                 })
                 .exceptionally(throwable -> {
@@ -416,16 +454,17 @@ public class ChatWebSocketHandler {
             logger.info("📤 Message edit broadcast to room {} by user {}", currentRoomId, userId);
             
             // Send ACK to sender
-            ChatMessage ack = ChatMessage.createSystemMessage(WebSocketEventConstants.ACK, currentRoomId, "server", 
-                                            "Message edit delivered", Instant.now());
-            ack.setReplyToMessageId(message.getEffectiveMessageId());
-            sendMessage(ack);
+            sendAckResponse(message.getId(), WebSocketEventConstants.EDIT_MESSAGE_ACK);
 
         } catch (Exception e) {
             logger.error("💥 Error processing message edit: {}", e.getMessage(), e);
             sendErrorMessage("Failed to process message edit");
         }
     }
+
+    // NOTE: 과거 서버 내부 임시 전송(sendTemporaryMessage) 기능은 제거되었습니다.
+    // 클라이언트는 표준 MESSAGE 전송을 사용하고, 필요 시 클라이언트 측에서 방에 임시 입장(join)하여
+    // 전송 후 퇴장하는 흐름(현재 sendMessage 경로)을 사용하세요.
 
     private void handleDeleteMessage(ChatMessage message) {
         if (currentRoomId == null) {
@@ -436,29 +475,27 @@ public class ChatWebSocketHandler {
         try {
             message.setSenderId(userId);
             message.setTimestampFromInstant(Instant.now());
-            message.setRoomId(currentRoomId);
 
             // 삭제 처리: 봉투(envelope) 기준으로 필수 필드(보낸이/타임스탬프/roomId)만 보정
             
             // Ensure non-empty id for delete operation as well
-            String effectiveId = message.getEffectiveMessageId();
-            if (effectiveId == null || effectiveId.trim().isEmpty()) {
+            String messageId = message.getId();
+            if (messageId == null || messageId.trim().isEmpty()) {
                 String generatedId = java.util.UUID.randomUUID().toString();
-                message.setMessageId(generatedId);
-                // 중첩(message.*)은 읽기 전용
+                message.setId(generatedId);
                 logger.info("🆔 Generated messageId on server (delete): {} for room {}", generatedId, currentRoomId);
             }
 
             logger.info("🗑️ Processing message deletion: messageId={}, roomId={}", 
-                       message.getMessageId(), currentRoomId);
+                       message.getId(), currentRoomId);
 
             // Delete from Firestore
             firestoreService.deleteMessage(currentRoomId, message)
                 .thenAccept(success -> {
                     if (success) {
-                        logger.info("✅ Message deleted from Firestore: {}", message.getMessageId());
+                        logger.info("✅ Message deleted from Firestore: {}", message.getId());
                     } else {
-                        logger.warn("⚠️ Failed to delete message from Firestore: {}", message.getMessageId());
+                        logger.warn("⚠️ Failed to delete message from Firestore: {}", message.getId());
                     }
                 })
                 .exceptionally(throwable -> {
@@ -471,10 +508,7 @@ public class ChatWebSocketHandler {
             logger.info("📤 Message deletion broadcast to room {} by user {}", currentRoomId, userId);
             
             // Send ACK to sender
-            ChatMessage ack = ChatMessage.createSystemMessage(WebSocketEventConstants.ACK, currentRoomId, "server", 
-                                            "Message deletion delivered", Instant.now());
-            ack.setReplyToMessageId(message.getEffectiveMessageId());
-            sendMessage(ack);
+            sendAckResponse(message.getId(), WebSocketEventConstants.DELETE_MESSAGE_ACK);
 
         } catch (Exception e) {
             logger.error("💥 Error processing message deletion: {}", e.getMessage(), e);
@@ -485,13 +519,13 @@ public class ChatWebSocketHandler {
 
 
     private void sendAuthSuccessMessage() {
-        ChatMessage authSuccess = ChatMessage.createSystemMessage(WebSocketEventConstants.AUTH_SUCCESS, null, "system", "Authentication successful", Instant.now());
-        sendMessage(authSuccess);
+        ChatMessage authSuccess = ChatMessage.createSystemMessage("system", "Authentication successful", Instant.now());
+        sendMessageWithType(authSuccess, WebSocketEventConstants.AUTH_SUCCESS);
         logger.info("✅ AUTH_SUCCESS message sent to user: {}", userId);
     }
 
     private void sendErrorMessage(String error) {
-        ChatMessage errorMessage = ChatMessage.createSystemMessage(WebSocketEventConstants.ERROR, null, "server", error, Instant.now());
+        ChatMessage errorMessage = ChatMessage.createSystemMessage("server", error, Instant.now());
         sendMessage(errorMessage);
         logger.warn("❌ Error message sent: {}", error);
     }
@@ -533,17 +567,102 @@ public class ChatWebSocketHandler {
     }
 
     public void sendMessage(ChatMessage message) {
+        sendMessageWithType(message, WebSocketEventConstants.MESSAGE);
+    }
+    
+    private void sendMessageWithType(ChatMessage message, String messageType) {
         if (session != null && session.isOpen()) {
             try {
-                String jsonMessage = objectMapper.writeValueAsString(message);
+                // ChatMessage를 WebSocketEnvelope로 감싸서 type 필드 추가
+                WebSocketEnvelope envelope = new WebSocketEnvelope(
+                    messageType, // 지정된 타입 사용
+                    currentRoomId, // roomId
+                    message // 실제 메시지 데이터
+                );
+                
+                String jsonMessage = objectMapper.writeValueAsString(envelope);
+                
+                // 전송 JSON 로그
+                logger.info("📤 [WS_SEND_JSON]");
+                logPrettyJson(jsonMessage);
+                
                 session.getBasicRemote().sendText(jsonMessage);
-                logger.debug("📤 Sent message: {}", jsonMessage);
             } catch (Exception e) {
-                logger.error("💥 Error sending message: {}", e.getMessage(), e);
+                logger.error("💥 메시지 전송 실패: {}", e.getMessage());
             }
         } else {
-            logger.warn("⚠️ Attempted to send message to closed session for user: {}", userId);
+            logger.warn("⚠️ 닫힌 세션에 메시지 전송 시도: {}", userId);
         }
+    }
+    
+    private void sendJoinedRoomResponse(String roomId) {
+        ChatMessage joinConfirmation = ChatMessage.createSystemMessage(
+                userId,
+                "Successfully joined room: " + roomId,
+                Instant.now()
+        );
+        
+        // Send JOINED_ROOM response with explicit roomId to ensure client filter matches
+        if (session != null && session.isOpen()) {
+            try {
+                WebSocketEnvelope envelope = new WebSocketEnvelope(
+                    WebSocketEventConstants.JOINED_ROOM, // type
+                    roomId, // explicit roomId (not currentRoomId)
+                    joinConfirmation // message
+                );
+                
+                String jsonMessage = objectMapper.writeValueAsString(envelope);
+                session.getAsyncRemote().sendText(jsonMessage);
+                
+                logger.info("✅ JOINED_ROOM response sent: type={}, roomId={}, currentRoomId={}", 
+                           WebSocketEventConstants.JOINED_ROOM, roomId, currentRoomId);
+                
+            } catch (Exception e) {
+                logger.error("❌ Failed to send JOINED_ROOM response: {}", e.getMessage(), e);
+            }
+        }
+    }
+    
+    private void sendLeftRoomResponse(String roomId) {
+        ChatMessage leaveConfirmation = ChatMessage.createSystemMessage(
+                userId,
+                "Successfully left room: " + roomId,
+                Instant.now()
+        );
+        
+        // Send LEFT_ROOM response with explicit roomId
+        if (session != null && session.isOpen()) {
+            try {
+                WebSocketEnvelope envelope = new WebSocketEnvelope(
+                    WebSocketEventConstants.LEFT_ROOM, // type
+                    roomId, // explicit roomId
+                    leaveConfirmation // message
+                );
+                
+                String jsonMessage = objectMapper.writeValueAsString(envelope);
+                session.getAsyncRemote().sendText(jsonMessage);
+                
+                logger.info("✅ LEFT_ROOM response sent: type={}, roomId={}", 
+                           WebSocketEventConstants.LEFT_ROOM, roomId);
+                
+            } catch (Exception e) {
+                logger.error("❌ Failed to send LEFT_ROOM response: {}", e.getMessage(), e);
+            }
+        }
+    }
+    
+    private void sendAckResponse(String originalMessageId, String ackType) {
+        String ackMessage = switch (ackType) {
+            case WebSocketEventConstants.MESSAGE_ACK -> "Message delivered";
+            case WebSocketEventConstants.EDIT_MESSAGE_ACK -> "Message edit delivered";
+            case WebSocketEventConstants.DELETE_MESSAGE_ACK -> "Message deletion delivered";
+            default -> "Operation delivered";
+        };
+        
+        ChatMessage ack = ChatMessage.createSystemMessage("server", ackMessage, Instant.now());
+        ack.setId(originalMessageId);  // ACK의 ID는 원본 메시지 ID
+        // replyToMessageId는 null로 유지 (ACK는 답장이 아님)
+        sendMessageWithType(ack, ackType);
     }
 
     private void closeWithError(String reason) {
@@ -559,6 +678,57 @@ public class ChatWebSocketHandler {
 
     public String getUserId() {
         return userId;
+    }
+    
+    /**
+     * JSON을 보기 좋게 로그로 출력
+     */
+    private void logPrettyJson(String jsonString) {
+        try {
+            Object json = objectMapper.readValue(jsonString, Object.class);
+            String prettyJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(json);
+            logger.info(prettyJson);
+        } catch (Exception e) {
+            // JSON 파싱 실패 시 원본 문자열 출력
+            logger.info(jsonString);
+        }
+    }
+
+    /**
+     * WebSocket 통신 전용 Envelope 모델
+     * type, roomId 등 통신 필드 + ChatMessage(도메인 데이터)로 구성
+     */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    private static class WebSocketEnvelope {
+        private String type;           // MESSAGE, JOIN_ROOM, LEAVE_ROOM 등
+        private String roomId;         // 라우팅용 방 ID
+        private String errorCode;      // 오류 응답용
+        private String authToken;      // 인증 토큰용 (null 값도 허용)
+        private ChatMessage message;   // 실제 도메인 메시지 데이터
+
+        public WebSocketEnvelope() {}
+
+        public WebSocketEnvelope(String type, String roomId, ChatMessage message) {
+            this.type = type;
+            this.roomId = roomId;
+            this.message = message;
+        }
+
+        public String getType() { return type; }
+        public void setType(String type) { this.type = type; }
+
+        public String getRoomId() { return roomId; }
+        public void setRoomId(String roomId) { this.roomId = roomId; }
+
+        public String getErrorCode() { return errorCode; }
+        public void setErrorCode(String errorCode) { this.errorCode = errorCode; }
+        
+        public String getAuthToken() { return authToken; }
+        public void setAuthToken(String authToken) { this.authToken = authToken; }
+
+        public ChatMessage getMessage() { return message; }
+        public void setMessage(ChatMessage message) { this.message = message; }
     }
 
     public static class ChatEndpointConfigurator extends ServerEndpointConfig.Configurator {

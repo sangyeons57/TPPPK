@@ -1,5 +1,6 @@
 package com.example.feature_member_list.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -116,7 +117,10 @@ class MemberListViewModel @Inject constructor(
     init {
         loadCurrentUser()
         observeMembers()
-        refreshMembers()
+    }
+
+    fun navigateBack() {
+        navigationManger.navigateBack()
     }
 
     /**
@@ -147,6 +151,9 @@ class MemberListViewModel @Inject constructor(
         viewModelScope.launch {
             uiState.map { it.searchQuery }.distinctUntilChanged()
                 .combine(projectMemberUseCases.observeProjectMembersUseCase()) { query, membersResult -> // membersResult is CustomResult<List<Member>>
+                    membersResult.onSuccess { members ->
+                        Log.d("MemberListViewModel", "Loaded members: ${members.size}")
+                    }
                     Pair(query, membersResult) // Pass both to the next stage
                 }
                 .catch { e -> // Catch errors from observeProjectMembersUseCase or combine itself
@@ -156,6 +163,7 @@ class MemberListViewModel @Inject constructor(
                     when (membersResult) {
                         is CustomResult.Success -> {
                             val domainMembers = membersResult.data
+                            Log.d("MemberListViewModel", "Loaded members: $domainMembers")
                             
                             // 각 멤버에 대해 사용자 정보와 역할 정보를 비동기로 가져오기
                             val uiMembers = domainMembers.map { domainMember ->
@@ -240,47 +248,6 @@ class MemberListViewModel @Inject constructor(
     }
 
     /**
-     * 멤버 목록 새로고침 함수
-     * 서버에서 최신 멤버 목록을 가져와 로컬 캐시를 업데이트합니다.
-     */
-    fun refreshMembers() {
-        /** stream을 사용해서 불필요할 것으로 예상된는데 한번 살펴봐야함
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            val result = fetchProjectMembersUseCase(projectId) // This is a suspend function call
-            when (result) {
-                is CustomResult.Success -> {
-                    // Data is observed by observeMembersUseCase, so just turn off loading for the refresh action itself.
-                    // Error state, if any, from this explicit fetch can be cleared if needed,
-                    // but observeMembers should provide the source of truth for data errors.
-                    // _uiState.update { it.copy(isLoading = false, error = null) } // isLoading handled by observeMembers flow
-                }
-                is CustomResult.Failure -> {
-                    _uiState.update { it.copy(
-                        error = "멤버 목록 새로고침 실패: ${result.exceptionOrNull()?.message}",
-                        isLoading = false // Explicitly set isLoading false on failure of refresh action
-                    ) }
-                }
-                CustomResult.Initial -> {
-                    _uiState.update { it.copy(isLoading = false) }
-                }
-                CustomResult.Loading -> {
-                    // This should ideally not happen if fetchProjectMembersUseCase is a one-shot suspend fun.
-                    // If it can emit Loading, keep isLoading true.
-                    _uiState.update { it.copy(isLoading = true) }
-                }
-                is CustomResult.Progress -> {
-                     _uiState.update { it.copy(isLoading = true) } // Or handle progress
-                }
-            }
-            // isLoading state will be ultimately managed by the observeMembers flow when it processes
-            // the (potentially) new data emitted as a result of this refresh trigger.
-            // However, if fetch itself fails, we stop its own loading indicator.
-        }
-        **/
-    }
-
-    /**
      * ★ 검색 쿼리 변경 처리 함수 추가
      */
     fun onSearchQueryChanged(query: String) {
@@ -336,7 +303,7 @@ class MemberListViewModel @Inject constructor(
             }
 
             _uiState.update { it.copy(isLoading = true) }
-            val result = projectMemberUseCases.deleteProjectMemberUseCase(member.userId)
+            val result = projectMemberUseCases.removeMemberUseCase(projectId, member.userId)
             when (result){
                 is CustomResult.Success -> {
                     _eventFlow.emit(MemberListEvent.ShowSnackbar("${member.userName.value}님을 내보냈습니다.")) // Used MemberUiModel.userName
@@ -427,4 +394,37 @@ class MemberListViewModel @Inject constructor(
         val currentUserId = _uiState.value.currentUserId
         return currentUserId != null && currentUserId.value == userId
     }
+
+    /**
+     * 멤버를 차단하는 함수
+     */
+    fun blockMember(member: MemberUiModel) {
+        viewModelScope.launch {
+            // 🚨 자기 자신 차단 방지 체크
+            val currentUserId = _uiState.value.currentUserId
+            if (currentUserId != null && currentUserId.value == member.userId.value) {
+                _eventFlow.emit(MemberListEvent.ShowSnackbar("자기 자신은 차단할 수 없습니다."))
+                return@launch
+            }
+
+            _uiState.update { it.copy(isLoading = true) }
+            val result =
+                projectMemberUseCases.blockMemberUseCase.blockMember(projectId, member.userId.value)
+            when (result) {
+                is CustomResult.Success -> {
+                    _eventFlow.emit(MemberListEvent.ShowSnackbar("${member.userName.value}님을 영구 차단했습니다."))
+                }
+
+                is CustomResult.Failure -> {
+                    _eventFlow.emit(MemberListEvent.ShowSnackbar("멤버 차단 실패: ${result.error}"))
+                }
+
+                else -> {
+                    _eventFlow.emit(MemberListEvent.ShowSnackbar("멤버 차단 실패: 알 수 없는 오류"))
+                }
+            }
+            _uiState.update { it.copy(isLoading = false) }
+        }
+    }
+
 } 

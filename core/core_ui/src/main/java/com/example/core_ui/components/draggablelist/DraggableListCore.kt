@@ -185,7 +185,7 @@ class DraggableListState<T>(
             // 실시간 순서 콜백 (실제 데이터 전달) - 상태 리셋 전에 호출
             if (realtimeItems.isNotEmpty() && onRealtimeReorder != null) {
                 val realtimeOrderedData = realtimeItems.map { it.originalData }
-                onRealtimeReorder.invoke(realtimeOrderedData)
+                onRealtimeReorder(realtimeOrderedData)
             }
             
             // 드래그 완료 시 realtimeItems의 순서를 items에 반영 (점멸 방지)

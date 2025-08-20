@@ -3,9 +3,7 @@ package com.example.data_converter
 import com.example.domain.AggregateRoot
 import com.example.domain.model.base.DMWrapper
 import com.example.domain.vo.DocumentId
-import com.example.domain.vo.ImageUrl
 import com.example.domain.vo.UserId
-import com.example.domain.vo.dmchannel.DMChannelLastMessagePreview
 import com.example.domain.vo.user.UserName
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
@@ -28,8 +26,6 @@ class DMWrapperJsonConverter @Inject constructor(
                 AggregateRoot.KEY_ID to data.id.value,
                 DMWrapper.KEY_OTHER_USER_ID to data.otherUserId.value,
                 DMWrapper.KEY_OTHER_USER_NAME to data.otherUserName.value,
-                DMWrapper.KEY_OTHER_USER_IMAGE_URL to data.otherUserImageUrl?.value,
-                DMWrapper.KEY_LAST_MESSAGE_PREVIEW to data.lastMessagePreview,
                 AggregateRoot.KEY_CREATED_AT to data.createdAt.toEpochMilli(),
                 AggregateRoot.KEY_UPDATED_AT to data.updatedAt.toEpochMilli()
             )
@@ -48,16 +44,6 @@ class DMWrapperJsonConverter @Inject constructor(
                 id = DocumentId(wrapperData[AggregateRoot.KEY_ID] as String),
                 otherUserId = UserId(wrapperData[DMWrapper.KEY_OTHER_USER_ID] as String),
                 otherUserName = UserName(wrapperData[DMWrapper.KEY_OTHER_USER_NAME] as String),
-                otherUserImageUrl = (wrapperData[DMWrapper.KEY_OTHER_USER_IMAGE_URL] as? String)?.let {
-                    ImageUrl(
-                        it
-                    )
-                },
-                lastMessagePreview = (wrapperData[DMWrapper.KEY_LAST_MESSAGE_PREVIEW] as? String)?.let {
-                    DMChannelLastMessagePreview(
-                        it
-                    )
-                },
                 createdAt = (wrapperData[AggregateRoot.KEY_CREATED_AT] as? Double)?.toLong()
                     ?.let { Instant.ofEpochMilli(it) },
                 updatedAt = (wrapperData[AggregateRoot.KEY_UPDATED_AT] as? Double)?.toLong()

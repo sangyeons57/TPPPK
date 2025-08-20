@@ -21,6 +21,7 @@ import com.example.feature_chat.model.ChatMessageUiModel
 import com.example.feature_chat.model.ChatUiState
 import com.example.feature_chat.ui.components.message.ChatMessageItemComposable
 import com.example.feature_chat.ui.components.message.MessageSkeletonItem
+import kotlinx.coroutines.flow.StateFlow
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -37,6 +38,10 @@ fun ChatMessagesList(
     onUserProfileClick: (String) -> Unit,
     onRetryMessage: (String) -> Unit = { _ -> },
     onJoinProject: (String) -> Unit = { _ -> },
+    onCheckMembership: (String) -> Unit = { _ -> }, // 프로젝트 멤버십 확인 콜백 추가
+    projectMembershipStatesFlow: StateFlow<Map<String, Boolean>> = kotlinx.coroutines.flow.MutableStateFlow(
+        emptyMap()
+    ), // 프로젝트 멤버십 상태 StateFlow
     onAddMember: (String, String) -> Unit = { _, _ -> }, // 멤버 추가 콜백 추가
     onImageClick: (String, List<String>, Int) -> Unit = { _, _, _ -> }, // 이미지 클릭 콜백 추가
     initialMessageId: String? = null
@@ -140,6 +145,8 @@ fun ChatMessagesList(
                         onUserProfileClick = { onUserProfileClick(it.userId) },
                         onRetryMessage = onRetryMessage,
                         onJoinProject = onJoinProject,
+                        onCheckMembership = onCheckMembership,
+                        projectMembershipStatesFlow = projectMembershipStatesFlow,
                         onAddMember = onAddMember,
                         onImageClick = onImageClick,
                         onMentionClick = { type, id ->

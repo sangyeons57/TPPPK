@@ -27,6 +27,8 @@ import com.example.domain_usecase.usecase.user.UpdateUserMemoUseCaseImpl
 import com.example.domain_usecase.usecase.user.UpdateUserStatusUseCase
 import com.example.domain_usecase.usecase.user.UpdateUserStatusUseCaseImpl
 import com.example.domain_usecase.usecase.user.UploadProfileImageUseCase
+import com.example.domain_usecase.usecase.user.FindUserIdByUserNameUseCase
+import com.example.domain_usecase.usecase.user.FindUserIdByUserNameUseCaseImpl
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -109,7 +111,9 @@ class UserUseCaseProvider @Inject constructor(
                 userRepository = this.userRepository
             ),
 
-
+            findUserIdByUserNameUseCase = FindUserIdByUserNameUseCaseImpl(
+                userRepository = this.userRepository
+            )
         )
     }
 }
@@ -134,5 +138,8 @@ data class UserUseCases(
 
     val checkNicknameAvailabilityUseCase: CheckNicknameAvailabilityUseCase,
     val removeProfileImageUseCase: RemoveProfileImageUseCase,
-    val uploadProfileImageUseCase: UploadProfileImageUseCase
+    val uploadProfileImageUseCase: UploadProfileImageUseCase,
+
+    // 사용자 검색
+    val findUserIdByUserNameUseCase: FindUserIdByUserNameUseCase
 )

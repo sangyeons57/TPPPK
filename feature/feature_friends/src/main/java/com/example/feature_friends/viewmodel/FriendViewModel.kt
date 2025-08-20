@@ -254,8 +254,9 @@ class FriendViewModel @Inject constructor(
             _eventFlow.emit(FriendsEvent.ShowSnackbar("친구 정보를 찾을 수 없습니다."))
             return
         }
-        
-        dmUseCases.addDmChannelUseCase(friend.displayName).collect { result ->
+
+        // Use friend's userId for DM channel creation
+        dmUseCases.addDmChannelUseCase(friend.friendId.value).collect { result ->
             when (result) {
                 is CustomResult.Loading -> {
                     _eventFlow.emit(FriendsEvent.ShowSnackbar("DM 채널을 생성하는 중..."))
@@ -319,7 +320,7 @@ class FriendViewModel @Inject constructor(
     fun removeFriend(friendId: UserId) {
         viewModelScope.launch {
             try {
-                val result = friendUseCases.removeFriendUseCase(friendId.value)
+                val result = friendUseCases.removeFriendUseCase(friendId)
                 when (result) {
                     is CustomResult.Success -> {
                         _eventFlow.emit(FriendsEvent.ShowSnackbar("친구를 삭제했습니다."))

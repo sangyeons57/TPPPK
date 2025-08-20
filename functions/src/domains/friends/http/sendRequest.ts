@@ -9,7 +9,8 @@ import {
   getOrCreateRequestId,
   withTracing,
   AppError,
-  IdempotencyManager
+  IdempotencyManager,
+  FRIEND_SUBCOLLECTION_STATUS
 } from "../../../shared";
 
 interface SendFriendRequestRequest {
@@ -57,7 +58,52 @@ export const sendFriendRequest = onCall(
             throw new AppError("invalid-argument", "Cannot send friend request to yourself");
           }
 
-          // 등성성 체크
+          const firestore = admin.firestore();
+
+          // 수신자 존재 확인 및 사용자 정보 획득
+          const receiverDoc = await firestore.collection("users").doc(receiverUserId).get();
+          if (!receiverDoc.exists) {
+            throw new AppError("not-found", "Receiver user not found");
+          }
+          
+          const requesterDoc = await firestore.collection("users").doc(requesterId).get();
+          if (!requesterDoc.exists) {
+            throw new AppError("not-found", "Requester user not found");
+          }
+
+          const receiverData = receiverDoc.data()!;
+          const requesterData = requesterDoc.data()!;
+
+          // 먼저 실제 데이터 기준으로 Subcollection에서 중복 확인 (요청자 측)
+          const existingFriendDoc = await firestore
+            .collection(`users/${requesterId}/friends`)
+            .doc(receiverUserId)
+            .get();
+
+          if (existingFriendDoc.exists) {
+            const friendData = existingFriendDoc.data()!;
+            if (friendData.status === FRIEND_SUBCOLLECTION_STATUS.ACCEPTED) {
+              throw new AppError("already-exists", "Users are already friends");
+            }
+            if (friendData.status === FRIEND_SUBCOLLECTION_STATUS.REQUESTED || friendData.status === FRIEND_SUBCOLLECTION_STATUS.PENDING) {
+              throw new AppError("already-exists", "Friend request already exists in subcollection");
+            }
+          }
+
+          // 수신자 측에서도 확인 (반대 방향 요청이 있는지)
+          const existingReverseDoc = await firestore
+            .collection(`users/${receiverUserId}/friends`)
+            .doc(requesterId)
+            .get();
+
+          if (existingReverseDoc.exists) {
+            const reverseData = existingReverseDoc.data()!;
+            if (reverseData.status === FRIEND_SUBCOLLECTION_STATUS.REQUESTED) {
+              throw new AppError("already-exists", "Friend request already received from this user");
+            }
+          }
+
+          // 실제 데이터 확인 후 Idempotency 체크 (동시성 제어용)
           const idempotencyKey = IdempotencyManager.generateKey(
             requesterId, 
             "send-friend-request", 
@@ -67,58 +113,14 @@ export const sendFriendRequest = onCall(
           const canProceed = await IdempotencyManager.checkAndMark(
             idempotencyKey, 
             "send-friend-request",
-            10 // 10분 TTL
+            2 // 2분 TTL (친구 요청은 빠른 재시도 필요)
           );
           
           if (!canProceed) {
-            throw new AppError("already-exists", "Friend request already sent or being processed");
+            throw new AppError("already-exists", "Friend request is currently being processed (idempotency check)");
           }
 
           try {
-            const firestore = admin.firestore();
-
-            // 수신자 존재 확인 및 사용자 정보 획득
-            const receiverDoc = await firestore.collection("users").doc(receiverUserId).get();
-            if (!receiverDoc.exists) {
-              throw new AppError("not-found", "Receiver user not found");
-            }
-            
-            const requesterDoc = await firestore.collection("users").doc(requesterId).get();
-            if (!requesterDoc.exists) {
-              throw new AppError("not-found", "Requester user not found");
-            }
-
-            const receiverData = receiverDoc.data()!;
-            const requesterData = requesterDoc.data()!;
-
-            // Subcollection에서 이미 친구인지 확인 (요청자 측)
-            const existingFriendDoc = await firestore
-              .collection(`users/${requesterId}/friends`)
-              .doc(receiverUserId)
-              .get();
-
-            if (existingFriendDoc.exists) {
-              const friendData = existingFriendDoc.data()!;
-              if (friendData.status === "ACCEPTED") {
-                throw new AppError("already-exists", "Users are already friends");
-              }
-              if (friendData.status === "REQUESTED" || friendData.status === "PENDING") {
-                throw new AppError("already-exists", "Friend request already sent");
-              }
-            }
-
-            // 수신자 측에서도 확인 (반대 방향 요청이 있는지)
-            const existingReverseDoc = await firestore
-              .collection(`users/${receiverUserId}/friends`)
-              .doc(requesterId)
-              .get();
-
-            if (existingReverseDoc.exists) {
-              const reverseData = existingReverseDoc.data()!;
-              if (reverseData.status === "REQUESTED") {
-                throw new AppError("already-exists", "Friend request already received from this user");
-              }
-            }
 
             // 양방향 친구 요청 생성 (Subcollection 방식)
             const batch = firestore.batch();
@@ -131,7 +133,7 @@ export const sendFriendRequest = onCall(
             const requesterFriendData = {
               name: receiverData.name || receiverData.username || "Unknown User",
               profileImageUrl: receiverData.profileImageUrl || null,
-              status: "REQUESTED",
+              status: FRIEND_SUBCOLLECTION_STATUS.REQUESTED,
               requestedAt: admin.firestore.FieldValue.serverTimestamp(),
               acceptedAt: null,
               createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -146,7 +148,7 @@ export const sendFriendRequest = onCall(
             const receiverFriendData = {
               name: requesterData.name || requesterData.username || "Unknown User",
               profileImageUrl: requesterData.profileImageUrl || null,
-              status: "PENDING",
+              status: FRIEND_SUBCOLLECTION_STATUS.PENDING,
               requestedAt: admin.firestore.FieldValue.serverTimestamp(),
               acceptedAt: null,
               createdAt: admin.firestore.FieldValue.serverTimestamp(),

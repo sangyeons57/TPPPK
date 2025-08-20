@@ -4,6 +4,9 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
+import com.example.core_navigation.core.AddRoleRoute
+import com.example.core_navigation.core.EditRoleRoute
+import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.base.Role
@@ -38,8 +41,6 @@ data class RoleListUiState(
 
 // --- 이벤트 ---
 sealed class RoleListEvent {
-    object NavigateToAddRole : RoleListEvent() // 역할 추가 화면으로 이동
-    data class NavigateToEditRole(val roleId: String) : RoleListEvent() // 역할 수정 화면으로 이동
     data class ShowDeleteRoleConfirmDialog(val roleItem: RoleItem) : RoleListEvent() // Added
     data class ShowSnackbar(val message: String) : RoleListEvent()
 }
@@ -49,6 +50,7 @@ sealed class RoleListEvent {
 class RoleListViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val projectRoleUseCaseProvider: ProjectRoleUseCaseProvider, // Added
+    private val navigationManger: NavigationManger
 ) : ViewModel() {
 
     private val projectId: String = savedStateHandle.getRequiredString(RouteArgs.PROJECT_ID)
@@ -109,22 +111,25 @@ class RoleListViewModel @Inject constructor(
         }
     }
 
+    fun navigateBack() {
+        navigationManger.navigateBack()
+    }
     /**
      * 역할 추가 버튼 클릭 시 호출
      */
     fun onAddRoleClick() {
-        viewModelScope.launch {
-            _eventFlow.emit(RoleListEvent.NavigateToAddRole)
-        }
+        navigationManger.navigateTo(
+            AddRoleRoute(uiState.value.projectId)
+        )
     }
 
     /**
      * 역할 아이템 클릭 시 호출
      */
     fun onRoleClick(roleId: DocumentId) {
-        viewModelScope.launch {
-            _eventFlow.emit(RoleListEvent.NavigateToEditRole(roleId.value))
-        }
+        navigationManger.navigateTo(
+            EditRoleRoute(uiState.value.projectId, roleId.value)
+        )
     }
 
     fun requestDeleteRole(roleItem: RoleItem) {

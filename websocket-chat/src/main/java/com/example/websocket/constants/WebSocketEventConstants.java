@@ -48,7 +48,10 @@ public final class WebSocketEventConstants {
     // ================================
     // ACK (성공 응답) 이벤트
     // ================================
-    
+
+    /** 일반 ACK */
+    public static final String ACK = "ACK";
+
     /** 메시지 전송 성공 확인 */
     public static final String MESSAGE_ACK = "MESSAGE_ACK";
     
@@ -83,9 +86,7 @@ public final class WebSocketEventConstants {
     
 
     
-    /** 일반 ACK */
-    public static final String ACK = "ACK";
-    
+
     // ================================
     // JSON 필드 이름 상수
     // ================================
@@ -106,7 +107,7 @@ public final class WebSocketEventConstants {
     public static final String FIELD_TIMESTAMP = "timestamp";
     
     /** 메시지 ID 필드 (@JsonProperty) */
-    public static final String FIELD_MESSAGE_ID = "messageId";
+    public static final String FIELD_MESSAGE_ID = "id";
     
     /** 답장 대상 메시지 ID 필드 (@JsonProperty) */
     public static final String FIELD_REPLY_TO_MESSAGE_ID = "replyToMessageId";

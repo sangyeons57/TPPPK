@@ -5,7 +5,8 @@ import {
   handleError, 
   createLogger, 
   getOrCreateRequestId,
-  withTracing
+  withTracing,
+  FRIEND_SUBCOLLECTION_STATUS
 } from "../../../shared";
 
 interface GetFriendsResponse {
@@ -45,42 +46,32 @@ export const getFriends = onCall(
 
           const firestore = admin.firestore();
 
-          // 사용자의 친구 목록 조회
-          const friendshipsQuery = await firestore
-            .collection("friends")
-            .where("userId", "==", userId)
-            .where("status", "==", "accepted")
+          // Subcollection에서 직접 친구 목록 조회
+          const friendsQuery = await firestore
+            .collection(`users/${userId}/friends`)
+            .where("status", "==", FRIEND_SUBCOLLECTION_STATUS.ACCEPTED)
             .get();
 
-          if (friendshipsQuery.empty) {
+          if (friendsQuery.empty) {
             logger.info("No friends found", { userId });
             return { friends: [] };
           }
 
-          // 친구들의 ID 추출
-          const friendIds = friendshipsQuery.docs.map(doc => doc.data().friendId);
-
-          // 친구들의 사용자 정보 조회
-          const friendsData = await Promise.all(
-            friendIds.map(async (friendId) => {
-              try {
-                const userDoc = await firestore.collection("users").doc(friendId).get();
-                if (userDoc.exists) {
-                  const userData = userDoc.data()!;
-                  return {
-                    id: friendId,
-                    name: userData.name || "Unknown User",
-                    profileImageUrl: userData.profileImageUrl,
-                    isOnline: userData.isOnline || false,
-                  };
-                }
-                return null;
-              } catch (error) {
-                logger.warn("Failed to fetch friend data", { friendId, error });
-                return null;
-              }
-            })
-          );
+          // 친구 문서에서 직접 정보 추출 (사용자 정보 재조회 불필요)
+          const friendsData = friendsQuery.docs.map(doc => {
+            try {
+              const friendData = doc.data();
+              return {
+                id: doc.id, // 친구의 userId
+                name: friendData.name || "Unknown User",
+                profileImageUrl: friendData.profileImageUrl || undefined,
+                isOnline: false, // 온라인 상태는 별도 조회 필요 시 추가
+              };
+            } catch (error) {
+              logger.warn("Failed to process friend data", { friendId: doc.id, error });
+              return null;
+            }
+          });
 
           // null 값 필터링 및 타입 보장
           const validFriends = friendsData.filter((friend): friend is NonNullable<typeof friend> => friend !== null);

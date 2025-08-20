@@ -12,6 +12,7 @@ android {
 dependencies {
 
     implementation(project(":core:core_common"))
+    implementation(project(":core:websocket"))
     implementation(project(":domain:domain"))
     implementation(project(":domain:domain_repository"))
     implementation(project(":data:orchestrator"))

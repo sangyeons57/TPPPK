@@ -1,7 +1,6 @@
 package com.example.websocket.model;
 
 import com.example.websocket.constants.WebSocketEventConstants;
-import com.example.websocket.constants.PayloadConstants;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.Instant;
@@ -10,99 +9,204 @@ import java.util.Map;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ChatMessage {
+
+    // ================================
+    // 페이로드 키 상수 집합
+    // ================================
+    
     /**
-     * WebSocket 봉투(envelope) + (하위호환용) 중첩 메시지 구조를 모두 지원하는 서버 측 DTO.
-     *
-     * 도메인 Message ← ChatMessage 매핑 규칙(중요):
-     * - Message.id               ← message.id (우선) / (폴백) messageId
-     * - Message.senderId         ← message.senderId (우선) / (폴백) senderId
-     * - Message.messageType      ← message.messageType (우선) / (폴백) messageType (없으면 TEXT 등 기본값)
-     * - Message.payload          ← message.payload (우선) / (폴백) payload
-     * - Message.replyToMessageId ← message.replyToMessageId (우선) / (폴백) replyToMessageId
-     * - Message.createdAt        ← (message.timestamp 또는 timestamp) epoch seconds
-     * - Message.channelId        ← roomId (봉투)
-     * - Message.projectId        ← projectId (봉투, 선택)
-     *
-     * 전송/수신 원칙:
-     * - 클라이언트는 가능하면 평탄(Flat) 스키마를 사용: 봉투에 모든 필드(messageId, messageType, payload, senderId, replyToMessageId, timestamp)를 포함.
-     * - 서버는 중첩(message.*)을 우선 읽되, 없으면 봉투로 폴백하여 하위호환 유지.
+     * WebSocket 메시지 페이로드에서 사용되는 실제 키들을 Android 클라이언트와 일치하게 관리.
+     * MessagePayload.kt 및 실제 사용 패턴을 바탕으로 정의.
      */
-    @JsonProperty(WebSocketEventConstants.FIELD_TYPE)
-    private String type;
+    public static final class PayloadKeys {
+        
+        // ================================
+        // Core Content Keys
+        // ================================
+        
+        /** 메인 텍스트 내용 */
+        public static final String CONTENT = "content";
+        
+        /** 첨부파일 배열 */
+        public static final String ATTACHMENTS = "attachments";
+        
+        // ================================
+        // Attachment Keys (attachments 배열 내 객체에서 사용)
+        // ================================
+        
+        /** 첨부파일 URL/URI */
+        public static final String URL = "url";
+        
+        /** 원본 파일명 */
+        public static final String FILENAME = "filename";
+        
+        /** MIME 타입 */
+        public static final String MIME = "mime";
+        
+        /** 파일 확장자 */
+        public static final String EXT = "ext";
+        
+        /** 첨부파일 순서 */
+        public static final String INDEX = "index";
+        
+        // ================================
+        // Upload State Keys
+        // ================================
+        
+        /** 업로드 진행률 (0.0-1.0) */
+        public static final String UPLOAD_PROGRESS = "uploadProgress";
+        
+        /** 업로드 중 표시 (boolean) */
+        public static final String UPLOADING = "uploading";
+        
+        // ================================
+        // Optimistic Update Keys
+        // ================================
+        
+        /** 낙관적 업데이트 메타데이터 컨테이너 */
+        public static final String META = "_meta";
+        
+        /** 대기 중인 작업 ("edit", "delete") */
+        public static final String PENDING_OP = "pendingOp";
+        
+        /** 롤백용 백업 페이로드 */
+        public static final String BACKUP_PAYLOAD = "backupPayload";
+        
+        // ================================
+        // System Message Keys
+        // ================================
+        
+        /** 시스템 메시지 타입 */
+        public static final String SYSTEM_TYPE = "systemType";
+        
+        /** 날짜 문자열 (SYSTEM_DATE용) */
+        public static final String DATE = "date";
+        
+        /** 표시용 텍스트 */
+        public static final String DISPLAY_TEXT = "displayText";
+        
+        /** 채널명 (CHAT_START용) */
+        public static final String CHANNEL_NAME = "channelName";
+        
+        /** 환영 메시지 */
+        public static final String WELCOME_TEXT = "welcomeText";
+        
+        // ================================
+        // Project Message Keys (PROJECT_INVITE & SYSTEM_PROJECT_*)
+        // ================================
+        
+        /** 프로젝트 식별자 */
+        public static final String PROJECT_ID = "projectId";
+        
+        /** 프로젝트 표시명 */
+        public static final String PROJECT_NAME = "projectName";
+        
+        /** 초대자 이름 */
+        public static final String INVITER_NAME = "inviterName";
+        
+        /** 초대 식별자 (PROJECT_INVITE에만 사용) */
+        public static final String INVITATION_ID = "invitationId";
+        
+        /** 대상 사용자 (MEMBER_INVITATION용) */
+        public static final String TARGET_USER_ID = "targetUserId";
+        
+        /** 버튼 텍스트 (기본값: "참여하기") */
+        public static final String ACTION_TEXT = "actionText";
+        
+        // ================================
+        // Mentions (Message level, not payload)
+        // ================================
+        
+        /** 멘션 대상 목록 */
+        public static final String MENTIONS = "mentions";
+        
+        // Private constructor to prevent instantiation
+        private PayloadKeys() {
+            throw new AssertionError("Cannot instantiate utility class");
+        }
+    }
+    /**
+     * 도메인 Message 전송을 위한 순수 데이터 객체 (NestedMessage 역할).
+     * WebSocket 통신 필드는 WebSocketMessage에서 처리하고, 이 클래스는 순수한 도메인 데이터만 포함.
+     *
+     * 도메인 Message ← ChatMessage 매핑 규칙:
+     * - Message.id               ← id
+     * - Message.senderId         ← senderId  
+     * - Message.messageType      ← messageType
+     * - Message.payload          ← payload
+     * - Message.replyToMessageId ← replyToMessageId
+     * - Message.createdAt        ← timestamp (epoch seconds)
+     */
     
-    @JsonProperty(WebSocketEventConstants.FIELD_ROOM_ID)
-    private String roomId;
-    
-    @JsonProperty(WebSocketEventConstants.FIELD_SENDER_ID)
-    private String senderId;
+
+    // 메시지 데이터 필드들 (MessageData에서 통합)
+    @JsonProperty(WebSocketEventConstants.FIELD_MESSAGE_ID)
+    private String id;
     
     @JsonProperty(WebSocketEventConstants.FIELD_MESSAGE_TYPE)
     private String messageType = WebSocketEventConstants.MESSAGE_TYPE_TEXT; // Default to TEXT type
     
-    @JsonProperty(WebSocketEventConstants.FIELD_TIMESTAMP)
-    private Double timestamp; // Changed to Double to match client
+    @JsonProperty(WebSocketEventConstants.FIELD_PAYLOAD)
+    private Map<String, Object> payload;
     
-    @JsonProperty(WebSocketEventConstants.FIELD_MESSAGE_ID)
-    private String messageId;
+    @JsonProperty(WebSocketEventConstants.FIELD_SENDER_ID)
+    private String senderId;
     
     @JsonProperty(WebSocketEventConstants.FIELD_REPLY_TO_MESSAGE_ID)
     private String replyToMessageId;
     
-    @JsonProperty(WebSocketEventConstants.FIELD_PAYLOAD)
-    private Map<String, Object> payload;
-    
-    @JsonProperty(WebSocketEventConstants.FIELD_PROJECT_ID)
-    private String projectId;
-    
-
-    // Nested domain message wrapper (하위호환용, 수신 시 우선 참조)
-    @JsonProperty(WebSocketEventConstants.FIELD_MESSAGE)
-    private MessageData message;
+    @JsonProperty(WebSocketEventConstants.FIELD_TIMESTAMP)
+    private Double timestamp; // Changed to Double to match client
 
     public ChatMessage() {}
 
-    public ChatMessage(String type, String roomId, String senderId, Map<String, Object> payload, Instant timestamp) {
-        this.type = type;
-        this.roomId = roomId;
+    public ChatMessage(String senderId, Map<String, Object> payload, Instant timestamp) {
         this.senderId = senderId;
         this.payload = payload;
         this.setTimestampFromInstant(timestamp);
     }
 
     // Factory methods for payload-based messages
-    public static ChatMessage createWithTextPayload(String type, String roomId, String senderId, String messageType, String textContent, Instant timestamp) {
+    public static ChatMessage createWithTextPayload(String senderId, String messageType, String textContent, Instant timestamp) {
         ChatMessage message = new ChatMessage();
-        message.type = type;
-        message.roomId = roomId;
         message.senderId = senderId;
         message.messageType = messageType != null ? messageType : WebSocketEventConstants.MESSAGE_TYPE_TEXT;
         
         // Create payload
         Map<String, Object> payloadMap = new HashMap<>();
-        payloadMap.put(PayloadConstants.CONTENT, textContent != null ? textContent : "");
+        payloadMap.put(PayloadKeys.CONTENT, textContent != null ? textContent : "");
         message.payload = payloadMap;
         message.setTimestampFromInstant(timestamp);
+        
+        // Generate ID if not provided
+        if (message.id == null || message.id.trim().isEmpty()) {
+            message.id = java.util.UUID.randomUUID().toString();
+        }
         
         return message;
     }
     
-    public static ChatMessage createSystemMessage(String type, String roomId, String senderId, String systemText, Instant timestamp) {
-        return createWithTextPayload(type, roomId, senderId, WebSocketEventConstants.MESSAGE_TYPE_SYSTEM, systemText, timestamp);
+    public static ChatMessage createSystemMessage(String senderId, String systemText, Instant timestamp) {
+        return createWithTextPayload(senderId, WebSocketEventConstants.MESSAGE_TYPE_SYSTEM, systemText, timestamp);
     }
 
     // Getters and Setters
-    public String getType() { return type; }
-    public void setType(String type) { this.type = type; }
 
-    public String getRoomId() { return roomId; }
-    public void setRoomId(String roomId) { this.roomId = roomId; }
+    // 메시지 데이터 getters/setters
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+
+    public String getMessageType() { return messageType; }
+    public void setMessageType(String messageType) { this.messageType = messageType; }
+
+    public Map<String, Object> getPayload() { return payload; }
+    public void setPayload(Map<String, Object> payload) { this.payload = payload; }
 
     public String getSenderId() { return senderId; }
     public void setSenderId(String senderId) { this.senderId = senderId; }
 
-
-    public String getMessageType() { return messageType; }
-    public void setMessageType(String messageType) { this.messageType = messageType; }
+    public String getReplyToMessageId() { return replyToMessageId; }
+    public void setReplyToMessageId(String replyToMessageId) { this.replyToMessageId = replyToMessageId; }
 
     public Double getTimestamp() { return timestamp; }
     public void setTimestamp(Double timestamp) { this.timestamp = timestamp; }
@@ -117,88 +221,31 @@ public class ChatMessage {
         this.timestamp = instant != null ? (double) instant.getEpochSecond() : null;
     }
 
-    public String getMessageId() { return messageId; }
-    public void setMessageId(String messageId) { this.messageId = messageId; }
-
-    public String getReplyToMessageId() { return replyToMessageId; }
-    public void setReplyToMessageId(String replyToMessageId) { this.replyToMessageId = replyToMessageId; }
-
-    public Map<String, Object> getPayload() { return payload; }
-    public void setPayload(Map<String, Object> payload) { this.payload = payload; }
-
-    public String getProjectId() { return projectId; }
-    public void setProjectId(String projectId) { this.projectId = projectId; }
-
-
-    public MessageData getMessage() { return message; }
-    public void setMessage(MessageData message) { this.message = message; }
-
-    // Effective getters: nested(message.*) 우선, 없으면 봉투(envelope) 폴백
-    public String getEffectiveMessageId() {
-        if (message != null && message.getId() != null) return message.getId();
-        return messageId;
-    }
-
-    public String getEffectiveSenderId() {
-        if (message != null && message.getSenderId() != null) return message.getSenderId();
-        return senderId;
-    }
-
-    public String getEffectiveReplyToMessageId() {
-        if (message != null && message.getReplyToMessageId() != null) return message.getReplyToMessageId();
-        return replyToMessageId;
-    }
-
-    public Double getEffectiveTimestamp() {
-        if (message != null && message.getTimestamp() != null) return message.getTimestamp();
-        return timestamp;
-    }
-
-    public Instant getEffectiveTimestampAsInstant() {
-        Double ts = getEffectiveTimestamp();
-        return ts != null ? Instant.ofEpochSecond(ts.longValue()) : null;
-    }
-
-    public String getEffectiveMessageType() {
-        if (message != null && message.getMessageType() != null) return message.getMessageType();
-        return messageType;
-    }
-
-    public Map<String, Object> getEffectivePayload() {
-        if (message != null && message.getPayload() != null) return message.getPayload();
-        return payload;
-    }
 
     /**
      * Returns a one-line summary of all fields for logging/debugging.
      */
     public String toSummaryString() {
         return String.format(
-            "type='%s', roomId='%s', senderId='%s', messageType='%s', payload=%s, timestamp=%s, messageId='%s', replyToMessageId='%s', projectId='%s'",
-            String.valueOf(type),
-            String.valueOf(roomId),
-            String.valueOf(getEffectiveSenderId()),
-            getEffectiveMessageType(),
-            getEffectivePayload() != null ? getEffectivePayload().toString() : "null",
-            String.valueOf(getEffectiveTimestamp()),
-            String.valueOf(getEffectiveMessageId()),
-            String.valueOf(getEffectiveReplyToMessageId()),
-            String.valueOf(projectId)
+            "senderId='%s', messageType='%s', payload=%s, timestamp=%s, messageId='%s', replyToMessageId='%s'",
+            String.valueOf(senderId),
+            messageType,
+            payload != null ? payload.toString() : "null",
+            String.valueOf(timestamp),
+            String.valueOf(id),
+            String.valueOf(replyToMessageId)
         );
     }
 
     @Override
     public String toString() {
         return "ChatMessage{" +
-                "type='" + type + '\'' +
-                ", roomId='" + roomId + '\'' +
-                ", senderId='" + senderId + '\'' +
-                ", messageType='" + getEffectiveMessageType() + '\'' +
-                ", payload=" + (getEffectivePayload() != null ? getEffectivePayload() : null) +
-                ", timestamp=" + getEffectiveTimestamp() +
-                ", messageId='" + getEffectiveMessageId() + '\'' +
-                ", replyToMessageId='" + getEffectiveReplyToMessageId() + '\'' +
-                ", projectId='" + projectId + '\'' +
+                "senderId='" + senderId + '\'' +
+                ", messageType='" + messageType + '\'' +
+                ", payload=" + (payload != null ? payload : null) +
+                ", timestamp=" + timestamp +
+                ", messageId='" + id + '\'' +
+                ", replyToMessageId='" + replyToMessageId + '\'' +
                 '}';
     }
 }

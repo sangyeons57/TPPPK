@@ -43,6 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_navigation.core.AddRoleRoute
 import com.example.core_navigation.core.EditRoleRoute
 import com.example.core_navigation.core.NavigationManger
+import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.Name
@@ -57,7 +58,6 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RoleListScreen(
-    navigationManger: NavigationManger,
     modifier: Modifier = Modifier,
     viewModel: RoleListViewModel = hiltViewModel()
 ) {
@@ -69,13 +69,6 @@ fun RoleListScreen(
     LaunchedEffect(Unit) {
         viewModel.eventFlow.collectLatest { event ->
             when (event) {
-                is RoleListEvent.NavigateToAddRole -> navigationManger.navigateTo(
-                    AddRoleRoute(uiState.projectId)
-                )
-
-                is RoleListEvent.NavigateToEditRole -> navigationManger.navigateTo(
-                    EditRoleRoute(uiState.projectId, event.roleId)
-                )
                 is RoleListEvent.ShowDeleteRoleConfirmDialog -> { // Added
                     showDeleteRoleDialog = event.roleItem
                 }
@@ -91,9 +84,9 @@ fun RoleListScreen(
             TopAppBar(
                 title = { Text("역할 관리") },
                 navigationIcon = {
-                    IconButton(onClick = { navigationManger.navigateBack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
-                    }
+                    DebouncedBackButton(
+                        onClick = viewModel::navigateBack,
+                    )
                 }
             )
         },

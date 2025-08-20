@@ -1,4 +1,4 @@
-package com.example.feature_project_setting.viewmodel.ui
+package com.example.feature_project_setting.ui
 
 import android.net.Uri
 import androidx.compose.foundation.background
@@ -40,6 +40,9 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.material3.RadioButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -65,6 +68,7 @@ import com.example.domain.vo.DocumentId
 import com.example.domain.vo.project.ProjectName
 import com.example.feature_model.CategoryUiModel
 import com.example.feature_model.ChannelUiModel
+import com.example.domain.model.ui.data.MemberUiModel
 import com.example.feature_project_setting.viewmodel.ProjectSettingEvent
 import com.example.feature_project_setting.viewmodel.ProjectSettingUiState
 import com.example.feature_project_setting.viewmodel.ProjectSettingViewModel
@@ -159,6 +163,7 @@ fun ProjectSettingScreen(
                 onManageRolesClick = viewModel::requestManageRoles,
                 onRenameProjectClick = viewModel::requestRenameProject, // 프로젝트 이름 변경 요청
                 onDeleteProjectClick = viewModel::requestDeleteProject, // 프로젝트 삭제 요청
+                onLeaveProjectClick = viewModel::requestLeaveProject, // 프로젝트 나가기 요청
                 onProjectImageClick = viewModel::onProjectImageClicked,
                 onSaveProjectImageClick = viewModel::onSaveProjectImageClicked,
                 onSetDefaultProjectProfileClick = viewModel::onSetDefaultProjectProfileClicked
@@ -228,7 +233,7 @@ fun ProjectSettingScreen(
         AlertDialog(
             onDismissRequest = { viewModel.dismiss() },
             title = { Text("프로젝트 삭제") },
-            text = { Text("정말로 '${uiState.projectName}' 프로젝트를 삭제하시겠습니까? 모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.") },
+            text = { Text("정말로 '${uiState.projectName.value}' 프로젝트를 삭제하시겠습니까? 모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -238,6 +243,37 @@ fun ProjectSettingScreen(
                 ) { Text("삭제") }
             },
             dismissButton = { TextButton(onClick = { viewModel.dismiss() }) { Text("취소") } }
+        )
+    }
+
+    // 프로젝트 나가기 확인 다이얼로그
+    if (uiState.showLeaveProjectDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismiss() },
+            title = { Text("프로젝트 나가기") },
+            text = { Text("정말로 '${uiState.projectName.value}' 프로젝트에서 나가시겠습니까?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.confirmLeaveProject()
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) { Text("나가기") }
+            },
+            dismissButton = { TextButton(onClick = { viewModel.dismiss() }) { Text("취소") } }
+        )
+    }
+
+    // 소유권 전달 다이얼로그
+    if (uiState.showTransferOwnershipDialog) {
+        TransferOwnershipDialog(
+            projectName = uiState.projectName,
+            members = uiState.projectMembers,
+            isLoading = uiState.isLoadingMembers,
+            onDismiss = { viewModel.dismiss() },
+            onTransferAndLeave = { memberId ->
+                viewModel.transferOwnershipAndLeave(memberId)
+            }
         )
     }
 }
@@ -259,6 +295,7 @@ fun ProjectSettingContent(
     onManageRolesClick: () -> Unit,
     onRenameProjectClick: () -> Unit,
     onDeleteProjectClick: () -> Unit,
+    onLeaveProjectClick: () -> Unit,
     onProjectImageClick: () -> Unit,
     onSaveProjectImageClick: () -> Unit,
     onSetDefaultProjectProfileClick: () -> Unit
@@ -300,14 +337,27 @@ fun ProjectSettingContent(
 
         item { Spacer(modifier = Modifier.height(16.dp)) }
 
-        // --- 프로젝트 삭제 ---
+        // --- 프로젝트 관리 ---
         item {
             SettingSectionTitle(title = "프로젝트 관리")
-            SettingMenuItem(
-                text = "프로젝트 삭제",
-                onClick = onDeleteProjectClick,
-                isDestructive = true // 빨간색 텍스트 등 강조
-            )
+
+            // 프로젝트 나가기 (Owner가 아닌 경우에만 표시)
+            if (!uiState.isCurrentUserOwner) {
+                SettingMenuItem(
+                    text = "프로젝트 나가기",
+                    onClick = onLeaveProjectClick,
+                    isDestructive = true
+                )
+            }
+
+            // 프로젝트 삭제 (Owner인 경우에만 표시)
+            if (uiState.isCurrentUserOwner) {
+                SettingMenuItem(
+                    text = "프로젝트 삭제",
+                    onClick = onDeleteProjectClick,
+                    isDestructive = true // 빨간색 텍스트 등 강조
+                )
+            }
         }
     }
 }
@@ -621,6 +671,99 @@ fun RenameProjectDialog(
     )
 }
 
+// 소유권 전달 다이얼로그
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TransferOwnershipDialog(
+    projectName: ProjectName,
+    members: List<MemberUiModel>,
+    isLoading: Boolean,
+    onDismiss: () -> Unit,
+    onTransferAndLeave: (String) -> Unit
+) {
+    var selectedMemberId by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("프로젝트 소유권 전달") },
+        text = {
+            Column {
+                Text(
+                    text = "프로젝트 나가기 전에 다른 멤버에게 소유권을 전달해야 합니다.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(100.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                } else if (members.isEmpty()) {
+                    Text(
+                        text = "전달할 수 있는 멤버가 없습니다.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                } else {
+                    Text(
+                        text = "새 소유자를 선택하세요:",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    LazyColumn(
+                        modifier = Modifier.height(200.dp)
+                    ) {
+                        items(members) { member ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .selectable(
+                                        selected = selectedMemberId == member.userId.value,
+                                        onClick = { selectedMemberId = member.userId.value }
+                                    )
+                                    .padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = selectedMemberId == member.userId.value,
+                                    onClick = { selectedMemberId = member.userId.value }
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = member.userName.value,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    selectedMemberId?.let { memberId ->
+                        onTransferAndLeave(memberId)
+                    }
+                },
+                enabled = selectedMemberId != null && !isLoading
+            ) { Text("전달 후 나가기") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("취소") }
+        }
+    )
+}
+
 @Preview
 @Composable
 private fun RenameProjectDialogPreview() {
@@ -658,6 +801,7 @@ private fun ProjectSettingContentLoadingPreview() {
             onManageRolesClick = {},
             onRenameProjectClick = {},
             onDeleteProjectClick = {},
+            onLeaveProjectClick = {},
             onProjectImageClick = {},
             onSaveProjectImageClick = {},
             onSetDefaultProjectProfileClick = {}
@@ -684,6 +828,7 @@ private fun ProjectSettingContentErrorPreview() {
             onManageRolesClick = {},
             onRenameProjectClick = {},
             onDeleteProjectClick = {},
+            onLeaveProjectClick = {},
             onProjectImageClick = {},
             onSaveProjectImageClick = {},
             onSetDefaultProjectProfileClick = {}

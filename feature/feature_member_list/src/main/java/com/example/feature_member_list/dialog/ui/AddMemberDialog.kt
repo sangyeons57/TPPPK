@@ -375,7 +375,8 @@ private fun UserInviteItem(
             contentDescription = "$userName 프로필",
             modifier = Modifier
                 .size(40.dp)
-                .clip(CircleShape)
+                .clip(CircleShape),
+            viewModel = hiltViewModel(key = userId.value)
         )
 
         Spacer(modifier = Modifier.width(12.dp))
@@ -493,4 +494,4 @@ fun AddMemberDialogPreview() {
             error = null
         )
     }
-} 
+}

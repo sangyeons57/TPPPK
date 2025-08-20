@@ -1,6 +1,7 @@
 package com.example.data_datasource.remote
 
 import android.util.Log
+import com.example.core_common.constants.ChannelConstants
 import com.example.core_common.result.CustomResult
 import com.example.data_datasource.remote.special.DefaultDatasource
 import com.example.data_datasource.remote.special.DefaultDatasourceImpl
@@ -168,14 +169,16 @@ open class MessageRemoteDataSourceImpl @Inject constructor(
                 val id = payloadJson.optString("id")
                     .takeIf { it.isNotEmpty() }
                     ?: throw IllegalArgumentException("Missing id in payload")
-                val channelId = payloadJson.optString("channelId")
+                val channelIdRaw = payloadJson.optString(ChannelConstants.KEY_CHANNEL_ID)
                     .takeIf { it.isNotEmpty() }
                     ?: throw IllegalArgumentException("Missing channelId in payload")
+                // Composite format support is handled by CollectionPath.messages(ChannelId(...))
 
-                // Map payload to DTO
+                // Map payload to DTO (store leaf channelId)
+                val channelIdLeaf = com.example.domain.vo.ChannelId(channelIdRaw).last()
                 val dto = MessageDTO(
                     id = id,
-                    channelId = channelId,
+                    channelId = channelIdLeaf,
                     senderId = payloadJson.optString("senderId", ""),
                     messageType = payloadJson.optString("messageType", "TEXT"),
                     payload = payloadJson.optString("payload", "{}"),
@@ -190,7 +193,7 @@ open class MessageRemoteDataSourceImpl @Inject constructor(
                 )
 
                 // Set the collection path from channel
-                val path = CollectionPath.dmChannelMessages(channelId)
+                val path = CollectionPath.messages(com.example.domain.vo.ChannelId(channelIdRaw))
                 setCollection(path)
 
                 when (e.op) {

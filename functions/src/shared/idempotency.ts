@@ -25,17 +25,27 @@ export class IdempotencyManager {
 
       if (doc.exists) {
         const data = doc.data();
+        
+        // 완료된 요청은 재시도 불가
         if (data?.operation === operation && data?.status === "completed") {
           logger.info(`Operation already completed for key: ${key}`);
           return false; // 이미 처리됨
         }
 
+        // 처리 중인 요청만 TTL 체크 (실패한 요청은 즉시 재시도 가능)
         if (data?.operation === operation && data?.status === "processing") {
           const createdAt = data.createdAt?.toDate();
           if (createdAt && Date.now() - createdAt.getTime() < ttlMinutes * 60 * 1000) {
             logger.warn(`Operation still processing for key: ${key}`);
             return false; // 아직 처리 중
           }
+          // TTL 만료된 processing 상태는 자동으로 재시도 허용
+          logger.info(`Expired processing operation, allowing retry for key: ${key}`);
+        }
+
+        // 실패한 요청은 즉시 재시도 허용 (별도 TTL 체크 없음)
+        if (data?.operation === operation && data?.status === "failed") {
+          logger.info(`Failed operation found, allowing immediate retry for key: ${key}`);
         }
       }
 
@@ -134,6 +144,43 @@ export class IdempotencyManager {
       logger.info(`Cleaned up ${expiredDocs.size} expired idempotency keys`);
     } catch (error) {
       logger.error("Failed to cleanup expired idempotency keys", error);
+      throw error;
+    }
+  }
+
+  // 특정 사용자의 실패한 친구 요청 키들을 클린업
+  static async cleanupFailedFriendRequests(userId: string): Promise<void> {
+    const logger = createLogger({ 
+      domain: "idempotency", 
+      operation: "cleanupFailedFriendRequests" 
+    });
+
+    try {
+      const failedDocs = await admin
+        .firestore()
+        .collection(this.COLLECTION)
+        .where("operation", "==", "send-friend-request")
+        .where("status", "==", "failed")
+        .get();
+
+      const userFailedDocs = failedDocs.docs.filter(doc => 
+        doc.id.startsWith(`${userId}:send-friend-request:`)
+      );
+
+      if (userFailedDocs.length === 0) {
+        logger.info(`No failed friend request keys found for user: ${userId}`);
+        return;
+      }
+
+      const batch = admin.firestore().batch();
+      userFailedDocs.forEach((doc) => {
+        batch.delete(doc.ref);
+      });
+
+      await batch.commit();
+      logger.info(`Cleaned up ${userFailedDocs.length} failed friend request keys for user: ${userId}`);
+    } catch (error) {
+      logger.error(`Failed to cleanup failed friend requests for user: ${userId}`, error);
       throw error;
     }
   }

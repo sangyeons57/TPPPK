@@ -3,6 +3,7 @@ package com.example.feature_home.viewmodel.service
 import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.DMWrapper
+import com.example.domain.vo.ImageUrl
 import com.example.domain_usecase.provider.dm.DMUseCases
 import com.example.feature_home.model.DmUiModel
 import kotlinx.coroutines.flow.Flow
@@ -25,7 +26,7 @@ class LoadDmsService(
         return DmUiModel(
             channelId = dmWrapper.id,
             partnerName = dmWrapper.otherUserName,
-            partnerProfileImageUrl = dmWrapper.otherUserImageUrl,
+            partnerProfileImageUrl = ImageUrl("고정 url사용 필요"),
         )
     }
     

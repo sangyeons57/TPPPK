@@ -2,6 +2,7 @@ package com.example.domain_repository.base
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Friend
+import com.example.domain.vo.UserId
 import com.example.domain_repository.DefaultRepository
 import kotlinx.coroutines.flow.Flow
 
@@ -23,12 +24,12 @@ interface FriendRepository : DefaultRepository<Friend> {
     fun observeFriendsList(userId: String): Flow<CustomResult<List<Friend>, Exception>>
     
     suspend fun sendFriendRequest(fromUserId: String, toUserId: String): CustomResult<Unit, Exception>
-    
-    suspend fun acceptFriendRequest(userId: String, friendId: String): CustomResult<Unit, Exception>
-    
-    suspend fun declineFriendRequest(userId: String, friendId: String): CustomResult<Unit, Exception>
+
+    suspend fun acceptFriendRequest(friendId: UserId): CustomResult<Unit, Exception>
+
+    suspend fun declineFriendRequest(friendId: UserId): CustomResult<Unit, Exception>
     
     suspend fun blockUser(userId: String, friendId: String): CustomResult<Unit, Exception>
-    
-    suspend fun removeFriend(userId: String, friendId: String): CustomResult<Unit, Exception>
+
+    suspend fun removeFriend(friendId: UserId): CustomResult<Unit, Exception>
 }

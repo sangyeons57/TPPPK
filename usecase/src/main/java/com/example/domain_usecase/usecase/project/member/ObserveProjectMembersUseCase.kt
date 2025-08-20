@@ -1,4 +1,4 @@
-package com.example.domain.usecase.project
+package com.example.domain_usecase.usecase.project.member
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Member
@@ -28,14 +28,6 @@ class ObserveProjectMembersUseCaseImpl @Inject constructor(
      * @return Flow<List<ProjectMember>> 멤버 목록 스트림
      */
     override fun invoke(): Flow<CustomResult<List<Member>, Exception>> {
-        return projectMemberRepository.observeAll().map { result ->
-            when (result) {
-                is CustomResult.Success -> CustomResult.Success(result.data.map { it as Member })
-                is CustomResult.Failure -> CustomResult.Failure(result.error)
-                is CustomResult.Initial -> CustomResult.Initial
-                is CustomResult.Loading -> CustomResult.Loading
-                is CustomResult.Progress -> CustomResult.Progress(result.progress)
-            }
-        }
+        return projectMemberRepository.observeAll()
     }
 } 

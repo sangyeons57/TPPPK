@@ -63,7 +63,11 @@ data class ChatUiState(
     val isLoadingProjectData: Boolean = false,
 
     // Anchor jump state (for UI coordination)
-    val isAnchorJumpInProgress: Boolean = false
+    val isAnchorJumpInProgress: Boolean = false,
+
+    // DM blocking state
+    val isProjectChannel: Boolean = false, // true if projectId is not null
+    val isDMBlocked: Boolean = false // true if DM channel is blocked
 )
 
 /**

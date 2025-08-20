@@ -155,7 +155,7 @@ class AcceptFriendsViewModel @Inject constructor(
             try {
                 authUtil.getCurrentUserId()
                 // userId는 실제로 friendRequestId를 의미함
-                val result = friendUseCases.acceptFriendRequestUseCase(userId.value)
+                val result = friendUseCases.acceptFriendRequestUseCase(userId)
                 when (result) {
                     is CustomResult.Success -> {
                         // 성공 시 목록에서 해당 요청 제거 (UI 상태 업데이트)
@@ -198,7 +198,7 @@ class AcceptFriendsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 // userId는 실제로 friendRequestId를 의미함
-                val result = friendUseCases.rejectFriendRequestUseCase(userId.value)
+                val result = friendUseCases.rejectFriendRequestUseCase(userId)
                 when (result) {
                     is CustomResult.Success -> {
                         // 성공 시 목록에서 해당 요청 제거 (UI 상태 업데이트)

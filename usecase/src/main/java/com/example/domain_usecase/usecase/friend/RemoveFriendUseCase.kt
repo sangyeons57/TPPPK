@@ -3,6 +3,7 @@ package com.example.domain_usecase.usecase.friend
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.exceptionOrNull
 import com.example.core_common.result.getOrNull
+import com.example.domain.vo.UserId
 import com.example.domain_repository.base.AuthRepository
 import com.example.domain_repository.base.FriendRepository
 import javax.inject.Inject
@@ -23,19 +24,9 @@ class RemoveFriendUseCase @Inject constructor(
      * @param friendUserId 제거할 친구의 사용자 ID
      * @return 성공 시 Unit이 포함된 Result, 실패 시 에러 정보가 포함된 Result
      */
-    suspend operator fun invoke(friendUserId: String): CustomResult<Unit, Exception> {
+    suspend operator fun invoke(friendUserId: UserId): CustomResult<Unit, Exception> {
         return try {
-            val currentUserResult = authRepository.getCurrentUserSession()
-            if (currentUserResult.isFailure) {
-                return CustomResult.Failure(currentUserResult.exceptionOrNull() ?: Exception("User not authenticated"))
-            }
-            
-            val currentUser = currentUserResult.getOrNull()
-            if (currentUser == null) {
-                return CustomResult.Failure(Exception("User not authenticated"))
-            }
-            
-            friendRepository.removeFriend(currentUser.userId.value, friendUserId)
+            friendRepository.removeFriend(friendUserId)
         } catch (e: Exception) {
             CustomResult.Failure(e)
         }

@@ -1,6 +1,7 @@
 package com.example.domain_usecase.usecase.task
 
 import com.example.core_common.result.CustomResult
+import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.base.Task
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.task.TaskStatus
@@ -29,12 +30,20 @@ class UpdateTaskStatusUseCaseImpl @Inject constructor(
 
         task.updateStatus(status)
 
-        return when (val result = taskRepository.save(task)) {
-            is CustomResult.Success -> CustomResult.Success(Unit)
-            is CustomResult.Failure -> CustomResult.Failure(result.error)
-            is CustomResult.Initial -> CustomResult.Initial
-            is CustomResult.Loading -> CustomResult.Loading
-            is CustomResult.Progress -> CustomResult.Progress(result.progress)
-        }
+        val updated = Task.fromDataSource(
+            id = task.id,
+            channelId = task.channelId,
+            taskType = task.taskType,
+            status = task.status,
+            content = task.content,
+            order = task.order,
+            checkedBy = task.checkedBy,
+            checkedAt = task.checkedAt,
+            createdAt = task.createdAt,
+            updatedAt = DateTimeUtil.nowInstant()
+        )
+
+        taskRepository.addTask(updated)
+        return CustomResult.Success(Unit)
     }
 }

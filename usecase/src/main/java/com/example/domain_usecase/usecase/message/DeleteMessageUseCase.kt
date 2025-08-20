@@ -17,10 +17,10 @@ class DeleteMessageUseCase @Inject constructor(
                         ?: return CustomResult.Failure(IllegalStateException("Message not found"))
                     
                     message.delete()
-                    
-                    when (val saveResult = messageRepository.save(message)) {
+
+                    when (val sendResult = messageRepository.sendMessage(message)) {
                         is CustomResult.Success -> CustomResult.Success(Unit)
-                        is CustomResult.Failure -> CustomResult.Failure(saveResult.error)
+                        is CustomResult.Failure -> CustomResult.Failure(sendResult.error)
                         is CustomResult.Initial -> CustomResult.Failure(IllegalStateException("Repository returned Initial state"))
                         is CustomResult.Loading -> CustomResult.Failure(IllegalStateException("Repository returned Loading state"))
                         is CustomResult.Progress -> CustomResult.Failure(IllegalStateException("Repository returned Progress state"))

@@ -62,24 +62,8 @@ object WebSocketFieldConstants {
     
     /** 텍스트 메시지 */
     const val MESSAGE_TYPE_TEXT = "TEXT"
-    
-    /** 시스템 메시지 */
-    const val MESSAGE_TYPE_SYSTEM = "SYSTEM"
-    
-    /** 시스템 날짜 메시지 */
-    const val MESSAGE_TYPE_SYSTEM_DATE = "SYSTEM_DATE"
-    
-    /** 시스템 프로젝트 입장 메시지 */
-    const val MESSAGE_TYPE_SYSTEM_PROJECT_JOIN = "SYSTEM_PROJECT_JOIN"
-    
-    /** 시스템 프로젝트 퇴장 메시지 */
-    const val MESSAGE_TYPE_SYSTEM_PROJECT_LEAVE = "SYSTEM_PROJECT_LEAVE"
-    
-    /** 시스템 사용자 초대 메시지 */
-    const val MESSAGE_TYPE_SYSTEM_USER_INVITE = "SYSTEM_USER_INVITE"
 
-    /** 시스템 멤버 초대 메시지 (프로젝트 멤버 초대 안내) */
-    const val MESSAGE_TYPE_SYSTEM_MEMBER_INVITATION = "SYSTEM_MEMBER_INVITATION"
+    // 시스템 관련 메시지 타입은 사용하지 않음
 
     /** 프로젝트 초대 메시지 */
     const val MESSAGE_TYPE_PROJECT_INVITE = "PROJECT_INVITE"
@@ -103,15 +87,7 @@ object WebSocketFieldConstants {
 
     fun isTextMessage(messageType: String?): Boolean = messageType == MESSAGE_TYPE_TEXT
 
-    fun isSystemMessage(messageType: String?): Boolean = messageType in setOf(
-        MESSAGE_TYPE_SYSTEM,
-        MESSAGE_TYPE_SYSTEM_DATE,
-        MESSAGE_TYPE_SYSTEM_PROJECT_JOIN,
-        MESSAGE_TYPE_SYSTEM_PROJECT_LEAVE,
-        MESSAGE_TYPE_SYSTEM_USER_INVITE,
-        MESSAGE_TYPE_SYSTEM_MEMBER_INVITATION,
-        MESSAGE_TYPE_PROJECT_INVITE
-    )
+    fun isSystemMessage(messageType: String?): Boolean = false
 
     fun isMediaMessage(messageType: String?): Boolean =
         false // No longer using separate IMAGE/FILE types

@@ -22,8 +22,6 @@ sealed class WebSocketDomainEvent {
         val timestamp: String,
         val replyToMessageId: String? = null,
         val roomId: String? = null,
-        val projectId: String? = null,
-        val channelType: String? = null,
         val originalPayload: String? = null,  // WebSocket에서 받은 원본 payload (attachment 정보 보존용)
         val messageTypeString: String? = null // WebSocket NestedMessage.messageType (있으면 신뢰)
     ) : WebSocketDomainEvent()

@@ -5,7 +5,8 @@ import {
   handleError, 
   createLogger, 
   getOrCreateRequestId,
-  withTracing
+  withTracing,
+  FRIEND_SUBCOLLECTION_STATUS
 } from "../../../shared";
 
 interface GetFriendRequestsResponse {
@@ -52,73 +53,53 @@ export const getFriendRequests = onCall(
           const userId = validateAuth(request.auth);
           const firestore = admin.firestore();
 
-          // 받은 친구 요청 조회
+          // Subcollection에서 받은 친구 요청 조회 (PENDING 상태)
           const receivedRequestsQuery = await firestore
-            .collection("friends")
-            .where("friendId", "==", userId)
-            .where("status", "==", "pending")
+            .collection(`users/${userId}/friends`)
+            .where("status", "==", FRIEND_SUBCOLLECTION_STATUS.PENDING)
             .orderBy("createdAt", "desc")
             .get();
 
-          // 보낸 친구 요청 조회
+          // Subcollection에서 보낸 친구 요청 조회 (REQUESTED 상태)
           const sentRequestsQuery = await firestore
-            .collection("friends")
-            .where("userId", "==", userId)
-            .where("status", "==", "pending")
+            .collection(`users/${userId}/friends`)
+            .where("status", "==", FRIEND_SUBCOLLECTION_STATUS.REQUESTED)
             .orderBy("createdAt", "desc")
             .get();
 
-          // 받은 요청 처리
-          const receivedRequests = await Promise.all(
-            receivedRequestsQuery.docs.map(async (doc) => {
-              try {
-                const requestData = doc.data();
-                const requesterDoc = await firestore
-                  .collection("users")
-                  .doc(requestData.userId)
-                  .get();
+          // 받은 요청 처리 (이미 친구 문서에 필요한 정보가 포함됨)
+          const receivedRequests = receivedRequestsQuery.docs.map((doc) => {
+            try {
+              const requestData = doc.data();
+              return {
+                id: doc.id, // 요청자의 userId
+                requesterId: doc.id,
+                requesterName: requestData.name || "Unknown User",
+                requesterProfileImageUrl: requestData.profileImageUrl,
+                createdAt: requestData.createdAt?.toDate()?.toISOString() || new Date().toISOString(),
+              };
+            } catch (error) {
+              logger.warn("Failed to process received friend request", { docId: doc.id, error });
+              return null;
+            }
+          });
 
-                const requesterData = requesterDoc.exists ? requesterDoc.data()! : {};
-
-                return {
-                  id: doc.id,
-                  requesterId: requestData.userId,
-                  requesterName: requesterData.name || "Unknown User",
-                  requesterProfileImageUrl: requesterData.profileImageUrl,
-                  createdAt: requestData.createdAt?.toDate()?.toISOString() || new Date().toISOString(),
-                };
-              } catch (error) {
-                logger.warn("Failed to process received friend request", { docId: doc.id, error });
-                return null;
-              }
-            })
-          );
-
-          // 보낸 요청 처리
-          const sentRequests = await Promise.all(
-            sentRequestsQuery.docs.map(async (doc) => {
-              try {
-                const requestData = doc.data();
-                const receiverDoc = await firestore
-                  .collection("users")
-                  .doc(requestData.friendId)
-                  .get();
-
-                const receiverData = receiverDoc.exists ? receiverDoc.data()! : {};
-
-                return {
-                  id: doc.id,
-                  receiverId: requestData.friendId,
-                  receiverName: receiverData.name || "Unknown User",
-                  receiverProfileImageUrl: receiverData.profileImageUrl,
-                  createdAt: requestData.createdAt?.toDate()?.toISOString() || new Date().toISOString(),
-                };
-              } catch (error) {
-                logger.warn("Failed to process sent friend request", { docId: doc.id, error });
-                return null;
-              }
-            })
-          );
+          // 보낸 요청 처리 (이미 친구 문서에 필요한 정보가 포함됨)
+          const sentRequests = sentRequestsQuery.docs.map((doc) => {
+            try {
+              const requestData = doc.data();
+              return {
+                id: doc.id, // 수신자의 userId
+                receiverId: doc.id,
+                receiverName: requestData.name || "Unknown User",
+                receiverProfileImageUrl: requestData.profileImageUrl,
+                createdAt: requestData.createdAt?.toDate()?.toISOString() || new Date().toISOString(),
+              };
+            } catch (error) {
+              logger.warn("Failed to process sent friend request", { docId: doc.id, error });
+              return null;
+            }
+          });
 
           // null 값 필터링 및 타입 보장
           const validReceivedRequests = receivedRequests.filter((req): req is NonNullable<typeof req> => req !== null);

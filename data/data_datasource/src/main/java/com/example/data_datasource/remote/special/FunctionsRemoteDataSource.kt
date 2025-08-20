@@ -8,6 +8,7 @@ import com.example.core_common.result.CustomResult
 import com.example.core_common.result.resultTry
 import com.example.core_common.util.MediaUtil
 import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.storage.FirebaseStorage
@@ -120,10 +121,10 @@ interface FunctionsRemoteDataSource {
     /**
      * 친구 요청을 수락합니다.
      *
-     * @param friendRequestId 수락할 친구 요청 ID
+     * @param friendUserId 수락할 친구 요청 ID
      * @return 성공 시 수락 결과, 실패 시 Exception을 담은 CustomResult
      */
-    suspend fun acceptFriendRequest(friendRequestId: String): CustomResult<Map<String, Any?>, Exception>
+    suspend fun acceptFriendRequest(friendUserId: UserId): CustomResult<Map<String, Any?>, Exception>
 
     /**
      * 친구 요청을 거절합니다.
@@ -131,7 +132,7 @@ interface FunctionsRemoteDataSource {
      * @param friendRequestId 거절할 친구 요청 ID
      * @return 성공 시 거절 결과, 실패 시 Exception을 담은 CustomResult
      */
-    suspend fun rejectFriendRequest(friendRequestId: String): CustomResult<Map<String, Any?>, Exception>
+    suspend fun rejectFriendRequest(friendUserId: UserId): CustomResult<Map<String, Any?>, Exception>
 
     /**
      * 친구를 제거합니다.
@@ -139,7 +140,7 @@ interface FunctionsRemoteDataSource {
      * @param friendUserId 제거할 친구의 사용자 ID
      * @return 성공 시 제거 결과, 실패 시 Exception을 담은 CustomResult
      */
-    suspend fun removeFriend(friendUserId: String): CustomResult<Map<String, Any?>, Exception>
+    suspend fun removeFriend(friendUserId: UserId): CustomResult<Map<String, Any?>, Exception>
 
     /**
      * 친구 목록을 조회합니다.
@@ -170,12 +171,12 @@ interface FunctionsRemoteDataSource {
     ): CustomResult<Map<String, Any?>, Exception>
 
     /**
-     * 사용자 이름을 통해 DM 채널을 생성합니다.
+     * 사용자 ID를 통해 DM 채널을 생성합니다.
      *
-     * @param targetUserName 대상 사용자 이름
+     * @param targetUserId 대상 사용자 ID
      * @return 성공 시 DM 채널 정보, 실패 시 Exception을 담은 CustomResult
      */
-    suspend fun createDMChannel(targetUserName: String): CustomResult<Map<String, Any?>, Exception>
+    suspend fun createDMChannel(targetUserId: String): CustomResult<Map<String, Any?>, Exception>
 
     /**
      * DM 채널을 차단합니다.
@@ -194,12 +195,12 @@ interface FunctionsRemoteDataSource {
     suspend fun unblockDMChannel(channelId: String): CustomResult<Map<String, Any?>, Exception>
     
     /**
-     * 사용자 이름을 통해 DM 채널 차단을 해제합니다.
+     * 사용자 ID를 통해 DM 채널 차단을 해제합니다.
      *
-     * @param targetUserName 차단 해제할 대상 사용자 이름
+     * @param targetUserId 차단 해제할 대상 사용자 ID
      * @return 성공 시 차단 해제 결과, 실패 시 Exception을 담은 CustomResult
      */
-    suspend fun unblockDMChannelByUserName(targetUserName: String): CustomResult<Map<String, Any?>, Exception>
+    suspend fun unblockDMChannelByUserId(targetUserId: String): CustomResult<Map<String, Any?>, Exception>
 
 
     // invite link/code flow removed
@@ -229,6 +230,29 @@ interface FunctionsRemoteDataSource {
      * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
      */
     suspend fun leaveProject(projectId: String): CustomResult<Unit, Exception>
+
+    /**
+     * 프로젝트에서 멤버를 제거합니다.
+     *
+     * @param projectId 프로젝트 ID
+     * @param targetUserId 제거할 사용자 ID
+     * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun removeMember(projectId: String, targetUserId: String): CustomResult<Unit, Exception>
+
+    /**
+     * 프로젝트 멤버를 차단/금지합니다.
+     *
+     * @param projectId 프로젝트 ID
+     * @param targetUserId 차단할 사용자 ID
+     * @param blockType 차단 유형 ("blocked" 또는 "banned")
+     * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun blockMember(
+        projectId: String,
+        targetUserId: String,
+        blockType: String
+    ): CustomResult<Unit, Exception>
 
     // ================== 프로젝트 초대 링크 관련 메서드 ==================
 
@@ -632,13 +656,13 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    override suspend fun acceptFriendRequest(friendRequestId: String): CustomResult<Map<String, Any?>, Exception> = withContext(Dispatchers.IO) {
+    override suspend fun acceptFriendRequest(friendUserId: UserId): CustomResult<Map<String, Any?>, Exception> =
+        withContext(Dispatchers.IO) {
         try {
             val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
             
             val requestData = mapOf(
-                FirebaseFunctionParameters.Friend.FRIEND_REQUEST_ID to friendRequestId,
-                FirebaseFunctionParameters.Friend.USER_ID to currentUser.uid
+                FirebaseFunctionParameters.Friend.FRIEND_USER_ID to friendUserId.value,
             )
 
             val callable = functions.getHttpsCallable(FirebaseFunctionParameters.Functions.ACCEPT_FRIEND_REQUEST)
@@ -660,13 +684,13 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    override suspend fun rejectFriendRequest(friendRequestId: String): CustomResult<Map<String, Any?>, Exception> = withContext(Dispatchers.IO) {
+    override suspend fun rejectFriendRequest(friendUserId: UserId): CustomResult<Map<String, Any?>, Exception> =
+        withContext(Dispatchers.IO) {
         try {
             val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
             
             val requestData = mapOf(
-                FirebaseFunctionParameters.Friend.FRIEND_REQUEST_ID to friendRequestId,
-                FirebaseFunctionParameters.Friend.USER_ID to currentUser.uid
+                FirebaseFunctionParameters.Friend.FRIEND_USER_ID to friendUserId.value,
             )
 
             val callable = functions.getHttpsCallable(FirebaseFunctionParameters.Functions.REJECT_FRIEND_REQUEST)
@@ -688,13 +712,14 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    override suspend fun removeFriend(friendUserId: String): CustomResult<Map<String, Any?>, Exception> = withContext(Dispatchers.IO) {
+    override suspend fun removeFriend(friendUserId: UserId): CustomResult<Map<String, Any?>, Exception> =
+        withContext(Dispatchers.IO) {
         try {
             val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
             
             val requestData = mapOf(
                 FirebaseFunctionParameters.Friend.USER_ID to currentUser.uid,
-                FirebaseFunctionParameters.Friend.FRIEND_USER_ID to friendUserId
+                FirebaseFunctionParameters.Friend.FRIEND_USER_ID to friendUserId.value
             )
 
             val callable = functions.getHttpsCallable(FirebaseFunctionParameters.Functions.REMOVE_FRIEND)
@@ -782,13 +807,14 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    override suspend fun createDMChannel(targetUserName: String): CustomResult<Map<String, Any?>, Exception> = withContext(Dispatchers.IO) {
+
+    override suspend fun createDMChannel(targetUserId: String): CustomResult<Map<String, Any?>, Exception> =
+        withContext(Dispatchers.IO) {
         try {
-            val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
-            
+            auth.currentUser ?: throw Exception("User not authenticated")
+            // currentUserId is derived server-side from auth; send only targetUserId
             val requestData = mapOf(
-                FirebaseFunctionParameters.DM.CURRENT_USER_ID to currentUser.uid,
-                FirebaseFunctionParameters.DM.TARGET_USER_NAME to targetUserName
+                FirebaseFunctionParameters.DM.TARGET_USER_ID to targetUserId
             )
 
             val callable = functions.getHttpsCallable(FirebaseFunctionParameters.Functions.CREATE_DM_CHANNEL)
@@ -866,13 +892,14 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
         }
     }
 
-    override suspend fun unblockDMChannelByUserName(targetUserName: String): CustomResult<Map<String, Any?>, Exception> = withContext(Dispatchers.IO) {
+    override suspend fun unblockDMChannelByUserId(targetUserId: String): CustomResult<Map<String, Any?>, Exception> =
+        withContext(Dispatchers.IO) {
         try {
             val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
             
             val requestData = mapOf(
                 FirebaseFunctionParameters.DM.CURRENT_USER_ID to currentUser.uid,
-                FirebaseFunctionParameters.DM.TARGET_USER_NAME to targetUserName
+                FirebaseFunctionParameters.DM.TARGET_USER_ID to targetUserId
             )
 
             val callable = functions.getHttpsCallable(FirebaseFunctionParameters.Functions.UNBLOCK_DM_CHANNEL_BY_USER_NAME)
@@ -961,6 +988,103 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
             }
         } catch (e: Exception) {
             Log.e("FunctionsRemoteDataSource", "Exception in leaveProject", e)
+            if (e is CancellationException) throw e
+            CustomResult.Failure(e)
+        }
+    }
+
+    override suspend fun removeMember(
+        projectId: String,
+        targetUserId: String
+    ): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
+        try {
+            Log.d(
+                "FunctionsRemoteDataSource",
+                "Starting removeMember for projectId: $projectId, targetUserId: $targetUserId"
+            )
+
+            val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
+            Log.d("FunctionsRemoteDataSource", "Current user: ${currentUser.uid}")
+
+            val requestData = mapOf(
+                FirebaseFunctionParameters.Project.PROJECT_ID to projectId,
+                FirebaseFunctionParameters.Project.TARGET_USER_ID to targetUserId
+            )
+
+            Log.d("FunctionsRemoteDataSource", "Request data: $requestData")
+
+            val callable =
+                functions.getHttpsCallable(FirebaseFunctionParameters.Functions.LEAVE_PROJECT)
+            Log.d(
+                "FunctionsRemoteDataSource",
+                "Calling Firebase Function: ${FirebaseFunctionParameters.Functions.LEAVE_PROJECT}"
+            )
+
+            val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
+                callable.call(requestData).await()
+            }
+
+            if (result != null) {
+                Log.d("FunctionsRemoteDataSource", "Remove member function call successful")
+                CustomResult.Success(Unit)
+            } else {
+                Log.e(
+                    "FunctionsRemoteDataSource",
+                    "Remove member function call timed out after ${DEFAULT_TIMEOUT_MS}ms"
+                )
+                CustomResult.Failure(Exception("Remove member function call timed out"))
+            }
+        } catch (e: Exception) {
+            Log.e("FunctionsRemoteDataSource", "Exception in removeMember", e)
+            if (e is CancellationException) throw e
+            CustomResult.Failure(e)
+        }
+    }
+
+    override suspend fun blockMember(
+        projectId: String,
+        targetUserId: String,
+        blockType: String
+    ): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
+        try {
+            Log.d(
+                "FunctionsRemoteDataSource",
+                "Starting blockMember for projectId: $projectId, targetUserId: $targetUserId, blockType: $blockType"
+            )
+
+            val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
+            Log.d("FunctionsRemoteDataSource", "Current user: ${currentUser.uid}")
+
+            val requestData = mapOf(
+                FirebaseFunctionParameters.Project.PROJECT_ID to projectId,
+                FirebaseFunctionParameters.Project.TARGET_USER_ID to targetUserId,
+                FirebaseFunctionParameters.Project.BLOCK_TYPE to blockType
+            )
+            Log.d("FunctionsRemoteDataSource", "Request data: $requestData")
+
+            val callable =
+                functions.getHttpsCallable(FirebaseFunctionParameters.Functions.BLOCK_MEMBER)
+            Log.d(
+                "FunctionsRemoteDataSource",
+                "Calling Firebase Function: ${FirebaseFunctionParameters.Functions.BLOCK_MEMBER}"
+            )
+
+            val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
+                callable.call(requestData).await()
+            }
+
+            if (result != null) {
+                Log.d("FunctionsRemoteDataSource", "Block member function call successful")
+                CustomResult.Success(Unit)
+            } else {
+                Log.e(
+                    "FunctionsRemoteDataSource",
+                    "Block member function call timed out after ${DEFAULT_TIMEOUT_MS}ms"
+                )
+                CustomResult.Failure(Exception("Block member function call timed out"))
+            }
+        } catch (e: Exception) {
+            Log.e("FunctionsRemoteDataSource", "Exception in blockMember", e)
             if (e is CancellationException) throw e
             CustomResult.Failure(e)
         }

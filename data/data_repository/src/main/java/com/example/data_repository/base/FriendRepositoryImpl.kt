@@ -12,6 +12,7 @@ import com.example.data_repository.DefaultRepositoryImpl
 import com.example.domain.model.base.Friend
 import com.example.domain.vo.CollectionPath
 import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
 import com.example.domain_repository.base.FriendRepository
 import com.example.mapper.DtoMapper
 import kotlinx.coroutines.flow.Flow
@@ -119,8 +120,8 @@ class FriendRepositoryImpl @Inject constructor(
             is CustomResult.Progress -> CustomResult.Progress(result.progress)
         }
     }
-    
-    override suspend fun acceptFriendRequest(userId: String, friendId: String): CustomResult<Unit, Exception> {
+
+    override suspend fun acceptFriendRequest(friendId: UserId): CustomResult<Unit, Exception> {
         return when (val result = functionsRemoteDataSource.acceptFriendRequest(friendId)) {
             is CustomResult.Success -> {
                 Log.d(TAG, "Friend request accepted successfully: ${result.data}")
@@ -135,8 +136,8 @@ class FriendRepositoryImpl @Inject constructor(
             is CustomResult.Progress -> CustomResult.Progress(result.progress)
         }
     }
-    
-    override suspend fun declineFriendRequest(userId: String, friendId: String): CustomResult<Unit, Exception> {
+
+    override suspend fun declineFriendRequest(friendId: UserId): CustomResult<Unit, Exception> {
         return when (val result = functionsRemoteDataSource.rejectFriendRequest(friendId)) {
             is CustomResult.Success -> {
                 Log.d(TAG, "Friend request declined successfully: ${result.data}")
@@ -157,8 +158,8 @@ class FriendRepositoryImpl @Inject constructor(
         // For now, keeping the original implementation
         return friendRemoteDataSource.blockUser(userId, friendId)
     }
-    
-    override suspend fun removeFriend(userId: String, friendId: String): CustomResult<Unit, Exception> {
+
+    override suspend fun removeFriend(friendId: UserId): CustomResult<Unit, Exception> {
         return when (val result = functionsRemoteDataSource.removeFriend(friendId)) {
             is CustomResult.Success -> {
                 Log.d(TAG, "Friend removed successfully: ${result.data}")

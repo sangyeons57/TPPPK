@@ -49,5 +49,103 @@ describe("joinProject (projectId-based)", () => {
     expect(result.projectId).toBe("project-1");
     expect(result.role).toBe("member");
   });
+
+  it("throws when user is banned from project", async () => {
+    // Mock project
+    MockFirestoreHelper.mockCollection(COLLECTIONS.PROJECTS, {
+      "project-1": {
+        id: "project-1",
+        name: "Project One",
+        imageUrl: "https://example.com/p.png",
+      },
+    });
+
+    // Mock banned member
+    MockFirestoreHelper.mockSubcollection(
+      COLLECTIONS.PROJECTS,
+      "project-1",
+      COLLECTIONS.MEMBERS,
+      {
+        [TEST_USERS.ALICE.uid]: {
+          id: TEST_USERS.ALICE.uid,
+          roleIds: [],
+          status: "banned",
+          blockedAt: new Date(),
+          blockedBy: "owner-id",
+        },
+      }
+    );
+
+    const request = createMockRequest({ projectId: "project-1" }, TEST_USERS.ALICE);
+    await expect(testCallable(joinProject, request)).rejects.toThrow(
+      "User is permanently banned from this project"
+    );
+  });
+
+  it("throws when user is blocked from project", async () => {
+    // Mock project
+    MockFirestoreHelper.mockCollection(COLLECTIONS.PROJECTS, {
+      "project-1": {
+        id: "project-1",
+        name: "Project One",
+        imageUrl: "https://example.com/p.png",
+      },
+    });
+
+    // Mock blocked member
+    MockFirestoreHelper.mockSubcollection(
+      COLLECTIONS.PROJECTS,
+      "project-1",
+      COLLECTIONS.MEMBERS,
+      {
+        [TEST_USERS.ALICE.uid]: {
+          id: TEST_USERS.ALICE.uid,
+          roleIds: [],
+          status: "blocked",
+          blockedAt: new Date(),
+          blockedBy: "owner-id",
+        },
+      }
+    );
+
+    const request = createMockRequest({ projectId: "project-1" }, TEST_USERS.ALICE);
+    await expect(testCallable(joinProject, request)).rejects.toThrow(
+      "User is blocked from this project"
+    );
+  });
+
+  it("returns success when user is already an active member", async () => {
+    // Mock project
+    MockFirestoreHelper.mockCollection(COLLECTIONS.PROJECTS, {
+      "project-1": {
+        id: "project-1",
+        name: "Project One",
+        imageUrl: "https://example.com/p.png",
+      },
+    });
+
+    // Mock active member
+    MockFirestoreHelper.mockSubcollection(
+      COLLECTIONS.PROJECTS,
+      "project-1",
+      COLLECTIONS.MEMBERS,
+      {
+        [TEST_USERS.ALICE.uid]: {
+          id: TEST_USERS.ALICE.uid,
+          roleIds: [],
+          status: "active",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      }
+    );
+
+    const request = createMockRequest({ projectId: "project-1" }, TEST_USERS.ALICE);
+    const result = await testCallable<any, any>(joinProject, request);
+
+    expect(result.success).toBe(true);
+    expect(result.projectId).toBe("project-1");
+    expect(result.role).toBe("member");
+  });
 });
 

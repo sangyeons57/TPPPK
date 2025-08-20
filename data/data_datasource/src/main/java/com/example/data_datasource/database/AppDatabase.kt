@@ -8,6 +8,8 @@ import com.example.data_model.local.OutboxDao
 import com.example.data_model.local.OutboxRecordEntity
 import com.example.data_model.local.SyncMetadataDao
 import com.example.data_model.local.SyncMetadataEntity
+import com.example.data_model.local.TaskDao
+import com.example.data_model.local.TaskEntity
 
 /**
  * Room Database 설정
@@ -16,9 +18,10 @@ import com.example.data_model.local.SyncMetadataEntity
     entities = [
         MessageEntity::class,
         OutboxRecordEntity::class,
-        SyncMetadataEntity::class
+        SyncMetadataEntity::class,
+        TaskEntity::class,
     ],
-    version = 8, // v8: messages(channelId, createdAt) 복합 인덱스 추가
+    version = 9, // v9: tasks 테이블 추가
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -26,4 +29,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun messageDao(): MessageDao
     abstract fun outBoxDao(): OutboxDao
     abstract fun syncMetadataDao(): SyncMetadataDao
+    abstract fun taskDao(): TaskDao
 }

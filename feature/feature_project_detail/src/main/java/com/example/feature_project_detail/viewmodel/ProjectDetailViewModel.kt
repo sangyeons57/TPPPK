@@ -17,6 +17,8 @@ import com.example.domain_usecase.provider.project.CoreProjectUseCases
 import com.example.domain_usecase.provider.project.ProjectChannelUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectStructureUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectStructureUseCases
+import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
+import com.example.domain_usecase.provider.project.ProjectMemberUseCases
 import com.example.feature_model.CategoryUiModel
 import com.example.feature_model.ChannelUiModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -60,6 +62,7 @@ class ProjectDetailViewModel @Inject constructor(
     private val coreProjectUseCaseProvider: CoreProjectUseCaseProvider,
     private val projectChannelUseCaseProvider: ProjectChannelUseCaseProvider,
     private val projectStructureUseCaseProvider: ProjectStructureUseCaseProvider,
+    private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider,
     private val navigationManger: NavigationManger
 ) : ViewModel() {
 
@@ -69,6 +72,7 @@ class ProjectDetailViewModel @Inject constructor(
     // ProjectUseCaseProvider를 통해 해당 프로젝트의 UseCases 생성
     private lateinit var projectUseCases : CoreProjectUseCases
     private lateinit var structureUseCases : ProjectStructureUseCases
+    private lateinit var memberUseCases: ProjectMemberUseCases
 
     private val _uiState = MutableStateFlow(ProjectDetailUiState(projectId = projectId))
     val uiState: StateFlow<ProjectDetailUiState> = _uiState.asStateFlow()
@@ -77,9 +81,78 @@ class ProjectDetailViewModel @Inject constructor(
         viewModelScope.launch {
             projectUseCases = coreProjectUseCaseProvider.createForCurrentUser()
             structureUseCases = projectStructureUseCaseProvider.createForProject(projectId)
+            memberUseCases = projectMemberUseCaseProvider.createForProject(projectId)
+
+            // 🔐 멤버십 검증 먼저 수행
+            verifyProjectMembership()
         }
-        // 프로젝트 상세 정보 로드
-        loadProjectDetails()
+    }
+
+    /**
+     * 🔐 프로젝트 멤버십 검증
+     * 현재 사용자가 실제 멤버인지 확인하고, 아닌 경우 project_wrapper를 정리하고 DM 화면으로 돌아갑니다.
+     */
+    private suspend fun verifyProjectMembership() {
+        try {
+            _uiState.update { it.copy(isLoading = true) }
+
+            // 1. 멤버십 검증
+            val membershipResult = memberUseCases.verifyProjectMembershipUseCase(projectId)
+            when (membershipResult) {
+                is CustomResult.Success -> {
+                    val isMember = membershipResult.data
+                    if (isMember) {
+                        // ✅ 정상 멤버 - 프로젝트 정보 로드 진행
+                        loadProjectDetails()
+                    } else {
+                        // ❌ 멤버가 아님 - project_wrapper 정리하고 DM 화면으로 복귀
+                        handleNonMemberAccess()
+                    }
+                }
+
+                is CustomResult.Failure -> {
+                    // 검증 실패 - 안전상 DM 화면으로 복귀
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = "프로젝트 접근 권한을 확인할 수 없습니다."
+                        )
+                    }
+                    handleNonMemberAccess()
+                }
+
+                else -> {
+                    _uiState.update { it.copy(isLoading = false, error = "알 수 없는 오류가 발생했습니다.") }
+                    handleNonMemberAccess()
+                }
+            }
+        } catch (e: Exception) {
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    error = "프로젝트 접근 권한 확인 중 오류 발생: ${e.message}"
+                )
+            }
+            handleNonMemberAccess()
+        }
+    }
+
+    /**
+     * 비멤버 접근 처리
+     * DM 화면으로 즉시 복귀
+     *
+     * 참고: project_wrapper 정리는 Firebase Functions의 leaveProject에서 이미 처리되므로
+     * 클라이언트에서 추가 정리 작업이 불필요합니다.
+     */
+    private suspend fun handleNonMemberAccess() {
+        try {
+            // Firebase Functions에서 이미 project_wrapper가 정리되었으므로
+            // 추가 정리 없이 DM 화면으로 즉시 복귀
+            navigationManger.navigateBack()
+        } catch (e: Exception) {
+            // 예외 발생해도 DM 화면으로 복귀
+            navigationManger.navigateBack()
+        }
     }
     
     private fun loadProjectDetails() {

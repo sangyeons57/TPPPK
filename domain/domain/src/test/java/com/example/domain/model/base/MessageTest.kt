@@ -6,8 +6,8 @@ import com.example.domain.vo.UserId
 import com.example.domain.vo.message.MessagePayload
 import com.example.domain.vo.message.MessageType
 import org.junit.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 
 class MessageTest {
 

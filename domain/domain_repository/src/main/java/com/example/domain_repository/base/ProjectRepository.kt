@@ -49,6 +49,15 @@ interface ProjectRepository : DefaultRepository<Project> {
     suspend fun leaveProject(projectId: DocumentId): CustomResult<Unit, Exception>
 
     /**
+     * 프로젝트에서 멤버를 제거합니다.
+     *
+     * @param projectId 프로젝트 ID
+     * @param targetUserId 제거할 사용자 ID
+     * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun removeMember(projectId: String, targetUserId: String): CustomResult<Unit, Exception>
+
+    /**
      * 프로젝트에 참여합니다.
      *
      * @param projectId 참여할 프로젝트 ID
@@ -64,5 +73,19 @@ interface ProjectRepository : DefaultRepository<Project> {
      * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
      */
     suspend fun transferOwnership(projectId: DocumentId, newOwnerId: String): CustomResult<Unit, Exception>
+
+    /**
+     * 프로젝트 멤버를 차단/금지합니다.
+     *
+     * @param projectId 프로젝트 ID
+     * @param targetUserId 차단할 사용자 ID
+     * @param blockType 차단 유형 ("blocked" 또는 "banned")
+     * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun blockMember(
+        projectId: DocumentId,
+        targetUserId: String,
+        blockType: String
+    ): CustomResult<Unit, Exception>
 
 }

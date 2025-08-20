@@ -70,9 +70,6 @@ class WebSocketMessageService @Inject constructor(
     // 코루틴 스코프 (자동 저장을 위한)
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    // Paging3 새로고침 이벤트 스트림
-    private val _messageRefreshEvents = MutableSharedFlow<String>() // channelId를 전달
-    val messageRefreshEvents: Flow<String> = _messageRefreshEvents.asSharedFlow()
 
     init {
         // WebSocketEventFlow 초기화 - GlobalWebSocketService의 메시지 스트림 연결
@@ -86,68 +83,45 @@ class WebSocketMessageService @Inject constructor(
      * WebSocket 메시지 이벤트를 Room DB에 자동으로 저장하는 SSOT 패턴 구현
      */
     private fun initializeAutoSaveToRoomDB() {
-        Log.i(TAG, "SSOT 패턴 초기화: WebSocket → Room DB 자동 저장 시작")
+        // SSOT 패턴 초기화: WebSocket → Room DB 자동 저장 시작
 
         // 새 메시지 이벤트 → Room DB 저장 + Paging3 새로고침
+        // 추가 필터링: SYSTEM 메시지는 저장하지 않음 (JOIN_ROOM 응답 등 제외)
         webSocketEventFlow.domainEvents
             .filterIsInstance<WebSocketDomainEvent.MessageReceived>()
+            .filter { event ->
+                // SYSTEM 메시지는 Room DB에 저장하지 않음 (UI 표시용 메시지 아님)
+                // 예: "Successfully joined room", "Authentication successful" 등
+                !isSystemMessage(event)
+            }
             .onEach { event ->
                 try {
                     // 입장하지 않은 방의 메시지는 저장하지 않음
                     val roomId = event.roomId
                     if (roomId.isNullOrBlank()) {
-                        Log.e(TAG, "roomId 가 비어있어 메시지를 저장하지 않음: ${event.messageId}")
+                        // roomId가 비어있어 메시지 저장하지 않음
                         return@onEach
                     }
 
-                    // 저장 허용 기준:
-                    // - 이미 입장한 방이거나
-                    // - DM 방(dm_ 접두사)이거나
-                    // - 초대/시스템 멤버 초대 등 특수 시스템 메시지 타입
-                    val isJoined = isRoomJoined(roomId)
-                    val isDmRoom = roomId.startsWith("dm_")
-                    val isSpecialSystemType = when (event.messageTypeString) {
-                        WebSocketFieldConstants.MESSAGE_TYPE_PROJECT_INVITE,
-                        WebSocketFieldConstants.MESSAGE_TYPE_SYSTEM_MEMBER_INVITATION,
-                        WebSocketFieldConstants.MESSAGE_TYPE_SYSTEM_PROJECT_JOIN,
-                        WebSocketFieldConstants.MESSAGE_TYPE_SYSTEM_PROJECT_LEAVE,
-                        WebSocketFieldConstants.MESSAGE_TYPE_SYSTEM_USER_INVITE -> true
-
-                        else -> false
-                    }
-                    val shouldPersist = isJoined || isDmRoom || isSpecialSystemType
-                    if (!shouldPersist) {
-                        Log.d(
-                            TAG,
-                            "입장하지 않은 방 일반 메시지 스킵: roomId=$roomId, messageId=${event.messageId}"
-                        )
-                        return@onEach
-                    }
+                    // 불필요한 필터 제거: 브로드캐스트 수신 시에도 메시지를 로컬(Room)에 저장하여
+                    // Paging3를 통해 즉시 UI에 반영되도록 한다.
+                    // (roomId만 유효하면 저장)
 
                     // 중복 저장 체크: 동일 ID가 있어도 업서트하여 내용/채널을 최신화한다.
                     // 이유: 전송 직후 로컬에 존재하더라도 서버 에코(payload/타임스탬프)가 더 정확하며,
                     // 채널/정렬 키(createdAt) 동기화를 위해 항상 upsert가 안전함.
                     val existingMessage = messageRepository.findById(event.messageId)
                     if (existingMessage != null) {
-                        Log.d(
-                            TAG,
-                            "메시지 이미 존재함, 업서트로 최신화 진행: ${event.messageId} (roomId=${event.roomId})"
-                        )
+                        // 메시지 이미 존재함, 업서트로 최신화 진행
                     }
 
                     val message = webSocketDomainMapper.messageReceivedToDomainMessage(event)
-                    val result = messageRepository.save(message)
+                    val result = messageRepository.saveReceivedMessage(message)
 
                     when (result) {
                         is CustomResult.Success -> {
-                            Log.d(TAG, "메시지 자동 저장 성공: ${event.messageId}")
-
-                            // Paging3 새로고침 이벤트 발송 (해당 채널만)
-                            // Room invalidation만으로도 갱신되지만, 신규 삽입일 때만 보조 신호 발송
-                            if (existingMessage == null) {
-                                _messageRefreshEvents.emit(roomId)
-                                Log.d(TAG, "Paging3 새로고침 이벤트 발송: $roomId (new)")
-                            }
+                            // 메시지 자동 저장 성공
+                            // Room 자동 invalidation에 의존하여 Paging3가 자동으로 갱신됨
                         }
 
                         is CustomResult.Failure -> {
@@ -155,7 +129,7 @@ class WebSocketMessageService @Inject constructor(
                         }
 
                         else -> {
-                            Log.d(TAG, "메시지 자동 저장 상태: ${event.messageId}")
+                            // 메시지 자동 저장 상태 확인
                         }
                     }
                 } catch (e: Exception) {
@@ -181,7 +155,7 @@ class WebSocketMessageService @Inject constructor(
                             MessagePayload.forText(event.newContent)
                         }.clearOptimisticMeta()
                         existing.updatePayload(updated)
-                        messageRepository.save(existing)
+                        messageRepository.saveReceivedMessage(existing)
                     } else {
                         // 업서트: 없는 경우 새 메시지로 생성(isNew=true)
                         val created = Message.create(
@@ -193,7 +167,7 @@ class WebSocketMessageService @Inject constructor(
                             mentions = emptyList(),
                             channelId = ChannelId(event.roomId ?: "")
                         )
-                        messageRepository.save(created)
+                        messageRepository.saveReceivedMessage(created)
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "메시지 수정 자동 저장 중 예외: ${event.messageId}", e)
@@ -210,7 +184,7 @@ class WebSocketMessageService @Inject constructor(
                     val existingMessage = messageRepository.findById(event.messageId)
                     if (existingMessage != null) {
                         existingMessage.delete()
-                        messageRepository.save(existingMessage)
+                        messageRepository.saveReceivedMessage(existingMessage)
                         Log.d(TAG, "메시지 삭제 처리 완료: ${event.messageId}")
                     } else {
                         // 업서트: 없는 경우 새 메시지 생성 후 삭제 마킹(isNew=true)
@@ -224,7 +198,7 @@ class WebSocketMessageService @Inject constructor(
                             channelId = ChannelId(event.roomId ?: "")
                         )
                         created.delete()
-                        messageRepository.save(created)
+                        messageRepository.saveReceivedMessage(created)
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "메시지 삭제 자동 저장 중 예외: ${event.messageId}", e)
@@ -246,10 +220,7 @@ class WebSocketMessageService @Inject constructor(
 
                             when (result) {
                                 is CustomResult.Success -> {
-                                    Log.d(
-                                        TAG,
-                                        "메시지 ACK 처리 완료 (OutBox DISPATCHED): ${event.messageId}"
-                                    )
+                                    // 메시지 ACK 처리 완료
 
                                     // ACK 수신 시, 로컬 payload의 업로딩 표식을 정리하여 로딩 인디케이터 재등장을 방지
                                     try {
@@ -265,7 +236,7 @@ class WebSocketMessageService @Inject constructor(
                                                 100
                                             )
                                             existing.updatePayload(payload)
-                                            messageRepository.save(existing)
+                                            messageRepository.saveReceivedMessage(existing)
                                             Log.d(TAG, "ACK 후 업로딩 플래그 정리 완료: ${event.messageId}")
                                         }
                                     } catch (e: Exception) {
@@ -526,8 +497,7 @@ class WebSocketMessageService @Inject constructor(
 
             // 방 입장 메시지 전송
             val sendResult = if (userId != null) {
-                val joinMessage = WebSocketMessage(
-                    type = WebSocketMessage.TYPE_JOIN_ROOM,
+                val joinMessage = WebSocketMessage.createJoinRoomMessage(
                     roomId = roomId,
                     senderId = userId.value,
                     timestamp = Instant.now().epochSecond.toDouble()
@@ -648,107 +618,36 @@ class WebSocketMessageService @Inject constructor(
     // ================================
 
     /**
-     * 메시지 전송 - MessagePayload 기반
+     * 메시지 전송 - 도메인 Message 기반(단일 경로)
      */
     suspend fun sendMessage(
         roomId: String,
-        senderId: UserId,
-        payload: MessagePayload,
-        messageId: DocumentId,
-        replyToMessageId: DocumentId? = null,
-        projectId: String? = null,
-        channelType: String? = null
+        message: Message
     ): Result<Unit> {
-        Log.i(TAG, "메시지 전송 시도 (payload): messageId=${messageId.value}, roomId=$roomId")
+        Log.i(TAG, "도메인 메시지 전송 시도: messageId=${message.id.value}, roomId=$roomId")
 
         try {
-            // Room DB 저장은 ViewModel에서 이미 처리되므로 여기서는 스킵
-            Log.d(TAG, "Room DB 저장은 ViewModel에서 처리됨, WebSocket 전송만 진행: ${messageId.value}")
-
-            // 임시 입장 필요 여부 확인
             val needTemporaryJoin = !isRoomJoined(roomId)
             if (needTemporaryJoin) {
                 Log.i(TAG, "방 미입장 상태 감지 → 임시 입장 후 전송 진행: roomId=$roomId")
-                val joinResult = joinRoom(roomId, senderId)
+                val joinResult = joinRoom(roomId, message.senderId)
                 if (joinResult.isFailure) {
                     Log.e(TAG, "임시 방 입장 실패: ${joinResult.exceptionOrNull()?.message}")
                     return joinResult
                 }
             }
 
-            // 메시지 타입 자동 감지 (특수 메시지 식별 시 messageType 포함 전송)
-            val (typeString, wsMessage) = try {
-                val json = payload.asJsonObject()
-                val projectName =
-                    json[WebSocketFieldConstants.FIELD_PROJECT_NAME]?.jsonPrimitive?.contentOrNull
-                val inviterName =
-                    json[WebSocketFieldConstants.FIELD_INVITER_NAME]?.jsonPrimitive?.contentOrNull
-                val invitationId =
-                    json[WebSocketFieldConstants.FIELD_INVITATION_ID]?.jsonPrimitive?.contentOrNull
-                val projectIdInPayload =
-                    json[WebSocketFieldConstants.FIELD_PROJECT_ID]?.jsonPrimitive?.contentOrNull
-
-                // PROJECT_INVITE 체크
-                if (!projectName.isNullOrBlank() && !inviterName.isNullOrBlank() && !invitationId.isNullOrBlank()) {
-                    val msg = WebSocketMessage.createChatMessageWithType(
-                        roomId = roomId,
-                        senderId = senderId.value,
-                        messagePayload = payload,
-                        messageId = messageId.value,
-                        messageTypeString = WebSocketFieldConstants.MESSAGE_TYPE_PROJECT_INVITE,
-                        replyToMessageId = replyToMessageId?.value,
-                        timestamp = Instant.now().epochSecond.toDouble(),
-                        projectId = projectId ?: projectIdInPayload
-                    )
-                    WebSocketFieldConstants.MESSAGE_TYPE_PROJECT_INVITE to msg
-                } else {
-                    // SYSTEM_MEMBER_INVITATION 체크 (projectId, projectName, inviterName, targetUserId)
-                    val pid = json["projectId"]?.jsonPrimitive?.contentOrNull
-                    val pname = json["projectName"]?.jsonPrimitive?.contentOrNull
-                    val invName = json["inviterName"]?.jsonPrimitive?.contentOrNull
-                    val targetUserId = json["targetUserId"]?.jsonPrimitive?.contentOrNull
-                    if (!pid.isNullOrBlank() && !pname.isNullOrBlank() && !invName.isNullOrBlank() && !targetUserId.isNullOrBlank()) {
-                        val msg = WebSocketMessage.createChatMessageWithType(
-                            roomId = roomId,
-                            senderId = senderId.value,
-                            messagePayload = payload,
-                            messageId = messageId.value,
-                            messageTypeString = WebSocketFieldConstants.MESSAGE_TYPE_SYSTEM_MEMBER_INVITATION,
-                            replyToMessageId = replyToMessageId?.value,
-                            timestamp = Instant.now().epochSecond.toDouble(),
-                            projectId = projectId ?: pid
-                        )
-                        WebSocketFieldConstants.MESSAGE_TYPE_SYSTEM_MEMBER_INVITATION to msg
-                    } else {
-                        null to WebSocketMessage.createChatMessage(
-                            roomId = roomId,
-                            senderId = senderId.value,
-                            messagePayload = payload,
-                            messageId = messageId.value,
-                            replyToMessageId = replyToMessageId?.value,
-                            timestamp = Instant.now().epochSecond.toDouble(),
-                            projectId = projectId
-                        )
-                    }
-                }
-            } catch (_: Exception) {
-                null to WebSocketMessage.createChatMessage(
-                    roomId = roomId,
-                    senderId = senderId.value,
-                    messagePayload = payload,
-                    messageId = messageId.value,
-                    replyToMessageId = replyToMessageId?.value,
-                    timestamp = Instant.now().epochSecond.toDouble(),
-                    projectId = projectId
-                )
-            }
+            val wsMessage = WebSocketMessage.createFromDomainMessage(
+                message = message,
+                roomId = roomId
+            )
 
             val sendResult = webSocketManager.sendMessage(wsMessage).also { result ->
                 val status =
                     if (result.isSuccess) OperationStatus.SUCCESS else OperationStatus.FAILED
                 Log.i(
                     TAG,
-                    "WebSocket 메시지 SEND $status: messageId=${messageId.value}${typeString?.let { ", type=$it" } ?: ""}"
+                    "WebSocket 메시지 SEND $status: messageId=${message.id.value}, messageType=${message.messageType}"
                 )
 
                 if (result.isFailure) {
@@ -756,16 +655,15 @@ class WebSocketMessageService @Inject constructor(
                 }
             }
 
-            // 전송 성공 시 ACK 대기 후 임시 퇴장
             if (sendResult.isSuccess && needTemporaryJoin) {
                 try {
                     val ack = withTimeoutOrNull(10_000) {
-                        webSocketEventFlow.getAckEventsForMessage(messageId.value).first()
+                        webSocketEventFlow.getAckEventsForMessage(message.id.value).first()
                     }
                     if (ack != null) {
-                        Log.i(TAG, "메시지 ACK 수신 후 임시 퇴장 진행: messageId=${messageId.value}")
+                        Log.i(TAG, "메시지 ACK 수신 후 임시 퇴장 진행: messageId=${message.id.value}")
                     } else {
-                        Log.w(TAG, "ACK 대기 시간 초과, 그래도 임시 퇴장 진행: messageId=${messageId.value}")
+                        Log.w(TAG, "ACK 대기 시간 초과, 그래도 임시 퇴장 진행: ${message.id.value}")
                     }
                 } catch (e: Exception) {
                     Log.w(TAG, "ACK 대기 중 예외 발생, 임시 퇴장 진행: ${e.message}")
@@ -781,34 +679,11 @@ class WebSocketMessageService @Inject constructor(
 
             return sendResult
         } catch (e: Exception) {
-            Log.e(TAG, "메시지 전송 과정 중 예외: ${messageId.value}", e)
+            Log.e(TAG, "도메인 메시지 전송 과정 중 예외: ${message.id.value}", e)
             return Result.failure(e)
         }
     }
 
-    /**
-     * 메시지 전송 - 텍스트 content (하위 호환용)
-     */
-    suspend fun sendMessageWithContent(
-        roomId: String,
-        senderId: UserId,
-        content: String,
-        messageId: DocumentId,
-        replyToMessageId: DocumentId? = null,
-        projectId: String? = null,
-        channelType: String? = null
-    ): Result<Unit> {
-        val payload = MessagePayload.forText(content)
-        return sendMessage(
-            roomId,
-            senderId,
-            payload,
-            messageId,
-            replyToMessageId,
-            projectId,
-            channelType
-        )
-    }
 
     /**
      * 메시지 수정 - MessagePayload 기반
@@ -817,7 +692,6 @@ class WebSocketMessageService @Inject constructor(
         roomId: String,
         messageId: DocumentId,
         newPayload: MessagePayload,
-        projectId: String? = null,
         channelType: String? = null
     ): Result<Unit> {
         Log.i(TAG, "메시지 수정 시도 (payload): messageId=${messageId.value}, roomId=$roomId")
@@ -825,8 +699,7 @@ class WebSocketMessageService @Inject constructor(
         val message = WebSocketMessage.createEditMessage(
             roomId = roomId,
             messageId = messageId.value,
-            newPayload = newPayload,
-            projectId = projectId
+            newPayload = newPayload
         )
 
         return webSocketManager.sendMessage(message).also { result ->
@@ -846,11 +719,10 @@ class WebSocketMessageService @Inject constructor(
         roomId: String,
         messageId: DocumentId,
         newContent: String,
-        projectId: String? = null,
         channelType: String? = null
     ): Result<Unit> {
         val newPayload = MessagePayload.forText(newContent)
-        return editMessage(roomId, messageId, newPayload, projectId, channelType)
+        return editMessage(roomId, messageId, newPayload, channelType)
     }
 
     /**
@@ -859,15 +731,13 @@ class WebSocketMessageService @Inject constructor(
     suspend fun deleteMessage(
         roomId: String,
         messageId: DocumentId,
-        projectId: String? = null,
         channelType: String? = null
     ): Result<Unit> {
         Log.i(TAG, "메시지 삭제 시도: messageId=${messageId.value}, roomId=$roomId")
 
         val message = WebSocketMessage.createDeleteMessage(
             roomId = roomId,
-            messageId = messageId.value,
-            projectId = projectId
+            messageId = messageId.value
         )
 
         return webSocketManager.sendMessage(message).also { result ->
@@ -877,6 +747,35 @@ class WebSocketMessageService @Inject constructor(
             if (result.isFailure) {
                 Log.e(TAG, "메시지 삭제 실패: ${result.exceptionOrNull()?.message}")
             }
+        }
+    }
+
+    /**
+     * 시스템 메시지인지 확인 (대부분 UI에 표시되지 않아야 함)
+     * 예: "Successfully joined room", "Authentication successful" 등
+     */
+    private fun isSystemMessage(event: WebSocketDomainEvent.MessageReceived): Boolean {
+        // senderId가 "system", "server" 또는 메시지 내용이 시스템 메시지 패턴인 경우
+        return when {
+            event.senderId == "system" || event.senderId == "server" -> {
+                // 시스템/서버 메시지는 대부분 UI에 표시하지 않음
+                when {
+                    event.content.contains("Successfully joined room") -> true
+                    event.content.contains("Successfully left room") -> true
+                    event.content.contains("Authentication successful") -> true
+                    event.content.contains("Message delivered") -> true
+                    event.content.contains("Message edit delivered") -> true
+                    event.content.contains("Message deletion delivered") -> true
+                    else -> false // 다른 서버 메시지는 저장할 수 있음
+                }
+            }
+
+            event.messageTypeString == "SYSTEM" -> {
+                // messageType이 SYSTEM인 경우도 대부분 시스템 메시지
+                true
+            }
+
+            else -> false
         }
     }
 

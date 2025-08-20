@@ -6,6 +6,7 @@ import com.example.domain.model.base.Message
 import com.example.domain.vo.CollectionPath
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.ProjectId
+import com.example.domain.vo.ChannelId
 import com.example.domain_repository.base.MessageRepository
 import javax.inject.Inject
 
@@ -26,41 +27,45 @@ class SendMessageUseCase @Inject constructor(
         projectId: ProjectId? = null,
     ): CustomResult<DocumentId, Exception> {
         return try {
-            val channelId = message.channelId.value
+            // Compose composite channelId when projectId is provided (ProjectId:ChannelId)
+            val compositeChannelId = if (projectId != null && !message.channelId.hasDelimiter()) {
+                ChannelId.compose(projectId.value, message.channelId.value)
+            } else message.channelId
 
-            // Ensure message has a non-empty id before any persistence or sending
-            val messageToSave = if (message.id.isNotAssigned()) {
-                try {
-                    Message.create(
-                        id = DocumentId.generate(),
-                        senderId = message.senderId,
-                        messageType = message.messageType,
-                        payload = message.payload,
-                        replyToMessageId = message.replyToMessageId,
-                        mentions = message.mentions,
-                        channelId = message.channelId
-                    )
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to generate Message ID; aborting send", e)
-                    return CustomResult.Failure(e)
-                }
+            val channelIdValue = compositeChannelId.value
+
+            // Ensure message has a valid ID - no ID regeneration allowed for consistency
+            if (message.id.isNotAssigned()) {
+                Log.e(TAG, "Message ID must be assigned before calling SendMessageUseCase")
+                return CustomResult.Failure(IllegalArgumentException("Message ID is required"))
+            }
+            val messageToSave = if (compositeChannelId.value != message.channelId.value) {
+                // Reconstitute message with the composite ChannelId while preserving fields
+                Message.fromDataSource(
+                    id = message.id,
+                    senderId = message.senderId,
+                    messageType = message.messageType,
+                    payload = message.payload,
+                    replyToMessageId = message.replyToMessageId,
+                    createdAt = message.createdAt,
+                    updatedAt = message.updatedAt,
+                    isDeleted = message.isDeleted,
+                    mentions = message.mentions,
+                    channelId = compositeChannelId
+                )
             } else message
 
             // Ensure repository is scoped to the correct collection
             try {
-                if (projectId != null) {
-                    messageRepository.setCollection(
-                        CollectionPath.projectChannelMessages(projectId.value, channelId)
-                    )
-                } else {
-                    messageRepository.setCollection(CollectionPath.dmChannelMessages(channelId))
-                }
+                messageRepository.setCollection(
+                    CollectionPath.messages(compositeChannelId)
+                )
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to set repository collection", e)
             }
 
             // 1) Local save (also enqueues OutBox inside repository transaction)
-            when (val saveResult = messageRepository.save(messageToSave)) {
+            when (val saveResult = messageRepository.sendMessage(messageToSave)) {
                 is CustomResult.Failure -> {
                     return CustomResult.Failure(saveResult.error)
                 }
@@ -68,13 +73,12 @@ class SendMessageUseCase @Inject constructor(
                     val messageId = saveResult.data
                     // 2) WebSocket send (best-effort; return success on local save)
                     try {
-                        val roomUseCases = webSocketUseCaseProvider.createForRoom(channelId)
+                        // WebSocket room uses leaf channel id
+                        val roomId = compositeChannelId.last()
+                        val roomUseCases = webSocketUseCaseProvider.createForRoom(roomId)
+                        // 도메인 메시지 기반 전송 API 사용
                         val wsResult = roomUseCases.sendMessageUseCase(
-                            senderId = messageToSave.senderId,
-                            payload = messageToSave.payload,
-                            messageId = messageId,
-                            replyToMessageId = messageToSave.replyToMessageId,
-                            projectId = projectId?.value
+                            message = messageToSave
                         )
                         if (!wsResult.isSuccess) {
                             Log.e(TAG, "WebSocket send failed for message: ${messageId.value}")

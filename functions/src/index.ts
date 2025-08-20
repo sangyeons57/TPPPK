@@ -42,6 +42,7 @@ export { getFriendRequests } from "./domains/friends/http/getFriendRequests";
 // =====================================
 
 // HTTP Functions
+export { deleteProject } from "./domains/projects/http/deleteProject";
 export { removeProjectProfileImage } from "./domains/projects/http/removeProfileImage";
 
 // Event Functions
@@ -53,7 +54,7 @@ export { onProjectChange, onProjectDelete } from "./domains/projects/events/onPr
 // =====================================
 
 // HTTP Functions
-export { createDMChannel } from "./domains/dm/http/createChannel";
+export { createDMChannel } from "./domains/dm/http/createDMChannel";
 export { blockDMChannel } from "./domains/dm/http/blockChannel";
 export { unblockDMChannel } from "./domains/dm/http/unblockChannel";
 
@@ -64,6 +65,7 @@ export { unblockDMChannel } from "./domains/dm/http/unblockChannel";
 // HTTP Functions
 export { joinProject } from "./domains/members/http/joinProject";
 export { leaveProject } from "./domains/members/http/leaveProject";
+export { blockMember } from "./domains/members/http/blockMember";
 
 // =====================================
 // SYSTEM DOMAIN  
@@ -71,6 +73,7 @@ export { leaveProject } from "./domains/members/http/leaveProject";
 
 // HTTP Functions
 export { helloWorld } from "./domains/system/http/helloWorld";
+export { cleanupIdempotency } from "./domains/system/http/cleanupIdempotency";
 
 // =====================================
 // ARCHITECTURE COMPLETE ✅

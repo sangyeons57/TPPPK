@@ -40,7 +40,7 @@ class ToggleTaskCheckUseCaseImpl @Inject constructor(
                 when (currentUserResult) {
                     is CustomResult.Success -> {
                         val currentUserId = UserId(currentUserResult.data.userId.internalValue)
-                        task.updateTaskType(newTaskType, currentUserId, DateTimeUtil.SERVER_TIMESTAMP_MARKER)
+                        task.updateTaskType(newTaskType, currentUserId, DateTimeUtil.nowInstant())
                     }
                     is CustomResult.Failure -> return CustomResult.Failure(currentUserResult.error)
                     is CustomResult.Initial -> return CustomResult.Initial
@@ -53,12 +53,20 @@ class ToggleTaskCheckUseCaseImpl @Inject constructor(
             }
         }
 
-        return when (val result = taskRepository.save(task)) {
-            is CustomResult.Success -> CustomResult.Success(Unit)
-            is CustomResult.Failure -> CustomResult.Failure(result.error)
-            is CustomResult.Initial -> CustomResult.Initial
-            is CustomResult.Loading -> CustomResult.Loading
-            is CustomResult.Progress -> CustomResult.Progress(result.progress)
-        }
+        val updated = Task.fromDataSource(
+            id = task.id,
+            channelId = task.channelId,
+            taskType = task.taskType,
+            status = task.status,
+            content = task.content,
+            order = task.order,
+            checkedBy = task.checkedBy,
+            checkedAt = task.checkedAt,
+            createdAt = task.createdAt,
+            updatedAt = DateTimeUtil.nowInstant()
+        )
+
+        taskRepository.addTask(updated)
+        return CustomResult.Success(Unit)
     }
 }

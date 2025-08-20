@@ -1,8 +1,10 @@
 package com.example.feature_member_list.dialog.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
+import com.example.domain.vo.ChannelId
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.ProjectId
 import com.example.domain.vo.UserId
@@ -15,13 +17,11 @@ import com.example.domain_usecase.provider.dm.DMUseCaseProvider
 import com.example.domain_usecase.provider.dm.DMUseCases
 import com.example.domain_usecase.usecase.user.SearchUsersByNameUseCaseImpl
 import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
+import com.example.domain_usecase.provider.user.UserUseCaseProvider
+import com.example.domain_usecase.provider.user.UserUseCases
 import com.example.domain_usecase.provider.project.ProjectMemberUseCases
 import com.example.domain_usecase.provider.project.CoreProjectUseCaseProvider
-import com.example.websocket.usecase.SendMessageUseCase as WsSendMessageUseCase
-import com.example.domain.vo.message.MessagePayload
-import com.example.domain.model.base.Message
-import com.example.domain.vo.ChannelId
-import com.example.domain.vo.message.MessageType
+import kotlinx.coroutines.flow.first
 import com.example.feature_member_list.dialog.ui.FriendItem
 import com.example.feature_member_list.dialog.ui.SearchedUser
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -60,13 +60,14 @@ class AddMemberViewModel @Inject constructor(
     private val authSessionUseCaseProvider: AuthSessionUseCaseProvider,
     private val searchUsersByNameUseCase: SearchUsersByNameUseCaseImpl,
     private val coreProjectUseCaseProvider: CoreProjectUseCaseProvider,
-    private val wsSendMessageUseCase: WsSendMessageUseCase,
+    private val userUseCaseProvider: UserUseCaseProvider,
 ) : ViewModel() {
 
     private var projectMemberUseCases: ProjectMemberUseCases? = null
     private var dmUseCases: DMUseCases? = null
     private var friendUseCases: FriendUseCases? = null
     private var authSessionUseCases: AuthSessionUseCases? = null
+    private var userUseCases: UserUseCases? = null
 
     private val _uiState = MutableStateFlow(AddMemberDialogUiState())
     val uiState: StateFlow<AddMemberDialogUiState> = _uiState.asStateFlow()
@@ -76,6 +77,7 @@ class AddMemberViewModel @Inject constructor(
 
     init {
         authSessionUseCases = authSessionUseCaseProvider.create()
+        userUseCases = userUseCaseProvider.createForUser()
     }
 
     /**
@@ -98,7 +100,7 @@ class AddMemberViewModel @Inject constructor(
                             val friends = friendsResult.data
                             val friendItems = friends.map { friend ->
                                 FriendItem(
-                                    userId = UserId(friend.id.value), // DocumentId를 UserId로 변환
+                                    userId = UserId.from(friend.id), // DocumentId를 UserId로 변환
                                     userName = friend.name, // Friend 모델의 Name 타입
                                     userEmail = null, // 이메일은 추가 조회 필요 (나중에 개선)
                                     profileImageUrl = friend.profileImageUrl?.value,
@@ -157,7 +159,7 @@ class AddMemberViewModel @Inject constructor(
                             val users = result.data
                             val searchedUsers = users.map { user ->
                                 SearchedUser(
-                                    userId = UserId(user.id.value),
+                                    userId = UserId.from(user.id),
                                     userName = user.name,
                                     userEmail = user.email.value,
                                     profileImageUrl = null // User model doesn't have profileImageUrl property
@@ -233,13 +235,20 @@ class AddMemberViewModel @Inject constructor(
      * 선택된 멤버들에게 DM으로 프로젝트 초대를 보냅니다.
      */
     fun inviteMembers(projectId: DocumentId, selectedMemberIds: Set<UserId>) {
+        Log.d(
+            "AddMemberViewModel",
+            "inviteMembers 시작 - projectId: ${projectId.value}, memberCount: ${selectedMemberIds.size}"
+        )
+        
         if (selectedMemberIds.isEmpty()) {
+            Log.w("AddMemberViewModel", "선택된 멤버가 없음")
             viewModelScope.launch {
                 _eventFlow.emit(AddMemberDialogEvent.ShowSnackbar("초대할 사용자를 선택해주세요.")) 
             }
             return
         }
 
+        Log.d("AddMemberViewModel", "초대 대상 멤버들: ${selectedMemberIds.map { it.value }}")
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingFriends = true) }
             var successCount = 0
@@ -247,16 +256,25 @@ class AddMemberViewModel @Inject constructor(
 
             try {
                 // 현재 사용자 세션과 사용자 ID/이름 확보
+                Log.d("AddMemberViewModel", "현재 사용자 세션 가져오는 중...")
                 val sessionResult = authSessionUseCases?.getCurrentUserSessionUseCase?.invoke()
                 val currentUserId = when (sessionResult) {
-                    is CustomResult.Success -> sessionResult.data.userId
+                    is CustomResult.Success -> {
+                        Log.d(
+                            "AddMemberViewModel",
+                            "현재 사용자 세션 확인됨: ${sessionResult.data.userId.value}"
+                        )
+                        sessionResult.data.userId
+                    }
                     is CustomResult.Failure -> {
+                        Log.e("AddMemberViewModel", "세션 정보 가져오기 실패", sessionResult.error)
                         _eventFlow.emit(AddMemberDialogEvent.ShowSnackbar("세션 정보를 가져오지 못했습니다."))
                         _uiState.update { it.copy(isLoadingFriends = false) }
                         return@launch
                     }
 
                     else -> {
+                        Log.e("AddMemberViewModel", "사용자 세션 상태가 올바르지 않음: $sessionResult")
                         _eventFlow.emit(AddMemberDialogEvent.ShowSnackbar("로그인이 필요합니다."))
                         _uiState.update { it.copy(isLoadingFriends = false) }
                         return@launch
@@ -264,93 +282,246 @@ class AddMemberViewModel @Inject constructor(
                 }
 
                 // 프로젝트 이름 확보
+                Log.d("AddMemberViewModel", "프로젝트 정보 가져오는 중: ${projectId.value}")
                 val coreProjectUseCases =
                     coreProjectUseCaseProvider.createForProject(projectId, currentUserId)
                 val projectResult =
                     coreProjectUseCases.getProjectDetailsStreamUseCase(projectId).firstOrNull()
                 val projectName = when (projectResult) {
-                    is CustomResult.Success -> projectResult.data.name.value
-                    else -> "프로젝트"
+                    is CustomResult.Success -> {
+                        Log.d("AddMemberViewModel", "프로젝트 정보 확인됨: ${projectResult.data.name.value}")
+                        projectResult.data.name.value
+                    }
+
+                    else -> {
+                        Log.w("AddMemberViewModel", "프로젝트 정보를 가져올 수 없음, 기본값 사용")
+                        "프로젝트"
+                    }
                 }
 
-                // DM UseCases 생성 (현재 사용자 기반)
+                // DM UseCases 생성 (현재 사용자 기준)
+                Log.d("AddMemberViewModel", "DM UseCases 생성 중...")
                 if (dmUseCases == null) {
                     dmUseCases = dmUseCaseProvider.createForUser(currentUserId)
                 }
 
-                for (memberId in selectedMemberIds) {
-                    try {
-                        // 대상 사용자 이름 찾기 (친구 목록에서 또는 검색 결과에서)
-                        val targetUserName = findUserNameById(memberId)
-                        if (targetUserName != null) {
-                            // 1) DM 채널 생성 시도 → 이미 존재시 기존 채널 조회
-                            val dmCases = dmUseCases ?: continue
-                            val dmCreateFlow =
-                                dmCases.addDmChannelUseCase(UserName(targetUserName.value))
-                            var channelId: String? = null
-                            dmCreateFlow.collect { res ->
-                                when (res) {
-                                    is CustomResult.Success -> channelId = res.data.value
-                                    is CustomResult.Failure -> {
-                                        val msg = res.error.message ?: ""
-                                        if (msg.contains(
-                                                "already exists",
-                                                true
-                                            ) || msg.contains("dmChannel", true)
-                                        ) {
-                                            val existing =
-                                                dmCases.getDmChannelUseCase.findByOtherUserId(
-                                                    memberId
-                                                )
-                                            if (existing is CustomResult.Success) {
-                                                channelId = existing.data.id.value
-                                            }
-                                        }
-                                    }
+                // ProjectMember UseCases 생성
+                Log.d("AddMemberViewModel", "ProjectMember UseCases 생성 중...")
+                if (projectMemberUseCases == null) {
+                    projectMemberUseCases = projectMemberUseCaseProvider.createForProject(projectId)
+                    Log.d("AddMemberViewModel", "ProjectMember UseCases 생성 완료")
+                } else {
+                    Log.d("AddMemberViewModel", "ProjectMember UseCases 이미 존재함")
+                }
 
-                                    else -> {}
-                                }
+                Log.d("AddMemberViewModel", "멤버별 초대 메시지 전송 시작")
+                for (memberId in selectedMemberIds) {
+                    Log.d("AddMemberViewModel", "멤버 초대 처리 중: ${memberId.value}")
+                    try {
+                        val dmCases = dmUseCases ?: continue
+
+                        // 1) 사용자 존재 확인
+                        Log.d("AddMemberViewModel", "사용자 존재 확인: ${memberId.value}")
+                        val userCases = userUseCases ?: continue
+                        val userExistsResult =
+                            userCases.getUserByIdUseCase(DocumentId.from(memberId))
+                        when (userExistsResult) {
+                            is CustomResult.Success -> {
+                                Log.d(
+                                    "AddMemberViewModel",
+                                    "사용자 존재 확인됨: ${userExistsResult.data.name.value}"
+                                )
                             }
 
-                            if (channelId == null) {
+                            is CustomResult.Failure -> {
+                                Log.e(
+                                    "AddMemberViewModel",
+                                    "사용자를 찾을 수 없음 - memberId: ${memberId.value}"
+                                )
                                 failureCount++
                                 continue
                             }
 
-                            // 2) Payload 구성 (Project 전용 고정 포맷)
-                            val inviterName =
-                                (sessionResult as CustomResult.Success).data.displayName?.value
-                                    ?: "사용자"
-                            val payload = MessagePayload.forProjectInviteBasic(
-                                projectId = projectId.value,
-                                projectName = projectName,
-                                inviterName = inviterName,
-                                targetUserId = memberId.value,
-                            )
-
-                            // 3) 도메인 Message 생성 후 WS 통합 UseCase로 전송
-                            val message = Message.create(
-                                id = DocumentId.generate(),
-                                senderId = currentUserId,
-                                messageType = MessageType.SYSTEM_MEMBER_INVITATION,
-                                payload = payload,
-                                replyToMessageId = null,
-                                mentions = emptyList(),
-                                channelId = ChannelId(channelId!!)
-                            )
-
-                            when (val sendRes = wsSendMessageUseCase(message, projectId = null)) {
-                                is CustomResult.Success -> successCount++
-                                else -> failureCount++
+                            else -> {
+                                Log.e(
+                                    "AddMemberViewModel",
+                                    "사용자 확인 중 오류 - memberId: ${memberId.value}"
+                                )
+                                failureCount++
+                                continue
                             }
-                        } else {
+                        }
+
+                        // 2) DM 채널 존재 확인
+                        Log.d("AddMemberViewModel", "DM 채널 존재 확인: ${memberId.value}")
+                        val channelExistsResult =
+                            dmCases.checkDmChannelExistsUseCase(memberId.value)
+
+                        val channelId = when (channelExistsResult) {
+                            is CustomResult.Success -> {
+                                if (channelExistsResult.data != null) {
+                                    // 채널 존재
+                                    Log.d(
+                                        "AddMemberViewModel",
+                                        "기존 DM 채널 사용: ${channelExistsResult.data}"
+                                    )
+                                    ChannelId(channelExistsResult.data!!)
+                                } else {
+                                    // 채널 없음 - 새로 생성
+                                    Log.d(
+                                        "AddMemberViewModel",
+                                        "DM 채널 생성 필요 - memberId: ${memberId.value}"
+                                    )
+
+                                    // Loading 상태를 제외한 실제 결과 대기
+                                    var createResult: CustomResult<DocumentId, Exception>? = null
+                                    dmCases.addDmChannelUseCase(memberId.value).collect { result ->
+                                        Log.d("AddMemberViewModel", "DM 채널 생성 결과: $result")
+                                        when (result) {
+                                            is CustomResult.Loading -> {
+                                                Log.d("AddMemberViewModel", "DM 채널 생성 중...")
+                                                // Loading 상태는 무시하고 계속 대기
+                                            }
+
+                                            is CustomResult.Success, is CustomResult.Failure -> {
+                                                createResult = result
+                                                return@collect // collect 종료
+                                            }
+
+                                            else -> {
+                                                Log.w(
+                                                    "AddMemberViewModel",
+                                                    "예상치 못한 DM 채널 생성 상태: $result"
+                                                )
+                                                createResult =
+                                                    CustomResult.Failure(Exception("Unexpected result type: ${result::class.simpleName}"))
+                                                return@collect
+                                            }
+                                        }
+                                    }
+
+                                    when (createResult) {
+                                        is CustomResult.Success -> {
+                                            Log.d(
+                                                "AddMemberViewModel",
+                                                "DM 채널 생성 성공: ${(createResult as CustomResult.Success<DocumentId>).data.value}"
+                                            )
+                                            ChannelId.from((createResult as CustomResult.Success<DocumentId>).data)
+                                        }
+
+                                        is CustomResult.Failure -> {
+                                            Log.e(
+                                                "AddMemberViewModel",
+                                                "DM 채널 생성 실패: ${(createResult as CustomResult.Failure<Exception>).error.message}"
+                                            )
+                                            failureCount++
+                                            continue
+                                        }
+
+                                        null -> {
+                                            Log.e("AddMemberViewModel", "DM 채널 생성 결과를 받지 못했습니다")
+                                            failureCount++
+                                            continue
+                                        }
+
+                                        else -> {
+                                            Log.e(
+                                                "AddMemberViewModel",
+                                                "DM 채널 생성 중 알 수 없는 오류: $createResult"
+                                            )
+                                            failureCount++
+                                            continue
+                                        }
+                                    }
+                                }
+                            }
+
+                            is CustomResult.Failure -> {
+                                Log.e(
+                                    "AddMemberViewModel",
+                                    "DM 채널 확인 실패: ${channelExistsResult.error.message}"
+                                )
+                                failureCount++
+                                continue
+                            }
+
+                            else -> {
+                                Log.e("AddMemberViewModel", "DM 채널 확인 중 알 수 없는 오류")
+                                failureCount++
+                                continue
+                            }
+                        }
+
+                        // 3) 프로젝트 초대 메시지 전송 (단순화된 UseCase 사용)
+                        Log.d("AddMemberViewModel", "프로젝트 초대 메시지 전송 - channelId: $channelId")
+                        val messageUseCases = projectMemberUseCases ?: continue
+
+                        Log.d("AddMemberViewModel", "🔥 UseCase 호출 직전 - memberId: ${memberId.value}")
+
+                        try {
+                            messageUseCases.sendProjectInviteMessageUseCase(
+                                channelId,
+                                projectId,
+                                memberId
+                            )
+                                .collect { result ->
+                                    Log.d(
+                                        "AddMemberViewModel",
+                                        "🔥 collect 콜백 실행됨 - result: $result"
+                                    )
+                                    when (result) {
+                                        is CustomResult.Success -> {
+                                            Log.d(
+                                                "AddMemberViewModel",
+                                                "초대 메시지 전송 성공 - memberId: ${memberId.value}"
+                                            )
+                                            successCount++
+                                        }
+
+                                        is CustomResult.Failure -> {
+                                            Log.e(
+                                                "AddMemberViewModel",
+                                                "초대 메시지 전송 실패 - memberId: ${memberId.value}, error: ${result.error.message}"
+                                            )
+                                            failureCount++
+                                        }
+
+                                        is CustomResult.Loading -> {
+                                            Log.d(
+                                                "AddMemberViewModel",
+                                                "초대 메시지 전송 중... - memberId: ${memberId.value}"
+                                            )
+                                        }
+
+                                        else -> {
+                                            Log.w("AddMemberViewModel", "알 수 없는 결과 타입: $result")
+                                        }
+                                    }
+                                }
+                            Log.d(
+                                "AddMemberViewModel",
+                                "🔥 collect 완료 - memberId: ${memberId.value}"
+                            )
+                        } catch (e: Exception) {
+                            Log.e(
+                                "AddMemberViewModel",
+                                "🔥 UseCase 호출 중 예외 - memberId: ${memberId.value}",
+                                e
+                            )
                             failureCount++
                         }
+
                     } catch (e: Exception) {
+                        Log.e(
+                            "AddMemberViewModel",
+                            "멤버 초대 중 예외 발생 - memberId: ${memberId.value}",
+                            e
+                        )
                         failureCount++
                     }
                 }
             } catch (e: Exception) {
+                Log.e("AddMemberViewModel", "전체 초대 프로세스 중 예외 발생", e)
                 _uiState.update {
                     it.copy(
                         isLoadingFriends = false,
@@ -360,6 +531,7 @@ class AddMemberViewModel @Inject constructor(
                 return@launch
             }
 
+            Log.d("AddMemberViewModel", "초대 프로세스 완료 - 성공: $successCount, 실패: $failureCount")
             _uiState.update {
                 it.copy(
                     isLoadingFriends = false,
@@ -369,10 +541,12 @@ class AddMemberViewModel @Inject constructor(
             }
 
             if (successCount > 0) {
+                Log.i("AddMemberViewModel", "초대 성공 - ${successCount}명에게 DM 초대 완료")
                 _eventFlow.emit(AddMemberDialogEvent.ShowSnackbar("${successCount}명에게 DM 초대를 보냈습니다."))
                 _eventFlow.emit(AddMemberDialogEvent.MembersAddedSuccessfully)
             }
             if (failureCount > 0) {
+                Log.w("AddMemberViewModel", "초대 실패 - ${failureCount}명의 초대 실패")
                 _eventFlow.emit(AddMemberDialogEvent.ShowSnackbar("${failureCount}명의 초대에 실패했습니다."))
             }
         }

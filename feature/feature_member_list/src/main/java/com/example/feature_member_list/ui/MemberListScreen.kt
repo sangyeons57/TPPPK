@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
@@ -56,7 +57,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.components.user.UserProfileImage
 import com.example.domain.model.ui.data.MemberUiModel
@@ -73,7 +73,6 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MemberListScreen(
-    navigationManger: NavigationManger,
     modifier: Modifier = Modifier,
     viewModel: MemberListViewModel = hiltViewModel()
 ) {
@@ -110,7 +109,7 @@ fun MemberListScreen(
                 title = { Text("멤버 관리") },
                 navigationIcon = {
                     DebouncedBackButton(
-                        onClick = navigationManger::navigateBack
+                        onClick = viewModel::navigateBack,
                     )
                 },
                 actions = {
@@ -138,6 +137,7 @@ fun MemberListScreen(
         MemberOptionsBottomSheet(
             member = selectedMember!!,
             currentUserId = uiState.currentUserId,
+            isCurrentUserOwner = viewModel.isCurrentUserOwner(), // Owner 여부 체크
             onDismiss = { 
                 showBottomSheet = false
                 selectedMember = null
@@ -149,6 +149,11 @@ fun MemberListScreen(
             },
             onDeleteMember = { member ->
                 showDeleteConfirmationDialog = member
+                showBottomSheet = false
+                selectedMember = null
+            },
+            onBlockMember = { member ->
+                viewModel.blockMember(member)
                 showBottomSheet = false
                 selectedMember = null
             }
@@ -183,7 +188,6 @@ fun MemberListScreen(
             onDismissRequest = { showAddMemberDialogState = false },
             onMemberAdded = {
                 showAddMemberDialogState = false
-                viewModel.refreshMembers()
             }
         )
     }
@@ -197,9 +201,11 @@ fun MemberListScreen(
 fun MemberOptionsBottomSheet(
     member: MemberUiModel,
     currentUserId: UserId?,
+    isCurrentUserOwner: Boolean = false, // Owner 여부
     onDismiss: () -> Unit,
     onEditMember: (MemberUiModel) -> Unit,
     onDeleteMember: (MemberUiModel) -> Unit,
+    onBlockMember: (MemberUiModel) -> Unit = {}, // 차단 액션
     modifier: Modifier = Modifier
 ) {
     // 🚨 자기 자신인지 확인
@@ -226,7 +232,8 @@ fun MemberOptionsBottomSheet(
                     contentDescription = "${member.userName.value}님의 프로필",
                     modifier = Modifier
                         .size(48.dp)
-                        .clip(CircleShape)
+                        .clip(CircleShape),
+                    viewModel = hiltViewModel(key = member.userId.value)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
@@ -257,8 +264,16 @@ fun MemberOptionsBottomSheet(
                 onClick = { onEditMember(member) }
             )
 
-            // 🚨 자기 자신이 아닌 경우에만 제거 옵션 표시
-            if (!isSelf) {
+            // Owner 전용 옵션들 (자기 자신이 아닌 경우에만)
+            if (isCurrentUserOwner && !isSelf) {
+                MemberOptionItem(
+                    icon = Icons.Filled.Block,
+                    title = "멤버 차단",
+                    subtitle = "영구적으로 프로젝트 접근 금지",
+                    onClick = { onBlockMember(member) },
+                    isDestructive = true
+                )
+                
                 MemberOptionItem(
                     icon = Icons.Filled.Delete,
                     title = "멤버 내보내기",
@@ -279,12 +294,12 @@ fun MemberOptionsBottomSheet(
  */
 @Composable
 private fun MemberOptionItem(
+    modifier: Modifier = Modifier,
     icon: ImageVector,
     title: String,
     subtitle: String,
     onClick: () -> Unit,
     isDestructive: Boolean = false,
-    modifier: Modifier = Modifier
 ) {
     val contentColor = if (isDestructive) {
         MaterialTheme.colorScheme.error
@@ -387,7 +402,6 @@ fun MemberListContent(
             items(uiState.members, key = { it.userId.value }) { member ->
                 ProjectMemberListItemComposable(
                     member = member,
-                    currentUserId = uiState.currentUserId,
                     onClick = { onMemberClick(member) },
                     onMoreClick = { onMemberMoreClick(member) }
                 )
@@ -402,7 +416,6 @@ fun MemberListContent(
 @Composable
 fun ProjectMemberListItemComposable(
     member: MemberUiModel,
-    currentUserId: UserId?,
     onClick: (MemberUiModel) -> Unit,
     onMoreClick: (MemberUiModel) -> Unit,
     modifier: Modifier = Modifier
@@ -419,7 +432,8 @@ fun ProjectMemberListItemComposable(
             contentDescription = "${member.userName.value}님의 프로필 사진",
             modifier = Modifier
                 .size(40.dp)
-                .clip(CircleShape)
+                .clip(CircleShape),
+            viewModel = hiltViewModel(key = member.userId.value)
         )
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -452,8 +466,5 @@ fun ProjectMemberListItemComposable(
 @Composable 
 fun MemberListScreenPreview() {
     MemberListScreen(
-        navigationManger = TODO(),
-        modifier = TODO(),
-        viewModel = TODO()
     )
 }

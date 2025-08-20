@@ -145,9 +145,11 @@ export const onProjectDelete = onDocumentDeleted(
           const firestore = admin.firestore();
 
           // ProjectWrapper 정리
+          // Wrappers are stored under users/{uid}/projects_wrapper/{projectId}
+          // Use collection group query to find all wrapper docs with ID == projectId
           const projectWrappersQuery = await firestore
-            .collection(COLLECTIONS.PROJECT_WRAPPERS)
-            .where("projectId", "==", projectId)
+            .collectionGroup(COLLECTIONS.PROJECT_WRAPPERS)
+            .where(admin.firestore.FieldPath.documentId(), "==", projectId)
             .get();
 
           if (projectWrappersQuery.empty) {

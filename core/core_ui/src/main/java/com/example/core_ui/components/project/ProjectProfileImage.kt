@@ -183,7 +183,10 @@ fun ProjectProfileImage(
     contentScale: ContentScale = ContentScale.Crop,
     forceRefresh: Boolean = false
 ) {
-    val viewModel: ProjectProfileImageViewModel = hiltViewModel()
+    // Key the ViewModel by projectId to avoid shared state across list items
+    val viewModel: ProjectProfileImageViewModel = hiltViewModel(
+        key = projectId?.let { "ProjectProfileImage:$it" } ?: "ProjectProfileImage:default"
+    )
     val globalRefreshTrigger by viewModel.refreshTrigger.collectAsState()
     val firebaseImageUrl by viewModel.imageUrl.collectAsState()
     

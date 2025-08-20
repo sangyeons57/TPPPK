@@ -53,22 +53,22 @@ export const unblockDMChannel = onCall(
 
           const firestore = admin.firestore();
 
-          // DM Wrapper 조회
-          const wrapperQuery = await firestore
+          // DM Wrapper 조회 (사용자 서브컬렉션에서)
+          const wrapperRef = firestore
+            .collection(COLLECTIONS.USERS)
+            .doc(currentUserId)
             .collection(COLLECTIONS.DM_WRAPPERS)
-            .where("userId", "==", currentUserId)
-            .where("channelId", "==", channelId)
-            .limit(1)
-            .get();
+            .doc(channelId);
+          
+          const wrapperDoc = await wrapperRef.get();
 
-          if (wrapperQuery.empty) {
+          if (!wrapperDoc.exists) {
             throw new AppError("not-found", "DM channel not found");
           }
 
-          const wrapperDoc = wrapperQuery.docs[0];
-
           // 이미 차단 해제된 경우
-          if (!wrapperDoc.data().isBlocked) {
+          const wrapperData = wrapperDoc.data();
+          if (!wrapperData?.isBlocked) {
             logger.info("DM channel already unblocked", { channelId, currentUserId });
             return {
               success: true,
@@ -77,7 +77,7 @@ export const unblockDMChannel = onCall(
           }
 
           // 차단 해제
-          await wrapperDoc.ref.update({
+          await wrapperRef.update({
             isBlocked: false,
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
           });

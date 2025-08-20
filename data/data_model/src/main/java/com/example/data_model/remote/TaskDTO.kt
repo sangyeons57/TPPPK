@@ -15,6 +15,8 @@ import java.util.Date
  */
 data class TaskDTO(
     @DocumentId override val id: String = "",
+    @get:PropertyName(CHANNEL_ID)
+    val channelId: String = "",
     @get:PropertyName(TYPE)
     val type: String = TYPE_TASK,
     @get:PropertyName(TASK_TYPE)
@@ -38,6 +40,7 @@ data class TaskDTO(
     companion object {
         const val COLLECTION_NAME = Task.COLLECTION_NAME
         const val TYPE = "type"
+        const val CHANNEL_ID = Task.KEY_CHANNEL_ID
         const val TASK_TYPE = Task.KEY_TASK_TYPE
         const val STATUS = Task.KEY_STATUS
         const val CONTENT = Task.KEY_CONTENT
@@ -48,4 +51,3 @@ data class TaskDTO(
     }
 
 }
-

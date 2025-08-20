@@ -16,6 +16,7 @@ import com.example.domain.vo.MentionType
 import com.example.domain.vo.UserId
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
+import com.example.domain_usecase.provider.dm.DMUseCaseProvider
 import com.example.domain_usecase.usecase.sync.SyncUseCase
 import com.example.feature_chat.model.ChatEvent
 import com.example.feature_chat.model.ChatMessageUiModel
@@ -62,7 +63,8 @@ class WebSocketChatViewModel @Inject constructor(
     private val webSocketUseCaseProvider: WebSocketUseCaseProvider,
     private val chatServiceProvider: ChatServiceProvider,
     private val syncUseCase: SyncUseCase,
-    private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider
+    private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider,
+    private val dmUseCaseProvider: DMUseCaseProvider
 ) : ViewModel() {
 
     private val channelId: String = savedStateHandle.getRequiredString(RouteArgs.CHANNEL_ID)
@@ -86,7 +88,8 @@ class WebSocketChatViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(
         ChatUiState(
             channelName = "채팅방",
-            connectionState = WebSocketConnectionState.Disconnected
+            connectionState = WebSocketConnectionState.Disconnected,
+            isProjectChannel = projectId != null
             // Note: messages, isLoadingHistory are now handled by Paging3
         )
     )
@@ -97,6 +100,11 @@ class WebSocketChatViewModel @Inject constructor(
 
     private var currentUserId: String? = null
 
+    // 프로젝트 참여 상태 관리 (projectId -> isJoined)
+    private val _projectMembershipStates = MutableStateFlow<Map<String, Boolean>>(emptyMap())
+    val projectMembershipStates: StateFlow<Map<String, Boolean>> =
+        _projectMembershipStates.asStateFlow()
+
     // 메시지 타임아웃 관리를 위한 Job 맵
     private val messageTimeoutJobs = mutableMapOf<String, Job>()
 
@@ -106,6 +114,10 @@ class WebSocketChatViewModel @Inject constructor(
         Log.d(TAG, "🚀 messagesFlow lazy 초기화 시작 (initialMessageId=$initialMessageId)")
         services.messageService.getUiMessagesPagingFlow(initialMessageId).cachedIn(viewModelScope)
     }
+
+    // OutBox 상태 맵(옵션): UI 컴포저블이 메시지별 로딩/실패 인디케이터를 바인딩할 때 사용할 수 있도록 노출
+    val outBoxStatuses: Flow<Map<String, com.example.domain.enum.OutBoxStatus>> =
+        services.messageService.observeChannelOutBoxStatuses()
 
     // 🎯 MessageService의 상태들을 UI에 전달
     val isAnchorJumpInProgress: StateFlow<Boolean> = services.messageService.isAnchorJumpInProgress
@@ -165,23 +177,20 @@ class WebSocketChatViewModel @Inject constructor(
             }
         }
 
-        // Room DB 최신 내용 로그 + Paging 새로고침 트리거 (메시지 변경시)
-        viewModelScope.launch {
-            webSocketUseCaseProvider.create().subscribeToMessageRefreshEventsUseCase()
-                .onEach { channelId ->
-                    if (channelId == this@WebSocketChatViewModel.channelId) {
-                        Log.d(TAG, "🗂️ Room DB 최신 내용 요청 (channel=$channelId)")
-                        _eventFlow.emit(ChatEvent.RefreshMessages)
-                    }
-                }
-                .launchIn(this)
-        }
+        // Room DB는 자동 invalidation으로 Paging3가 자동 갱신됨
 
         // 5. 연결 상태 모니터링
         observeConnectionState()
 
         // 6. 오프라인 큐 모니터링
         observeOfflineQueue()
+
+        // 6.1 OutBox 기반 채널 전송 진행 상태를 UI에 연결
+        services.messageService.observeChannelPendingCount()
+            .onEach { pendingCount ->
+                _uiState.update { it.copy(isSendingMessage = pendingCount > 0) }
+            }
+            .launchIn(viewModelScope)
 
         // 7. 주기적인 캐시 정리 (1시간마다)
         startPeriodicCacheCleanup()
@@ -453,17 +462,10 @@ class WebSocketChatViewModel @Inject constructor(
                                 TAG,
                                 "✅ 메시지 ACK 수신: ${event.messageId}, type: ${event.ackType}"
                             )
-                            // MessageService의 ACK 처리 호출
-                            viewModelScope.launch {
-                                services.messageService.handleMessageAck(event.messageId)
-                                // 낙관적 메타 정리 (편집/삭제 공통)
-                                services.messageService.handleOptimisticAck(event.messageId)
-
-                                // UI 갱신 이벤트 전송 (로딩 인디케이터 제거용)
-                                _eventFlow.emit(ChatEvent.ScrollToBottom)
-
-                                Log.d(TAG, "🔄 ACK 처리 후 UI 갱신 이벤트 전송: ${event.messageId}")
-                            }
+                            // ACK 처리는 WebSocketMessageService에서 OutBox를 직접 업데이트한다.
+                            // UI 측에서는 OutBox 관찰을 통해 자동으로 로딩 인디케이터가 해제된다.
+                            // 필요 시 부드러운 UX를 위해 하단으로 스크롤만 트리거.
+                            _eventFlow.emit(ChatEvent.ScrollToBottom)
                         }
 
                         is WebSocketDomainEvent.MessageFailed -> {
@@ -471,13 +473,8 @@ class WebSocketChatViewModel @Inject constructor(
                                 TAG,
                                 "❌ 메시지 전송 실패: ${event.messageId}, type: ${event.failureType}, error: ${event.errorMessage}"
                             )
-                            // MessageService의 실패 처리 호출
-                            viewModelScope.launch {
-                                services.messageService.handleMessageFailure(event.messageId)
-                                // 낙관적 롤백 적용
-                                services.messageService.handleOptimisticFailure(event.messageId)
-                            }
-                            // 사용자에게 실패 알림
+                            // 실패 처리는 WebSocketMessageService에서 OutBox를 직접 업데이트한다.
+                            // UI는 OutBox 관찰을 통해 실패 상태를 반영한다.
                             _eventFlow.emit(ChatEvent.ShowSnackbar("메시지 전송에 실패했습니다"))
                         }
 
@@ -987,6 +984,80 @@ class WebSocketChatViewModel @Inject constructor(
     }
 
     /**
+     * DM 채널 차단
+     */
+    fun blockDMChannel() {
+        if (projectId != null) return // 프로젝트 채널에서는 차단 불가
+
+        viewModelScope.launch {
+            try {
+                val currentUserId = currentUserId ?: return@launch
+                val dmUseCases = dmUseCaseProvider.createForUser(UserId.from(currentUserId))
+                dmUseCases.blockDMChannelUseCase(DocumentId.from(channelId)).collect { result ->
+                    when (result) {
+                        is CustomResult.Loading -> {
+                            // 로딩 상태는 UI에서 처리하지 않음 (빠른 응답 예상)
+                        }
+
+                        is CustomResult.Success -> {
+                            _uiState.update { it.copy(isDMBlocked = true) }
+                            _eventFlow.emit(ChatEvent.ShowSnackbar("사용자를 차단했습니다"))
+                        }
+
+                        is CustomResult.Failure -> {
+                            _eventFlow.emit(ChatEvent.ShowSnackbar("차단에 실패했습니다: ${result.error.message}"))
+                        }
+
+                        else -> {
+                            // Do nothing for other states
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "DM 채널 차단 실패", e)
+                _eventFlow.emit(ChatEvent.ShowSnackbar("차단에 실패했습니다"))
+            }
+        }
+    }
+
+    /**
+     * DM 채널 차단 해제
+     */
+    fun unblockDMChannel() {
+        if (projectId != null) return // 프로젝트 채널에서는 차단 해제 불가
+
+        viewModelScope.launch {
+            try {
+                val currentUserId = currentUserId ?: return@launch
+                val dmUseCases = dmUseCaseProvider.createForUser(UserId.from(currentUserId))
+                dmUseCases.unblockDMChannelUseCase(DocumentId.from(channelId)).collect { result ->
+                    when (result) {
+                        is CustomResult.Loading -> {
+                            // 로딩 상태는 UI에서 처리하지 않음 (빠른 응답 예상)
+                        }
+
+                        is CustomResult.Success -> {
+                            _uiState.update { it.copy(isDMBlocked = false) }
+                            _eventFlow.emit(ChatEvent.ShowSnackbar("차단을 해제했습니다"))
+                        }
+
+                        is CustomResult.Failure -> {
+                            _eventFlow.emit(ChatEvent.ShowSnackbar("차단 해제에 실패했습니다: ${result.error.message}"))
+                        }
+
+                        else -> {
+                            // Do nothing for other states
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "DM 채널 차단 해제 실패", e)
+                _eventFlow.emit(ChatEvent.ShowSnackbar("차단 해제에 실패했습니다"))
+            }
+        }
+    }
+
+    /**
      * 멤버 초대 수락 처리 (projectId 기반 Functions 호출)
      */
     fun onAddMember(projectId: String, targetUserId: String) {
@@ -1031,6 +1102,8 @@ class WebSocketChatViewModel @Inject constructor(
                 when (result) {
                     is CustomResult.Success -> {
                         Log.d(TAG, "✅ 프로젝트 참여 성공")
+                        // 로컬 상태 업데이트: 해당 프로젝트에 참여했음을 표시
+                        updateProjectMembershipState(projectId, true)
                         _eventFlow.emit(ChatEvent.ShowSnackbar("프로젝트에 참여했습니다!"))
                     }
 
@@ -1049,6 +1122,44 @@ class WebSocketChatViewModel @Inject constructor(
                 _eventFlow.emit(ChatEvent.ShowSnackbar("프로젝트 참여 중 오류가 발생했습니다"))
             }
         }
+    }
+
+    /**
+     * 프로젝트 멤버십 상태를 업데이트합니다.
+     */
+    private fun updateProjectMembershipState(projectId: String, isJoined: Boolean) {
+        _projectMembershipStates.update { currentStates ->
+            currentStates.toMutableMap().apply {
+                put(projectId, isJoined)
+            }
+        }
+        Log.d(TAG, "📝 프로젝트 멤버십 상태 업데이트: $projectId -> $isJoined")
+    }
+
+    /**
+     * 특정 프로젝트의 멤버십 상태를 확인합니다.
+     */
+    fun checkProjectMembership(projectId: String) {
+        viewModelScope.launch {
+            try {
+                val userId = currentUserId ?: return@launch
+                val memberUseCases =
+                    projectMemberUseCaseProvider.createForProject(DocumentId(projectId))
+                val isJoined = memberUseCases.checkUserProjectMembershipUseCase(projectId, userId)
+                updateProjectMembershipState(projectId, isJoined)
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ 프로젝트 멤버십 확인 실패", e)
+                // 실패 시 안전하게 false로 설정
+                updateProjectMembershipState(projectId, false)
+            }
+        }
+    }
+
+    /**
+     * 프로젝트 멤버십 상태를 반환합니다.
+     */
+    fun isProjectMember(projectId: String): Boolean {
+        return _projectMembershipStates.value[projectId] ?: false
     }
 
     companion object {

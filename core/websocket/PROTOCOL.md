@@ -67,29 +67,167 @@ Image Flow (recommended)
 
 Examples
 
-- message
-  {
+## Basic Message Types
+
+### TEXT Message
+
+```json
+{
   "schema": "v2",
   "kind": "message",
-  "messageId": "abc123",
+  "messageId": "msg123",
   "messageType": "TEXT",
-  "payload": { "content": "", "
-  attachments": [ { "kind": "image", "url": "https://...", "mime": "image/jpeg", "filename": "img.jpg" } ] },
+  "payload": {
+    "content": "안녕하세요!"
+  },
   "replyToMessageId": null,
   "meta": { "projectId": "p1", "channelType": "room" }
-  }
+}
+```
 
-- message_patch
-  {
+### TEXT Message with Attachments
+
+```json
+{
+  "schema": "v2",
+  "kind": "message",
+  "messageId": "msg124",
+  "messageType": "TEXT",
+  "payload": {
+    "content": "사진을 공유합니다",
+    "attachments": [
+      {
+        "url": "https://example.com/image.jpg",
+        "mime": "image/jpeg",
+        "filename": "photo.jpg",
+        "index": 0
+      }
+    ]
+  },
+  "replyToMessageId": null,
+  "meta": { "projectId": "p1", "channelType": "room" }
+}
+```
+
+## Project Messages (User-sent)
+
+### PROJECT_INVITE Message
+
+```json
+{
+  "schema": "v2",
+  "kind": "message",
+  "messageId": "invite123",
+  "messageType": "PROJECT_INVITE",
+  "payload": {
+    "content": "",
+    "projectId": "proj-456",
+    "projectName": "새로운 프로젝트",
+    "inviterName": "김철수",
+    "invitationId": "inv-789",
+    "actionText": "참여하기"
+  },
+  "replyToMessageId": null,
+  "meta": { "channelType": "dm" }
+}
+```
+
+## System Messages
+
+### SYSTEM_PROJECT_JOIN Message
+
+```json
+{
+  "schema": "v2",
+  "kind": "message",
+  "messageId": "sys123",
+  "messageType": "SYSTEM_PROJECT_JOIN",
+  "payload": {
+    "content": "김철수님이 프로젝트에 참여했습니다",
+    "projectId": "proj-456",
+    "projectName": "새로운 프로젝트",
+    "actionText": "참여하기"
+  },
+  "meta": { "projectId": "proj-456", "channelType": "room" }
+}
+```
+
+### SYSTEM_DATE Message
+
+```json
+{
+  "schema": "v2",
+  "kind": "message",
+  "messageId": "date123",
+  "messageType": "SYSTEM_DATE",
+  "payload": {
+    "date": "2024-01-01",
+    "displayText": "2024년 1월 1일"
+  },
+  "meta": { "projectId": "p1", "channelType": "room" }
+}
+```
+
+### SYSTEM_CHAT_START Message
+
+```json
+{
+  "schema": "v2",
+  "kind": "message",
+  "messageId": "start123",
+  "messageType": "SYSTEM_CHAT_START",
+  "payload": {
+    "channelName": "일반",
+    "welcomeText": "채팅이 시작되었습니다"
+  },
+  "meta": { "projectId": "p1", "channelType": "room" }
+}
+```
+
+### SYSTEM_MEMBER_INVITATION Message
+
+```json
+{
+  "schema": "v2",
+  "kind": "message",
+  "messageId": "member123",
+  "messageType": "SYSTEM_MEMBER_INVITATION",
+  "payload": {
+    "content": "김철수님이 이영희님을 초대했습니다",
+    "projectId": "proj-456",
+    "projectName": "새로운 프로젝트",
+    "inviterName": "김철수",
+    "targetUserId": "user789",
+    "actionText": "멤버로 추가"
+  },
+  "meta": { "projectId": "proj-456", "channelType": "room" }
+}
+```
+
+## Message Patches
+
+### message_patch
+
+```json
+{
   "schema": "v2",
   "kind": "message_patch",
-  "targetMessageId": "abc123",
+  "targetMessageId": "msg124",
   "patchVersion": 1,
   "patch": {
-  "status": "media_ready",
-  "attachments": [ { "index": 0, "ready": true, "width": 1280, "height": 960, "size": 234567 } ]
+    "status": "media_ready",
+    "attachments": [
+      {
+        "index": 0,
+        "ready": true,
+        "width": 1280,
+        "height": 960,
+        "size": 234567
+      }
+    ]
   }
-  }
+}
+```
 
 Developer Notes
 

@@ -3,9 +3,7 @@ package com.example.mapper.dm
 import com.example.data_model.remote.DMWrapperDTO
 import com.example.domain.model.base.DMWrapper
 import com.example.domain.vo.DocumentId
-import com.example.domain.vo.ImageUrl
 import com.example.domain.vo.UserId
-import com.example.domain.vo.dmchannel.DMChannelLastMessagePreview
 import com.example.domain.vo.user.UserName
 import com.example.mapper.DtoMapper
 import javax.inject.Inject
@@ -22,8 +20,6 @@ class DMWrapperMapper @Inject constructor() : DtoMapper<DMWrapper, DMWrapperDTO>
             id = DocumentId(dto.id),
             otherUserId = UserId(dto.otherUserId),
             otherUserName = UserName(dto.otherUserName),
-            otherUserImageUrl = dto.otherUserImageUrl?.let { ImageUrl(it) },
-            lastMessagePreview = dto.lastMessagePreview?.let { DMChannelLastMessagePreview(it) },
             createdAt = dto.createdAt?.toInstant(),
             updatedAt = dto.updatedAt?.toInstant()
         )
@@ -34,8 +30,6 @@ class DMWrapperMapper @Inject constructor() : DtoMapper<DMWrapper, DMWrapperDTO>
             id = domain.id.value,
             otherUserId = domain.otherUserId.value,
             otherUserName = domain.otherUserName.value,
-            otherUserImageUrl = domain.otherUserImageUrl?.value,
-            lastMessagePreview = domain.lastMessagePreview?.value,
             createdAt = null, // ServerTimestamp가 처리
             updatedAt = null  // ServerTimestamp가 처리
         )

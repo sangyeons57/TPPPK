@@ -176,7 +176,6 @@ value class MessagePayload(val value: String) {
             projectId: String,
             projectName: String,
             inviterName: String,
-            invitationId: String,
             actionText: String = "참여하기"
         ): MessagePayload {
             val jsonObject = buildJsonObject {
@@ -184,7 +183,6 @@ value class MessagePayload(val value: String) {
                 put("projectId", projectId)
                 put("projectName", projectName)
                 put("inviterName", inviterName)
-                put("invitationId", invitationId)
                 put("actionText", actionText)
             }
             return MessagePayload(jsonObject.toString())

@@ -9,11 +9,12 @@ import {
   withTracing,
   AppError,
   IdempotencyManager,
-  publish
+  publish,
+  FRIEND_SUBCOLLECTION_STATUS
 } from "../../../shared";
 
 interface AcceptFriendRequestRequest {
-  friendRequestId: string;
+  friendUserId: string; // 친구 요청을 보낸 사용자의 ID
 }
 
 interface AcceptFriendRequestResponse {
@@ -47,16 +48,16 @@ export const acceptFriendRequest = onCall(
         async () => {
           // 인증 검증
           const userId = validateAuth(request.auth);
-          const { friendRequestId } = request.data as AcceptFriendRequestRequest;
+          const { friendUserId } = request.data as AcceptFriendRequestRequest;
 
           // 입력 검증
-          validateRequired(friendRequestId, "friendRequestId");
+          validateRequired(friendUserId, "friendUserId");
 
           // 등성성 체크
           const idempotencyKey = IdempotencyManager.generateKey(
             userId, 
             "accept-friend-request", 
-            friendRequestId
+            friendUserId
           );
           
           const canProceed = await IdempotencyManager.checkAndMark(
@@ -72,45 +73,55 @@ export const acceptFriendRequest = onCall(
           try {
             const firestore = admin.firestore();
 
-            // 친구 요청 조회
-            const friendRequestRef = firestore.collection("friends").doc(friendRequestId);
-            const friendRequestDoc = await friendRequestRef.get();
+            // Subcollection에서 친구 요청 조회 (수신자 관점)
+            const pendingFriendRef = firestore
+              .collection(`users/${userId}/friends`)
+              .doc(friendUserId);
+            
+            const pendingFriendDoc = await pendingFriendRef.get();
 
-            if (!friendRequestDoc.exists) {
+            if (!pendingFriendDoc.exists) {
               throw new AppError("not-found", "Friend request not found");
             }
 
-            const friendRequestData = friendRequestDoc.data()!;
-
-            // 요청 수신자 검증
-            if (friendRequestData.friendId !== userId) {
-              throw new AppError("permission-denied", "You can only accept friend requests sent to you");
-            }
+            const pendingFriendData = pendingFriendDoc.data()!;
 
             // 요청 상태 확인
-            if (friendRequestData.status !== "pending") {
+            if (pendingFriendData.status !== FRIEND_SUBCOLLECTION_STATUS.PENDING) {
               throw new AppError("invalid-argument", "Friend request is not pending");
             }
 
-            const requesterId = friendRequestData.userId;
+            // 요청자 측 문서도 확인
+            const requesterFriendRef = firestore
+              .collection(`users/${friendUserId}/friends`)
+              .doc(userId);
+            
+            const requesterFriendDoc = await requesterFriendRef.get();
 
-            // 배치 작업으로 양방향 친구 관계 생성
+            if (!requesterFriendDoc.exists) {
+              throw new AppError("not-found", "Corresponding friend request not found");
+            }
+
+            const requesterFriendData = requesterFriendDoc.data()!;
+
+            if (requesterFriendData.status !== FRIEND_SUBCOLLECTION_STATUS.REQUESTED) {
+              throw new AppError("invalid-argument", "Friend request status mismatch");
+            }
+
+            // 양방향 상태를 ACCEPTED로 업데이트
             const batch = firestore.batch();
 
-            // 기존 요청 업데이트 (accepted로 변경)
-            batch.update(friendRequestRef, {
-              status: "accepted",
+            // 수신자 측: PENDING → ACCEPTED
+            batch.update(pendingFriendRef, {
+              status: FRIEND_SUBCOLLECTION_STATUS.ACCEPTED,
+              acceptedAt: admin.firestore.FieldValue.serverTimestamp(),
               updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             });
 
-            // 반대 방향 친구 관계 생성 (수신자 -> 요청자)
-            const reverseFriendRef = firestore.collection("friends").doc();
-            batch.set(reverseFriendRef, {
-              id: reverseFriendRef.id,
-              userId: userId,
-              friendId: requesterId,
-              status: "accepted",
-              createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            // 요청자 측: REQUESTED → ACCEPTED  
+            batch.update(requesterFriendRef, {
+              status: FRIEND_SUBCOLLECTION_STATUS.ACCEPTED,
+              acceptedAt: admin.firestore.FieldValue.serverTimestamp(),
               updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             });
 
@@ -119,11 +130,11 @@ export const acceptFriendRequest = onCall(
             // DM 채널 생성을 위한 이벤트 발행 (비동기 처리)
             try {
               await publish("friends.accepted", {
-                requesterId,
+                requesterId: friendUserId,
                 receiverId: userId,
-                friendRequestId,
+                friendshipId: `${userId}_${friendUserId}`,
               });
-              logger.info("Published friend accepted event for DM creation", { requesterId, userId });
+              logger.info("Published friend accepted event for DM creation", { friendUserId, userId });
             } catch (publishError) {
               logger.warn("Failed to publish friend accepted event", publishError);
               // 이벤트 발행 실패해도 친구 수락은 성공으로 처리
@@ -134,8 +145,8 @@ export const acceptFriendRequest = onCall(
 
             logger.info("Friend request accepted successfully", { 
               userId, 
-              requesterId, 
-              friendRequestId 
+              friendUserId,
+              friendship: `${userId} <-> ${friendUserId}`
             });
 
             return {

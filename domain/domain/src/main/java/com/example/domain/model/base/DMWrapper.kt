@@ -4,17 +4,13 @@ import com.example.core_common.util.DateTimeUtil
 import com.example.domain.AggregateRoot
 import com.example.domain.event.dmwrapper.DMWrapperOtherUserChangedEvent
 import com.example.domain.vo.DocumentId
-import com.example.domain.vo.ImageUrl
 import com.example.domain.vo.UserId
-import com.example.domain.vo.dmchannel.DMChannelLastMessagePreview
 import com.example.domain.vo.user.UserName
 import java.time.Instant
 
 class DMWrapper private constructor(
     initialOtherUserId: UserId,
     initialOtherUserName: UserName,
-    initialOtherUserImageUrl: ImageUrl?,
-    initialLastMessagePreview: DMChannelLastMessagePreview?,
     override val id: DocumentId,
     override val isNew: Boolean,
     override val createdAt: Instant,
@@ -27,12 +23,6 @@ class DMWrapper private constructor(
     var otherUserName: UserName = initialOtherUserName
         private set
 
-    var otherUserImageUrl: ImageUrl? = initialOtherUserImageUrl
-        private set
-
-    var lastMessagePreview: DMChannelLastMessagePreview? = initialLastMessagePreview
-        private set
-
     init {
         setOriginalState()
     }
@@ -41,8 +31,6 @@ class DMWrapper private constructor(
         return mapOf(
             KEY_OTHER_USER_ID to otherUserId.value,
             KEY_OTHER_USER_NAME to otherUserName.value,
-            KEY_OTHER_USER_IMAGE_URL to otherUserImageUrl?.value,
-            KEY_LAST_MESSAGE_PREVIEW to lastMessagePreview?.value,
             KEY_CREATED_AT to createdAt,
             KEY_UPDATED_AT to updatedAt,
         )
@@ -59,8 +47,6 @@ class DMWrapper private constructor(
         const val COLLECTION_NAME = "dm_wrapper"
         const val KEY_OTHER_USER_ID = "otherUserId"
         const val KEY_OTHER_USER_NAME = "otherUserName"
-        const val KEY_OTHER_USER_IMAGE_URL = "otherUserImageUrl"
-        const val KEY_LAST_MESSAGE_PREVIEW = "lastMessagePreview"
 
         fun create(
             otherUserId: UserId,
@@ -70,8 +56,6 @@ class DMWrapper private constructor(
                 id = DocumentId.EMPTY,
                 initialOtherUserId = otherUserId,
                 initialOtherUserName = otherUserName,
-                initialOtherUserImageUrl = null,
-                initialLastMessagePreview = null,
                 createdAt = DateTimeUtil.nowInstant(),
                 updatedAt = DateTimeUtil.nowInstant(),
                 isNew = true,
@@ -83,8 +67,6 @@ class DMWrapper private constructor(
             id: DocumentId,
             otherUserId: UserId,
             otherUserName: UserName,
-            otherUserImageUrl: ImageUrl?,
-            lastMessagePreview: DMChannelLastMessagePreview?,
             createdAt: Instant?,
             updatedAt: Instant?
         ): DMWrapper {
@@ -92,8 +74,6 @@ class DMWrapper private constructor(
                 id = id,
                 initialOtherUserId = otherUserId,
                 initialOtherUserName = otherUserName,
-                initialOtherUserImageUrl = otherUserImageUrl,
-                initialLastMessagePreview = lastMessagePreview,
                 createdAt = createdAt ?: DateTimeUtil.nowInstant(),
                 updatedAt = updatedAt ?: DateTimeUtil.nowInstant(),
                 isNew = false,

@@ -50,7 +50,7 @@ class MessageRepositoryImpl @Inject constructor(
      * - 메시지 저장은 Room DAO를 통해 즉시 반영한다
      * - 원격 저장은 WebSocket 경로에서 서버가 책임진다
      */
-    override suspend fun save(entity: Message): CustomResult<DocumentId, Exception> {
+    override suspend fun sendMessage(entity: Message): CustomResult<DocumentId, Exception> {
         return try {
             db.withTransaction {
                 val entityModel = entityMapper.domainToEntity(entity)
@@ -91,27 +91,73 @@ class MessageRepositoryImpl @Inject constructor(
         }
     }
 
-    // 모든 기본 CRUD 메서드들은 부모 클래스에서 자동으로 처리됩니다!
-    override suspend fun sendMessage(
-        channelId: String,
-        payload: MessagePayload
-    ): String {
-        val messageId = UUID.randomUUID().toString()
-        System.currentTimeMillis()
+    /**
+     * save() 메서드 사용 금지 - 메시지는 반드시 sendMessage() 사용
+     *
+     * 이유:
+     * - save()는 단순 저장만 하고 WebSocket 전송을 하지 않음
+     * - sendMessage()는 로컬 저장 + WebSocket 전송을 모두 처리
+     * - 메시지 전송은 반드시 WebSocket을 통해 실시간으로 전달되어야 함
+     */
+    override suspend fun save(entity: Message): CustomResult<DocumentId, Exception> {
+        val errorMessage = """
+            ❌ MessageRepository에서 save() 사용 금지!
+            
+            메시지 전송은 반드시 sendMessage()를 사용하세요:
+            - save(): 로컬 저장만 (WebSocket 전송 없음)
+            - sendMessage(): 로컬 저장 + WebSocket 전송 (권장)
+            
+            올바른 사용법:
+            messageRepository.sendMessage(message)
+        """.trimIndent()
 
-        val message = Message.create(
-            id = DocumentId(messageId),
-            senderId = UserId(AuthUtil.getCurrentUserId() ?: ""),
-            messageType = MessageType.TEXT,
-            payload = payload,
-            replyToMessageId = null,
-            mentions = emptyList(),
-            channelId = ChannelId(channelId)
+        Log.e("MessageRepository", errorMessage)
+        return CustomResult.Failure(
+            UnsupportedOperationException(
+                "Use sendMessage() instead of save() for message transmission with WebSocket"
+            )
         )
-        // save() 내부에서 트랜잭션 + OutBox enqueue 처리
-        save(message)
+    }
 
-        return messageId
+    /**
+     * WebSocket으로부터 수신된 메시지를 로컬에 저장합니다.
+     *
+     * 이 메서드는 WebSocket 서비스 전용이며, 다음 용도로만 사용됩니다:
+     * - 서버로부터 수신된 메시지의 로컬 저장
+     * - WebSocket 전송 없이 순수 저장만 수행
+     *
+     * 일반적인 메시지 전송에는 sendMessage()를 사용하세요.
+     */
+    override suspend fun saveReceivedMessage(entity: Message): CustomResult<DocumentId, Exception> {
+        Log.d("MessageRepository", "saveReceivedMessage(Room) 호출: ${entity.id.value}")
+
+        return try {
+            // 원격(Firestore)을 건드리지 않고, 로컬(Room)만 업서트한다.
+            db.withTransaction {
+                val entityModel = entityMapper.domainToEntity(entity)
+
+                // 가능 시 중복 업서트 방지: 동일 채널/보낸이/페이로드가 이미 있으면 최신화만
+                runCatching {
+                    val existingId = messageDao.findExistingIdBySenderAndPayload(
+                        channelId = entityModel.channelId,
+                        senderId = entityModel.senderId,
+                        payload = entityModel.payload
+                    )
+                    if (existingId != null && existingId != entityModel.id) {
+                        // 기존 낙관적 레코드를 tombstone 처리하여 중복 제거 후 서버 반영본으로 교체
+                        messageDao.tombstone(existingId, entityModel.updatedAt)
+                    }
+                }.onFailure {
+                    Log.w("MessageRepository", "saveReceivedMessage 중복 검사 실패(무시): ${it.message}")
+                }
+
+                messageDao.upsert(entityModel)
+            }
+            CustomResult.Success(entity.id)
+        } catch (e: Exception) {
+            Log.e("MessageRepository", "saveReceivedMessage(Room) 실패: ${entity.id.value}", e)
+            CustomResult.Failure(e)
+        }
     }
 
     /**

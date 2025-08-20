@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -21,11 +22,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -198,6 +203,7 @@ fun ChatScreen(
     // Paging3 handles automatic loading - no manual pagination needed
 
     val topAppBarScrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
+    var showDropdownMenu by remember { mutableStateOf(false) }
 
     Scaffold(
         modifier = modifier
@@ -212,11 +218,42 @@ fun ChatScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "뒤로 가기")
                     }
                 },
+                actions = {
+                    // DM 채널인 경우에만 메뉴 표시 (projectId가 null인 경우)
+                    if (!uiState.isProjectChannel) {
+                        IconButton(onClick = { showDropdownMenu = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "더 보기")
+                        }
+                        DropdownMenu(
+                            expanded = showDropdownMenu,
+                            onDismissRequest = { showDropdownMenu = false }
+                        ) {
+                            if (uiState.isDMBlocked) {
+                                DropdownMenuItem(
+                                    text = { Text("차단 해제") },
+                                    onClick = {
+                                        showDropdownMenu = false
+                                        viewModel.unblockDMChannel()
+                                    }
+                                )
+                            } else {
+                                DropdownMenuItem(
+                                    text = { Text("사용자 차단") },
+                                    onClick = {
+                                        showDropdownMenu = false
+                                        viewModel.blockDMChannel()
+                                    }
+                                )
+                            }
+                        }
+                    }
+                },
                 scrollBehavior = topAppBarScrollBehavior
             )
         },
         bottomBar = {
             if (uiState.error == null || uiState.error?.contains("WebSocket 구현 예정") == false) {
+                val isMessageInputEnabled = !uiState.isDMBlocked
                 Column(
                     modifier = Modifier
                         .navigationBarsPadding()
@@ -231,8 +268,8 @@ fun ChatScreen(
                     MessageInput(
                         text = uiState.pendingMessageText,
                         isEditing = uiState.isEditing,
-                        isEnabled = viewModel.canPerformWriteOperations(),
-                        canSend = (uiState.pendingMessageText.isNotBlank() || uiState.selectedAttachmentUris.isNotEmpty()),
+                        isEnabled = isMessageInputEnabled && viewModel.canPerformWriteOperations(),
+                        canSend = isMessageInputEnabled && (uiState.pendingMessageText.isNotBlank() || uiState.selectedAttachmentUris.isNotEmpty()),
                         onTextChange = viewModel::onMessageInputChange,
                         onSendClick = viewModel::onSendClick,
                         onAttachmentClick = { imagePickerLauncher.launch("image/*") },
@@ -261,6 +298,14 @@ fun ChatScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            // 채널 OutBox PENDING이 존재하면 상단에 얇은 진행 표시줄 표시
+            if (uiState.isSendingMessage) {
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("outbox_sending_indicator")
+                )
+            }
             ConnectionStatusBar(
                 connectionState = uiState.connectionState,
                 queuedMessagesCount = uiState.queuedMessagesCount,
@@ -332,6 +377,8 @@ fun ChatScreen(
                             showImageViewer = true
                         },
                         onJoinProject = viewModel::onJoinProject,
+                        onCheckMembership = viewModel::checkProjectMembership,
+                        projectMembershipStatesFlow = viewModel.projectMembershipStates,
                         onAddMember = viewModel::onAddMember,
                         initialMessageId = viewModel.getInitialMessageId()
                     )

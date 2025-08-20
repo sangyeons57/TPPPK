@@ -7,18 +7,16 @@ import com.example.domain_usecase.usecase.task.CreateTaskUseCase
 import com.example.domain_usecase.usecase.task.CreateTaskUseCaseImpl
 import com.example.domain_usecase.usecase.task.DeleteTaskUseCase
 import com.example.domain_usecase.usecase.task.DeleteTaskUseCaseImpl
-import com.example.domain_usecase.usecase.task.GetTasksUseCase
-import com.example.domain_usecase.usecase.task.GetTasksUseCaseImpl
-import com.example.domain_usecase.usecase.task.ObserveTasksUseCase
-import com.example.domain_usecase.usecase.task.ObserveTasksUseCaseImpl
+import com.example.domain_usecase.usecase.task.ObserveChannelTasksUseCase
+import com.example.domain_usecase.usecase.task.ObserveChannelTasksUseCaseImpl
 import com.example.domain_usecase.usecase.task.ToggleTaskCheckUseCase
 import com.example.domain_usecase.usecase.task.ToggleTaskCheckUseCaseImpl
 import com.example.domain_usecase.usecase.task.UpdateTaskStatusUseCase
 import com.example.domain_usecase.usecase.task.UpdateTaskStatusUseCaseImpl
 import com.example.domain_usecase.usecase.task.UpdateTaskUseCase
 import com.example.domain_usecase.usecase.task.UpdateTaskUseCaseImpl
-import com.example.domain_usecase.usecase.task.ReorderTaskUseCase
-import com.example.domain_usecase.usecase.task.ReorderTaskUseCaseImpl
+import com.example.domain_usecase.usecase.task.MoveTaskUseCase
+import com.example.domain_usecase.usecase.task.MoveTaskUseCaseImpl
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -68,16 +66,12 @@ class TaskUseCaseProvider @Inject constructor(
                 taskRepository = this.taskRepository,
                 authRepository = this.authRepository,
             ),
-            
-            getTasksUseCase = GetTasksUseCaseImpl(
+
+            observeChannelTasksUseCase = ObserveChannelTasksUseCaseImpl(
                 taskRepository = this.taskRepository
             ),
-            
-            observeTasksUseCase = ObserveTasksUseCaseImpl(
-                taskRepository = this.taskRepository
-            ),
-            
-            reorderTaskUseCase = ReorderTaskUseCaseImpl(
+
+            moveTaskUseCase = MoveTaskUseCaseImpl(
                 taskRepository = this.taskRepository
             ),
             
@@ -95,8 +89,7 @@ data class TaskUseCases(
     val updateTaskUseCase: UpdateTaskUseCase,
     val updateTaskStatusUseCase: UpdateTaskStatusUseCase,
     val toggleTaskCheckUseCase: ToggleTaskCheckUseCase,
-    val getTasksUseCase: GetTasksUseCase,
-    val observeTasksUseCase: ObserveTasksUseCase,
-    val reorderTaskUseCase: ReorderTaskUseCase,
+    val observeChannelTasksUseCase: ObserveChannelTasksUseCase,
+    val moveTaskUseCase: MoveTaskUseCase,
 
     )

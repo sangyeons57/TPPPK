@@ -8,10 +8,9 @@ import com.example.domain.vo.DocumentId
 import com.example.domain.vo.UserId
 import com.example.domain.vo.message.MessagePayload
 import com.example.domain.vo.message.MessageType
-import io.mockk.MockKAnnotations
 import org.junit.Before
 import org.junit.Test
-import kotlin.test.assertEquals
+import org.junit.Assert.assertEquals
 
 class MessageMapperTest {
 
@@ -19,7 +18,6 @@ class MessageMapperTest {
 
     @Before
     fun setup() {
-        MockKAnnotations.init(this)
         messageMapper = MessageMapper()
     }
 
@@ -36,8 +34,7 @@ class MessageMapperTest {
             isDeleted = false,
             mentions = "[]",
             createdAt = System.currentTimeMillis(),
-            updatedAt = System.currentTimeMillis(),
-            outBoxStatus = ""
+            updatedAt = System.currentTimeMillis()
         )
 
         // When

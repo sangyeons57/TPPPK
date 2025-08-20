@@ -11,6 +11,7 @@ import com.example.domain.vo.task.TaskType
 import java.time.Instant
 
 class Task private constructor(
+    val channelId: DocumentId,
     initialTaskType: TaskType,
     initialStatus: TaskStatus,
     initialContent: TaskContent,
@@ -43,6 +44,7 @@ class Task private constructor(
 
     override fun getCurrentStateMap(): Map<String, Any?> {
         return mapOf(
+            KEY_CHANNEL_ID to this.channelId.value,
             KEY_TASK_TYPE to this.taskType.value,
             KEY_STATUS to this.status.value,
             KEY_CONTENT to this.content.value,
@@ -129,6 +131,7 @@ class Task private constructor(
 
     companion object {
         const val COLLECTION_NAME = "tasks"  // 통합된 collection 이름
+        const val KEY_CHANNEL_ID = "channelId"
         const val KEY_TASK_TYPE = "taskType"
         const val KEY_STATUS = "status"
         const val KEY_CONTENT = "content"
@@ -141,11 +144,13 @@ class Task private constructor(
          */
         fun create(
             id: DocumentId,
+            channelId: DocumentId,
             taskType: TaskType = TaskType.CHECKLIST,
             content: TaskContent = TaskContent.EMPTY,
             order: TaskOrder = TaskOrder.DEFAULT
         ): Task {
             val task = Task(
+                channelId = channelId,
                 initialTaskType = taskType,
                 initialStatus = TaskStatus.PENDING,
                 initialContent = content,
@@ -165,6 +170,7 @@ class Task private constructor(
          */
         fun fromDataSource(
             id: DocumentId,
+            channelId: DocumentId,
             taskType: TaskType,
             status: TaskStatus,
             content: TaskContent,
@@ -175,6 +181,7 @@ class Task private constructor(
             updatedAt: Instant?
         ): Task {
             return Task(
+                channelId = channelId,
                 initialTaskType = taskType,
                 initialStatus = status,
                 initialContent = content,

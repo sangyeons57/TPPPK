@@ -17,6 +17,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.tasks.await
 import java.util.Date
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -63,6 +64,14 @@ interface UserRemoteDataSource : DefaultDatasource<UserDTO> {
     fun observeUserUpdatedAt(userId: String): Flow<CustomResult<Long, Exception>>
 
     fun observeUsers(userIds: List<String>): Flow<CustomResult<List<UserDTO>, Exception>>
+
+    /**
+     * 사용자 이름으로 사용자 ID를 찾습니다.
+     *
+     * @param userName 찾을 사용자의 이름
+     * @return 성공 시 사용자 ID, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun findUserIdByUserName(userName: com.example.domain.vo.user.UserName): CustomResult<String, Exception>
 }
 
 @Singleton
@@ -308,5 +317,24 @@ class UserRemoteDataSourceImpl @Inject constructor(
             }
         }
         awaitClose { listenerRegistration.remove() }
+    }
+
+    override suspend fun findUserIdByUserName(userName: com.example.domain.vo.user.UserName): CustomResult<String, Exception> {
+        return try {
+            val query = collection
+                .whereEqualTo(UserDTO.NAME, userName.value)
+                .limit(1)
+
+            val snapshot = query.get().await()
+
+            if (snapshot.isEmpty) {
+                CustomResult.Failure(Exception("사용자를 찾을 수 없습니다: ${userName.value}"))
+            } else {
+                val document = snapshot.documents[0]
+                CustomResult.Success(document.id)
+            }
+        } catch (e: Exception) {
+            CustomResult.Failure(e)
+        }
     }
 }

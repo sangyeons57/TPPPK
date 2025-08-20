@@ -35,7 +35,16 @@ interface MessageRepository : DefaultRepository<Message> {
      * @param payload 메시지 페이로드(MessagePayload JSON)
      * @return 생성된 메시지 ID
      */
-    suspend fun sendMessage(channelId: String, payload: MessagePayload): String
+    suspend fun sendMessage(entity: Message): CustomResult<DocumentId, Exception>
+
+    /**
+     * WebSocket으로부터 수신된 메시지를 로컬에 저장합니다.
+     *
+     * 이 메서드는 WebSocket 서비스 전용이며, WebSocket 전송 없이 순수 저장만 수행합니다.
+     * 일반적인 메시지 전송에는 sendMessage()를 사용하세요.
+     */
+    suspend fun saveReceivedMessage(entity: Message): CustomResult<DocumentId, Exception>
+
     suspend fun deleteMessage(id: String)
 
     // ================================

@@ -51,8 +51,9 @@ async function testFriendFlow() {
     // Test 1: Send Friend Request
     console.log('1. Testing sendFriendRequest...');
     const sendResult = await makeRequest('/sendFriendRequest', {
-      requesterId: testRequester,
-      receiverUserId: testReceiver
+      data: {
+        receiverUserId: testReceiver
+      }
     });
     console.log('   Response:', sendResult.status, sendResult.data);
 
@@ -75,8 +76,7 @@ async function testFriendFlow() {
     // Test 2: Get Friend Requests
     console.log('\n2. Testing getFriendRequests...');
     const requestsResult = await makeRequest('/getFriendRequests', {
-      userId: testReceiver,
-      type: 'received'
+      data: {}
     });
     console.log('   Response:', requestsResult.status, requestsResult.data);
 
@@ -98,8 +98,9 @@ async function testFriendFlow() {
     // Test 3: Accept Friend Request
     console.log('\n3. Testing acceptFriendRequest...');
     const acceptResult = await makeRequest('/acceptFriendRequest', {
-      requesterId: testRequester,
-      receiverId: testReceiver
+      data: {
+        friendUserId: testRequester
+      }
     });
     console.log('   Response:', acceptResult.status, acceptResult.data);
 
@@ -112,8 +113,7 @@ async function testFriendFlow() {
     
     // Check requester's friends
     const requesterFriends = await makeRequest('/getFriends', {
-      userId: testRequester,
-      status: 'ACCEPTED'
+      data: {}
     });
     console.log('   Requester friends:', requesterFriends.status, requesterFriends.data);
     
@@ -135,8 +135,7 @@ async function testFriendFlow() {
 
     // Check receiver's friends
     const receiverFriends = await makeRequest('/getFriends', {
-      userId: testReceiver,
-      status: 'ACCEPTED'
+      data: {}
     });
     console.log('   Receiver friends:', receiverFriends.status, receiverFriends.data);
     

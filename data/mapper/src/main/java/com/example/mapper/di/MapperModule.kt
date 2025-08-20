@@ -213,4 +213,10 @@ object MapperModule {
     @Singleton
     fun provideMessageFullMapper(mapper: MessageMapper): Mapper<MessageEntity, Message, MessageDTO> =
         mapper
+
+    // Task Full Mapper (Entity + Domain + DTO)
+    @Provides
+    @Singleton
+    fun provideTaskFullMapper(mapper: TaskMapper): Mapper<com.example.data_model.local.TaskEntity, Task, TaskDTO> =
+        mapper
 }

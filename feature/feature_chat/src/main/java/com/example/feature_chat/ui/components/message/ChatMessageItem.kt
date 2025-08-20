@@ -25,7 +25,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.StateFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,6 +65,10 @@ fun ChatMessageItemComposable(
     onMentionClick: (String, String) -> Unit = { _, _ -> }, // (type, id) -> Unit
     onRetryMessage: (String) -> Unit = { _ -> }, // 재전송 콜백 추가
     onJoinProject: (String) -> Unit = { _ -> }, // 프로젝트 참여 콜백 추가
+    onCheckMembership: (String) -> Unit = { _ -> }, // 프로젝트 멤버십 확인 콜백 추가
+    projectMembershipStatesFlow: StateFlow<Map<String, Boolean>> = kotlinx.coroutines.flow.MutableStateFlow(
+        emptyMap()
+    ), // 프로젝트 멤버십 상태 StateFlow
     onAddMember: (String, String) -> Unit = { _, _ -> }, // 멤버 추가 콜백 추가 (projectId, targetUserId)
     onImageClick: (String, List<String>, Int) -> Unit = { _, _, _ -> }, // 이미지 클릭 콜백 추가
     participants: List<ChatParticipant> = emptyList(),
@@ -237,6 +245,9 @@ fun ChatMessageItemComposable(
             ProjectInviteMessage(
                 payload = MessagePayload(message.payload),
                 onJoinProject = onJoinProject,
+                isSender = message.isMyMessage,
+                onCheckMembership = onCheckMembership,
+                projectMembershipStatesFlow = projectMembershipStatesFlow,
                 modifier = modifier.padding(vertical = 6.dp)
             )
         }
@@ -356,6 +367,9 @@ fun SelectedImagePreview(
 private fun ProjectInviteMessage(
     payload: MessagePayload,
     onJoinProject: (String) -> Unit = {},
+    isSender: Boolean = false,
+    onCheckMembership: (String) -> Unit = { _ -> },
+    projectMembershipStatesFlow: StateFlow<Map<String, Boolean>>,
     modifier: Modifier = Modifier
 ) {
     // Parse payload outside composable to avoid try-catch around composable calls
@@ -379,11 +393,24 @@ private fun ProjectInviteMessage(
     }
 
     if (payloadData["isValid"] == true) {
+        val projectId = payloadData["projectId"] as String
+
+        // 멤버십 상태 확인 (LaunchedEffect로 초기화 시 한 번만 확인)
+        LaunchedEffect(projectId) {
+            onCheckMembership(projectId)
+        }
+
+        // StateFlow에서 현재 멤버십 상태 구독
+        val projectMembershipStates by projectMembershipStatesFlow.collectAsStateWithLifecycle()
+        val isAlreadyJoined = projectMembershipStates[projectId] ?: false
+        
         ProjectInviteMessageComponent(
             projectName = payloadData["projectName"] as String,
             inviterName = payloadData["inviterName"] as String,
             actionText = payloadData["actionText"] as String,
-            onJoinProject = { onJoinProject(payloadData["projectId"] as String) },
+            isSender = isSender,
+            isAlreadyJoined = isAlreadyJoined,
+            onJoinProject = { onJoinProject(projectId) },
             modifier = modifier
         )
     } else {

@@ -9,12 +9,12 @@ interface DMChannelRepository : DefaultRepository<DMChannel> {
     suspend fun findByOtherUserId(otherUserId: String): CustomResult<DMChannel, Exception>
     
     /**
-     * 사용자 이름을 통해 DM 채널을 생성합니다.
+     * 사용자 ID를 통해 DM 채널을 생성합니다.
      *
-     * @param targetUserName 대상 사용자 이름
+     * @param targetUserId 대상 사용자 ID
      * @return 성공 시 DM 채널 정보, 실패 시 Exception을 담은 CustomResult
      */
-    suspend fun createDMChannel(targetUserName: String): CustomResult<Map<String, Any?>, Exception>
+    suspend fun createDMChannel(targetUserId: String): CustomResult<Map<String, Any?>, Exception>
     
     /**
      * DM 채널을 차단합니다.
@@ -33,10 +33,10 @@ interface DMChannelRepository : DefaultRepository<DMChannel> {
     suspend fun unblockDMChannel(channelId: String): CustomResult<Map<String, Any?>, Exception>
     
     /**
-     * 사용자 이름을 통해 DM 채널 차단을 해제합니다.
+     * 사용자 ID를 통해 DM 채널 차단을 해제합니다.
      *
-     * @param targetUserName 차단 해제할 대상 사용자 이름
+     * @param targetUserId 차단 해제할 대상 사용자 ID
      * @return 성공 시 차단 해제 결과, 실패 시 Exception을 담은 CustomResult
      */
-    suspend fun unblockDMChannelByUserName(targetUserName: String): CustomResult<Map<String, Any?>, Exception>
+    suspend fun unblockDMChannelByUserId(targetUserId: String): CustomResult<Map<String, Any?>, Exception>
 }

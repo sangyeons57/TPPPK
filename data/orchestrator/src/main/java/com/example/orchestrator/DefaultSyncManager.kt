@@ -9,7 +9,7 @@ import com.example.domain.model.sync.SyncPort
 import com.example.domain.model.sync.SyncScope
 
 class DefaultSyncManager(
-    private val ports: List<SyncPort<AggregateRoot>>,
+    private val ports: List<SyncPort<out AggregateRoot>>,
     private val cursorStore: SyncCursorStore,
     private val pageSize: Int = 200,
     private val defaultResolver: ConflictResolver<Any> = NoopResolver,
@@ -42,7 +42,6 @@ class DefaultSyncManager(
             if (!outcome.success) break
 
             remoteBatch.nextCursor?.let {
-                port.commitCursor(it)
                 cursor = it
                 cursorStore.saveCursor(port.name, cursor)
             }

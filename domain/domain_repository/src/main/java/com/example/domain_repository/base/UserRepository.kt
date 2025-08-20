@@ -121,4 +121,12 @@ interface UserRepository : DefaultRepository<User> {
         userId: String,
         channelId: String
     ): CustomResult<Map<String, Any?>, Exception>
+
+    /**
+     * 사용자 이름으로 사용자 ID를 찾습니다.
+     *
+     * @param userName 찾을 사용자의 이름
+     * @return 성공 시 사용자 ID, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun findUserIdByUserName(userName: UserName): CustomResult<String, Exception>
 }

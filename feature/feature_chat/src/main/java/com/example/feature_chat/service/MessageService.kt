@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
@@ -59,7 +60,6 @@ class MessageService @Inject constructor(
     private val messageRepository: MessageRepository,
     private val userProfileService: UserProfileService,
     private val fileUseCases: FileManagementUseCases,
-    private val dmUseCaseProvider: DMUseCaseProvider,
     private val sendMessageUseCase: SendMessageUseCase,
     private val roomId: String,
     private val projectId: String? = null
@@ -69,15 +69,9 @@ class MessageService @Inject constructor(
         private const val TAG = "MessageService"
     }
 
-    // OutBox 상태 캐시 (메시지 ID -> OutBox 상태)
-    private val outboxStatusCache = mutableMapOf<String, OutBoxStatus>()
-
     // URI-Storage 경로 매핑 캐시 (로컬 URI -> Firebase Storage 경로)
     private val uriToStoragePathCache = mutableMapOf<String, String>()
 
-    // 로그 샘플링을 위한 카운터
-    private var statusCheckLogCounter = 0
-    private val loggedMessageIds = mutableSetOf<String>()
 
     init {
         // Repository 컬렉션 컨텍스트 설정 누락으로 인한 오류 방지
@@ -97,20 +91,7 @@ class MessageService @Inject constructor(
         }
     }
 
-    /**
-     * OutBox 상태를 캐시에 업데이트
-     */
-    fun updateOutBoxStatusCache(messageId: String, status: OutBoxStatus) {
-        outboxStatusCache[messageId] = status
-        Log.d(TAG, "OutBox 상태 캐시 업데이트: $messageId -> $status")
-    }
-
-    /**
-     * 캐시된 OutBox 상태 조회 (non-suspend)
-     */
-    private fun getCachedOutBoxStatus(messageId: String): OutBoxStatus? {
-        return outboxStatusCache[messageId]
-    }
+    // OutBox 상태는 캐시를 사용하지 않고 Room OutBoxEntity를 통해 관찰/조회합니다.
 
     // WebSocket 사용 사례 (방별) - 메시지 전송용으로만 사용
     private val roomWebSocketUseCases = webSocketUseCaseProvider.createForRoom(roomId)
@@ -132,59 +113,71 @@ class MessageService @Inject constructor(
         useFallbackAnchor: Boolean = false
     ): Flow<PagingData<ChatMessageUiModel>> {
         Log.d(TAG, "UI 메시지 Paging Flow 제공 - initialMessageId=$initialMessageId, useFallbackAnchor=$useFallbackAnchor")
-        return flow {
-            val initialKey: Int? = try {
-                if (initialMessageId.isNullOrBlank()) {
-                    if (useFallbackAnchor) {
-                        System.currentTimeMillis().toInt()
-                    } else {
-                        null
-                    }
+
+        val initialKey: Int? = try {
+            if (initialMessageId.isNullOrBlank()) {
+                if (useFallbackAnchor) {
+                    System.currentTimeMillis().toInt()
                 } else {
-                    val anchor = messageRepository.findById(initialMessageId)
-                    if (anchor != null) {
-                        anchor.createdAt?.toEpochMilli()?.toInt()
-                    } else if (useFallbackAnchor) {
-                        Log.d(TAG, "앵커 메시지 미존재, fallback 사용: $initialMessageId")
-                        System.currentTimeMillis().toInt()
-                    } else {
-                        null
-                    }
+                    null
                 }
-            } catch (_: Exception) {
-                if (useFallbackAnchor) System.currentTimeMillis().toInt() else null
+            } else {
+                val anchor = runBlocking { messageRepository.findById(initialMessageId) }
+                if (anchor != null) {
+                    anchor.createdAt?.toEpochMilli()?.toInt()
+                } else if (useFallbackAnchor) {
+                    Log.d(TAG, "앵커 메시지 미존재, fallback 사용: $initialMessageId")
+                    System.currentTimeMillis().toInt()
+                } else {
+                    null
+                }
             }
+        } catch (_: Exception) {
+            if (useFallbackAnchor) System.currentTimeMillis().toInt() else null
+        }
 
-            val pager = Pager(
-                config = PagingConfig(
-                    pageSize = PagingConstants.PAGE_SIZE,
-                    initialLoadSize = PagingConstants.INITIAL_LOAD_SIZE,
-                    prefetchDistance = PagingConstants.PREFETCH_DISTANCE,
-                    maxSize = PagingConstants.MAX_SIZE,
-                    enablePlaceholders = false
-                ),
-                initialKey = initialKey,
-                pagingSourceFactory = {
-                    messageRepository.getMessageEntityPagingSource(roomId)
-                }
-            )
+        val pager = Pager(
+            config = PagingConfig(
+                pageSize = PagingConstants.PAGE_SIZE,
+                initialLoadSize = PagingConstants.INITIAL_LOAD_SIZE,
+                prefetchDistance = PagingConstants.PREFETCH_DISTANCE,
+                maxSize = PagingConstants.MAX_SIZE,
+                enablePlaceholders = false
+            ),
+            initialKey = initialKey,
+            pagingSourceFactory = {
+                messageRepository.getMessageEntityPagingSource(roomId)
+            }
+        )
 
-            emitAll(
-                pager.flow.map { pagingData ->
-                    pagingData.map { entity ->
-                        val message = messageRepository.convertEntityToDomain(entity)
-                        convertDomainMessageToUiModel(message)
+        // Message Paging Flow를 도메인 변환하여 반환 (Flow combination 없이 직접 변환)
+        return pager.flow.map { pagingData ->
+            pagingData.map { entity ->
+                val message = messageRepository.convertEntityToDomain(entity)
+                // OutBox 상태는 현재 시점에서 동기적으로 조회 (성능을 위해)
+                val outboxStatus = try {
+                    runBlocking {
+                        val result = messageRepository.getMessageOutBoxStatus(message.id)
+                        if (result is CustomResult.Success) result.data else null
                     }
+                } catch (e: Exception) {
+                    null
                 }
-            )
+                convertDomainMessageToUiModel(message, outboxStatus)
+            }
         }
     }
 
     /**
      * 도메인 Message를 ChatMessageUiModel로 변환
      * 캐싱을 통한 성능 최적화
+     * @param message 도메인 메시지 객체
+     * @param outboxStatus OutBox 상태 (null이면 정상 상태로 간주)
      */
-    fun convertDomainMessageToUiModel(message: Message): ChatMessageUiModel {
+    fun convertDomainMessageToUiModel(
+        message: Message,
+        outboxStatus: OutBoxStatus? = null
+    ): ChatMessageUiModel {
         // 채널 혼입 진단: 다른 채널 데이터가 섞여오면 즉시 경고
         if (message.channelId.value != roomId) {
             Log.w(
@@ -206,13 +199,9 @@ class MessageService @Inject constructor(
             }
         }
 
-        // OutBox 상태 확인 - 캐시에서 조회 (non-suspend)
-        val outboxStatus = getCachedOutBoxStatus(message.id.value)
-
-        // OutBox 상태에 따른 전송 상태 판단
+        // OutBox 상태 기반 동적 상태 계산
         val isSending = outboxStatus == OutBoxStatus.PENDING
         val sendFailed = outboxStatus == OutBoxStatus.FAILED
-        val isDispatched = outboxStatus == OutBoxStatus.DISPATCHED
 
         // 이미지 URL 추출
         val imageUrls = extractImageUrlsFromPayload(message.payload.value)
@@ -262,16 +251,15 @@ class MessageService @Inject constructor(
             isDeleted = message.isDeleted.value,
             deliveryState = when {
                 hasPendingOptimisticOp -> MessageDeliveryState.Sending
-                isSending -> MessageDeliveryState.Sending
-                sendFailed -> MessageDeliveryState.Failed("메시지 전송에 실패했습니다")
-                isDispatched -> MessageDeliveryState.Sent
-                else -> MessageDeliveryState.Sent // 기본값은 전송 완료로 간주
+                outboxStatus == OutBoxStatus.PENDING -> MessageDeliveryState.Sending
+                outboxStatus == OutBoxStatus.FAILED -> MessageDeliveryState.Failed("send_failed")
+                else -> MessageDeliveryState.Sent
             },
-            isOptimistic = isSending || hasPendingOptimisticOp,
+            isOptimistic = hasPendingOptimisticOp,
             clientSentAt = null,
             retryCount = 0,
-            canRetry = sendFailed, // 전송 실패한 경우에만 재전송 가능
-            errorMessage = if (sendFailed) "메시지 전송에 실패했습니다" else null,
+            canRetry = outboxStatus == OutBoxStatus.FAILED,
+            errorMessage = null,
             replyToMessageId = message.replyToMessageId?.value,
             replyToContent = null, // TODO: 답장 대상 메시지 내용 조회
             replyToUserName = null, // TODO: 답장 대상 사용자 이름 조회
@@ -298,6 +286,13 @@ class MessageService @Inject constructor(
 
     fun observeChannelPendingCount(): Flow<Int> =
         messageRepository.observeChannelPendingCount(roomId)
+
+    /**
+     * 채널 내 각 메시지의 OutBox 상태 맵을 관찰합니다. (messageId -> OutBoxStatus)
+     * UI가 개별 row 로딩/실패 인디케이터를 바인딩할 때 사용할 수 있습니다.
+     */
+    fun observeChannelOutBoxStatuses(): Flow<Map<String, OutBoxStatus>> =
+        messageRepository.observeChannelOutBoxStatuses(roomId)
 
     private suspend fun loadWithTimeout(userId: String) {
         // 150ms 내에 프로필 불러오기 시도 (캐시 미스 시만)
@@ -449,10 +444,15 @@ class MessageService @Inject constructor(
         Log.d(TAG, "메시지 전송 시도: text='$textContent', images=${imageUris.size}개")
         
         return try {
+            // 🎯 중앙화된 MessageId 생성 (전체 플로우에서 단일 ID 사용)
+            val messageId = DocumentId(java.util.UUID.randomUUID().toString())
+            Log.d(TAG, "생성된 MessageId: ${messageId.value}")
+            
             // 이미지가 있는 경우 단순한 placeholder 플로우 사용
             if (imageUris.isNotEmpty() && !isSystemMessage) {
                 Log.d(TAG, "📸 [이미지전송] 이미지 메시지 플로우 시작: ${imageUris.size}개 이미지")
                 return sendImageMessageSimple(
+                    messageId = messageId,
                     senderId = senderId,
                     textContent = textContent,
                     imageUris = imageUris,
@@ -461,23 +461,57 @@ class MessageService @Inject constructor(
             }
 
             // 일반 텍스트/시스템 메시지 처리 - 도메인 Message 구성 후 통합 UseCase 호출
-            val messagePayload = if (isSystemMessage && systemType != null) {
+            val (messagePayload, actualMessageType) = if (isSystemMessage && systemType != null) {
+                // 시스템 메시지 payload 구성
                 val jsonObject = buildJsonObject {
                     put(MessagePayload.KEY_CONTENT, JsonPrimitive(textContent))
                     additionalMetadata.forEach { (key, value) ->
                         put(key, JsonPrimitive(value))
                     }
                 }
-                MessagePayload(jsonObject.toString())
+                val payload = MessagePayload(jsonObject.toString())
+
+                // systemType에 따른 MessageType 매핑
+                val messageType = when (systemType) {
+                    "USER_INVITE", "MEMBER_INVITATION" -> {
+                        // projectId, projectName, inviterName, targetUserId 검증
+                        if (additionalMetadata.containsKey("projectId") &&
+                            additionalMetadata.containsKey("projectName") &&
+                            additionalMetadata.containsKey("inviterName")
+                        ) {
+                            MessageType.SYSTEM_MEMBER_INVITATION
+                        } else {
+                            MessageType.TEXT
+                        }
+                    }
+
+                    "PROJECT_INVITE" -> {
+                        // projectId, projectName, inviterName, invitationId 검증
+                        if (additionalMetadata.containsKey("projectId") &&
+                            additionalMetadata.containsKey("projectName") &&
+                            additionalMetadata.containsKey("inviterName")
+                        ) {
+                            MessageType.PROJECT_INVITE
+                        } else {
+                            MessageType.TEXT
+                        }
+                    }
+
+                    "PROJECT_JOIN" -> MessageType.SYSTEM_PROJECT_JOIN
+                    "PROJECT_LEAVE" -> MessageType.SYSTEM_PROJECT_LEAVE
+                    "DATE" -> MessageType.SYSTEM_DATE
+                    else -> MessageType.TEXT
+                }
+
+                payload to messageType
             } else {
-                MessagePayload.forText(textContent)
+                MessagePayload.forText(textContent) to MessageType.TEXT
             }
 
-            val newMessageId = DocumentId(java.util.UUID.randomUUID().toString())
             val domainMessage = Message.create(
-                id = newMessageId,
+                id = messageId,
                 senderId = senderId,
-                messageType = MessageType.TEXT,
+                messageType = actualMessageType,
                 payload = messagePayload,
                 replyToMessageId = replyToMessageId,
                 mentions = emptyList(),
@@ -489,9 +523,7 @@ class MessageService @Inject constructor(
                 projectId = projectId?.let { com.example.domain.vo.ProjectId(it) }
             )
 
-            if (result is Success) {
-                updateOutBoxStatusCache(result.data.value, OutBoxStatus.PENDING)
-            }
+            // OutBox 상태는 save() 내부에서 자동으로 PENDING 상태로 생성됩니다
 
             result
 
@@ -509,13 +541,13 @@ class MessageService @Inject constructor(
      * 3. 메시지 전송 성공 시 백그라운드 업로드 시작
      */
     private suspend fun sendImageMessageSimple(
+        messageId: DocumentId,
         senderId: UserId,
         textContent: String,
         imageUris: List<Uri>,
         replyToMessageId: DocumentId?
     ): CustomResult<DocumentId, Exception> {
         return try {
-            val messageId = DocumentId(java.util.UUID.randomUUID().toString())
             Log.d(TAG, "🖼️ 이미지 메시지 전송 시작: messageId=${messageId.value}, images=${imageUris.size}개")
 
             // 1단계: URI와 Storage 경로 매핑 저장
@@ -563,7 +595,7 @@ class MessageService @Inject constructor(
                 return CustomResult.Failure(Exception("메시지 로컬 저장 실패"))
             }
 
-            updateOutBoxStatusCache(messageId.value, OutBoxStatus.PENDING)
+            // OutBox 상태는 save()/enqueue 단계에서 PENDING으로 관리됩니다.
 
             // 3단계: 업로드 선행(Option A) - 모든 이미지를 Firebase Storage에 업로드하여 안정 URL 획득
             Log.d(TAG, "🔄 [이미지전송] Firebase Storage 업로드(선행) 시작")
@@ -754,11 +786,7 @@ class MessageService @Inject constructor(
                         TAG,
                         "✅ [이미지전송완료] 메시지 payload를 실제 Firebase URL로 업데이트 완료: ${messageId.value}"
                     )
-
-                    // OutBox 상태를 DISPATCHED로 변경 (업로드 완료)
-                    updateOutBoxStatusCache(messageId.value, OutBoxStatus.DISPATCHED)
-
-                    // Room이 자동으로 invalidation을 처리하므로 수동 invalidation 불필요
+                    // OutBox 상태 변경은 WebSocket ACK 처리에 의해 갱신됩니다.
                 } else {
                     Log.e(TAG, "❌ 메시지 payload 업데이트 저장 실패")
                     markMessageAsFailed(messageId)
@@ -780,10 +808,7 @@ class MessageService @Inject constructor(
         try {
             val result = messageRepository.handleMessageAck(messageId)
             if (result is Success) {
-                updateOutBoxStatusCache(messageId, OutBoxStatus.DISPATCHED)
-
                 // Room이 자동으로 invalidation을 처리하므로 수동 invalidation 불필요
-
                 Log.d(TAG, "✅ 메시지 ACK 처리 완료 + UI 갱신: $messageId")
             } else {
                 Log.e(TAG, "❌ 메시지 ACK 처리 실패: $result")
@@ -800,7 +825,7 @@ class MessageService @Inject constructor(
         try {
             val result = messageRepository.handleMessageFailure(messageId)
             if (result is Success) {
-                updateOutBoxStatusCache(messageId, OutBoxStatus.FAILED)
+                // OutBox 상태는 handleMessageFailure에서 자동으로 FAILED 상태로 업데이트됩니다
 
                 // Room이 자동으로 invalidation을 처리하므로 수동 invalidation 불필요
 
@@ -818,15 +843,15 @@ class MessageService @Inject constructor(
      * 내부 메시지 전송 로직 (payload 기반)
      */
     private suspend fun sendMessageInternal(
+        messageId: DocumentId,
         senderId: UserId,
         messageType: MessageType,
         payload: MessagePayload,
         replyToMessageId: DocumentId?
     ): CustomResult<DocumentId, Exception> {
         return try {
-            val newId = DocumentId.generate()
             val domainMessage = Message.create(
-                id = newId,
+                id = messageId,
                 senderId = senderId,
                 messageType = messageType,
                 payload = payload,
@@ -840,54 +865,11 @@ class MessageService @Inject constructor(
                 projectId = projectId?.let { com.example.domain.vo.ProjectId(it) }
             )
 
-            if (result is Success) {
-                updateOutBoxStatusCache(result.data.value, OutBoxStatus.PENDING)
-            }
+            // OutBox 상태는 save() 내부에서 자동으로 PENDING 상태로 생성됩니다
 
             result
         } catch (e: Exception) {
             Log.e(TAG, "❌ sendMessageInternal 중 예외", e)
-            CustomResult.Failure(e)
-        }
-    }
-
-    /**
-     * Map 형태 payload로 메시지 전송
-     * - Repository.sendMessage(channelId, payloadMap)으로 로컬 저장 + OutBox 생성
-     * - 이후 WebSocket 전송 수행
-     */
-    suspend fun sendMessageWithPayloadMap(
-        senderId: UserId,
-        payloadMap: Map<String, Any?>,
-        replyToMessageId: DocumentId? = null
-    ): CustomResult<DocumentId, Exception> {
-        return try {
-            val payloadJson = mapToJsonString(payloadMap)
-            val messagePayload = MessagePayload(payloadJson)
-
-            val newId = DocumentId.generate()
-            val domainMessage = Message.create(
-                id = newId,
-                senderId = senderId,
-                messageType = MessageType.TEXT,
-                payload = messagePayload,
-                replyToMessageId = replyToMessageId,
-                mentions = emptyList(),
-                channelId = ChannelId(roomId)
-            )
-
-            val result = sendMessageUseCase(
-                message = domainMessage,
-                projectId = projectId?.let { com.example.domain.vo.ProjectId(it) }
-            )
-
-            if (result is Success) {
-                updateOutBoxStatusCache(result.data.value, OutBoxStatus.PENDING)
-            }
-
-            result
-        } catch (e: Exception) {
-            Log.e(TAG, "메시지 전송(Map) 중 예외", e)
             CustomResult.Failure(e)
         }
     }
@@ -933,8 +915,7 @@ class MessageService @Inject constructor(
             val newPayload = createUpdatedPayloadWithPreservedAttachments(messageId, newContent)
             val editResult = roomWebSocketUseCases.editMessageUseCase(
                 messageId = messageId,
-                newPayload = newPayload,
-                projectId = projectId
+                newPayload = newPayload
             )
 
             if (editResult.isSuccess) {
@@ -966,8 +947,7 @@ class MessageService @Inject constructor(
         // 2) WebSocket 전송
         return try {
             val deleteResult = roomWebSocketUseCases.deleteMessageUseCase(
-                messageId = messageId,
-                projectId = projectId
+                messageId = messageId
             )
 
             if (deleteResult.isSuccess) {
@@ -1272,7 +1252,9 @@ class MessageService @Inject constructor(
 
                 if (imageUrls.isNotEmpty()) {
                     // 이미지 메시지 재전송 - 이미 업로드된 URL로 바로 전송
+                    val retryMessageId = DocumentId(java.util.UUID.randomUUID().toString())
                     val result = sendMessageInternal(
+                        messageId = retryMessageId,
                         senderId = message.senderId,
                         messageType = message.messageType,
                         payload = payload,
@@ -1282,7 +1264,7 @@ class MessageService @Inject constructor(
                     if (result is Success) {
                         // 기존 실패한 메시지 삭제
                         messageRepository.delete(DocumentId(messageId))
-                        updateOutBoxStatusCache(messageId, OutBoxStatus.DISPATCHED)
+                        // OutBox 상태는 WebSocket ACK 처리에서 자동으로 DISPATCHED로 업데이트됩니다
                     }
 
                     when (result) {
@@ -1294,7 +1276,9 @@ class MessageService @Inject constructor(
                     }
                 } else {
                     // 일반 텍스트 메시지 재전송
+                    val retryMessageId = DocumentId(java.util.UUID.randomUUID().toString())
                     val result = sendMessageInternal(
+                        messageId = retryMessageId,
                         senderId = message.senderId,
                         messageType = message.messageType,
                         payload = payload,
@@ -1304,7 +1288,7 @@ class MessageService @Inject constructor(
                     if (result is Success) {
                         // 기존 실패한 메시지 삭제
                         messageRepository.delete(DocumentId(messageId))
-                        updateOutBoxStatusCache(messageId, OutBoxStatus.DISPATCHED)
+                        // OutBox 상태는 WebSocket ACK 처리에서 자동으로 DISPATCHED로 업데이트됩니다
                     }
 
                     when (result) {
@@ -1335,7 +1319,7 @@ class MessageService @Inject constructor(
      */
     private suspend fun markMessageAsFailed(messageId: DocumentId) {
         try {
-            updateOutBoxStatusCache(messageId.value, OutBoxStatus.FAILED)
+            // OutBox 상태는 handleMessageFailure에서 자동으로 FAILED 상태로 업데이트됩니다
             Log.e(TAG, "❌ 메시지 실패 상태로 표시: ${messageId.value}")
         } catch (e: Exception) {
             Log.e(TAG, "❌ 메시지 실패 표시 중 예외", e)
@@ -1394,7 +1378,9 @@ class MessageService @Inject constructor(
                         }
                     } else {
                         // 일반 메시지 재전송
+                        val retryMessageId = DocumentId(java.util.UUID.randomUUID().toString())
                         val result = sendMessageInternal(
+                            messageId = retryMessageId,
                             senderId = message.senderId,
                             messageType = message.messageType,
                             payload = payload,
@@ -1402,7 +1388,7 @@ class MessageService @Inject constructor(
                         )
                         when (result) {
                             is Success -> {
-                                updateOutBoxStatusCache(messageId.value, OutBoxStatus.DISPATCHED)
+                                // OutBox 상태는 WebSocket ACK 처리에서 자동으로 DISPATCHED로 업데이트됩니다
                                 Success(Unit)
                             }
 

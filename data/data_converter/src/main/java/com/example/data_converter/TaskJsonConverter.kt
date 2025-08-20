@@ -27,6 +27,7 @@ class TaskJsonConverter @Inject constructor(
         return try {
             val taskData = mapOf(
                 AggregateRoot.KEY_ID to data.id.value,
+                Task.KEY_CHANNEL_ID to data.channelId.value,
                 Task.KEY_TASK_TYPE to data.taskType.value,
                 Task.KEY_STATUS to data.status.value,
                 Task.KEY_CONTENT to data.content.value,
@@ -49,6 +50,7 @@ class TaskJsonConverter @Inject constructor(
 
             Task.fromDataSource(
                 id = DocumentId(taskData[AggregateRoot.KEY_ID] as String),
+                channelId = DocumentId(taskData[Task.KEY_CHANNEL_ID] as String),
                 taskType = TaskType.fromValue(taskData[Task.KEY_TASK_TYPE] as String),
                 status = TaskStatus.fromValue(taskData[Task.KEY_STATUS] as String),
                 content = TaskContent(taskData[Task.KEY_CONTENT] as String),

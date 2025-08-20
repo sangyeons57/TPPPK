@@ -65,18 +65,29 @@ export const COLLECTIONS = {
   PROJECT_INVITATIONS: "project_invitations",
   MESSAGES: "messages",
   DM_CHANNELS: "dm_channels",
-  DM_WRAPPERS: "dm_wrappers",
+  DM_WRAPPERS: "dm_wrapper",
   PROJECT_WRAPPERS: "projects_wrapper",
   IDEMPOTENCY_KEYS: "idempotency_keys",
 } as const;
 
-// Friend Status
+// Friend Status (Legacy Root Collection)
 export const FRIEND_STATUS = {
   PENDING: "pending",
   ACCEPTED: "accepted", 
   REJECTED: "rejected",
   BLOCKED: "blocked",
 } as const;
+
+// Friend Status (Subcollection Approach)
+export const FRIEND_SUBCOLLECTION_STATUS = {
+  REQUESTED: "REQUESTED",  // 요청자 측 상태
+  PENDING: "PENDING",      // 수신자 측 상태  
+  ACCEPTED: "ACCEPTED",    // 양방향 수락 상태
+  DECLINED: "DECLINED",    // 거절 상태
+  BLOCKED: "BLOCKED",      // 차단 상태
+} as const;
+
+export type FriendSubcollectionStatus = typeof FRIEND_SUBCOLLECTION_STATUS[keyof typeof FRIEND_SUBCOLLECTION_STATUS];
 
 // Member Roles
 export const MEMBER_ROLES = {

@@ -57,7 +57,7 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
             init(null, arrayOf(trustManager), SecureRandom())
         }
 
-        Log.d(TAG, "SSL configured with strict security settings")
+        // SSL configured with strict security settings
 
         return sslSocketFactory(sslContext.socketFactory, trustManager)
     }
@@ -65,6 +65,12 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
+    }
+
+    private val prettyJson = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+        prettyPrint = true
     }
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -94,32 +100,34 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
 
     private val webSocketListener = object : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
-            Log.d(TAG, "WebSocket connection opened successfully")
             Log.i(TAG, "🔌 WebSocket connected - URL: ${response.request.url}")
             _connectionState.value = WebSocketConnectionState.Connected("")
-
-            // Reset manual disconnect flag
             manuallyDisconnected = false
-
-            // OkHttp handles ping/pong automatically with pingInterval
-            Log.d(TAG, "🔌 [AUTO-PING-PONG] WebSocket connected - ping will start in 30 seconds")
-            Log.d(TAG, "Connection state updated to Connected, reconnect attempts reset")
         }
 
         override fun onMessage(webSocket: WebSocket, bytes: okio.ByteString) {
-            Log.d(TAG, "🏓 [AUTO-PING-PONG] Received pong frame: ${bytes.hex()}")
             super.onMessage(webSocket, bytes)
         }
 
         override fun onMessage(webSocket: WebSocket, text: String) {
-            Log.d(TAG, "Received message: $text")
+            Log.i("WS_RECV_JSON", "📥 [수신 JSON]")
+            try {
+                val parsedJson = json.parseToJsonElement(text)
+                val prettyText = prettyJson.encodeToString(parsedJson)
+                Log.i("WS_RECV_JSON", prettyText)
+            } catch (e: Exception) {
+                Log.i("WS_RECV_JSON", text) // fallback to raw text
+            }
             try {
                 val message = json.decodeFromString<WebSocketMessage>(text)
+                Log.i(
+                    "WS_RECV_MAPPED",
+                    "✅ [매핑 성공] type=${message.type}, roomId=${message.roomId}, hasMessage=${message.message != null}"
+                )
 
                 // Handle authentication responses
                 when (message.type) {
                     WebSocketMessage.TYPE_AUTH_SUCCESS -> {
-                        Log.d(TAG, "Authentication successful")
                         _isAuthenticated.value = true
                     }
 
@@ -129,7 +137,6 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
 
                         when {
                             errorContent.contains("Authentication") -> {
-                                Log.w(TAG, "Authentication failed: $errorContent")
                                 _isAuthenticated.value = false
                             }
 
@@ -144,11 +151,11 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
                                 )
                                 _isAuthenticated.value = false
                                 // Close connection with policy violation code
-                                webSocket?.close(1008, "Server configuration error")
+                                webSocket.close(1008, "Server configuration error")
                             }
 
                             else -> {
-                                Log.w(TAG, "Other error received: $errorContent")
+                                // Other errors handled by application layer
                             }
                         }
                     }
@@ -156,18 +163,23 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
 
                 _incomingMessages.tryEmit(message)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to parse message: $text", e)
+                Log.e("WS_RECV_MAPPED", "❌ [매핑 실패]", e)
+                try {
+                    val parsedJson = json.parseToJsonElement(text)
+                    val prettyText = prettyJson.encodeToString(parsedJson)
+                    Log.e("WS_RECV_MAPPED", prettyText)
+                } catch (jsonE: Exception) {
+                    Log.e("WS_RECV_MAPPED", text) // fallback to raw text
+                }
             }
         }
 
         override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
-            Log.d(TAG, "WebSocket closing: $code - $reason")
             _connectionState.value = WebSocketConnectionState.Disconnected
             _isAuthenticated.value = false
         }
 
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-            Log.d(TAG, "WebSocket closed: $code - $reason")
             Log.w(TAG, "🔌 WebSocket disconnected - Code: $code, Reason: $reason")
 
             // 연결 끄어질 때 모든 방에서 퇴장
@@ -309,10 +321,17 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
                 val ws = webSocket
                     ?: return@withContext Result.failure(Exception("WebSocket not connected"))
                 val jsonMessage = json.encodeToString(message)
+                Log.i("WS_SEND_JSON", "📤 [전송 JSON]")
+                try {
+                    val parsedJson = json.parseToJsonElement(jsonMessage)
+                    val prettyText = prettyJson.encodeToString(parsedJson)
+                    Log.i("WS_SEND_JSON", prettyText)
+                } catch (e: Exception) {
+                    Log.i("WS_SEND_JSON", jsonMessage) // fallback to raw text
+                }
 
                 val success = ws.send(jsonMessage)
                 if (success) {
-                    Log.d(TAG, "Sent message: $jsonMessage")
                     Result.success(Unit)
                 } else {
                     Result.failure(Exception("Failed to send message"))
@@ -331,13 +350,11 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
         return withContext(Dispatchers.IO) {
             synchronized(joinedRooms) {
                 if (joinedRooms.contains(roomId)) {
-                    Log.d(TAG, "Already joined room: $roomId")
                     return@withContext Result.success(Unit)
                 }
 
                 // 연결 상태 확인
                 if (_connectionState.value !is WebSocketConnectionState.Connected) {
-                    Log.w(TAG, "Cannot join room: not connected")
                     return@withContext Result.failure(Exception("WebSocket not connected"))
                 }
 
@@ -369,7 +386,6 @@ class WebSocketManagerImpl @Inject constructor() : WebSocketManager {
         return withContext(Dispatchers.IO) {
             synchronized(joinedRooms) {
                 if (!joinedRooms.contains(roomId)) {
-                    Log.d(TAG, "Not in room: $roomId")
                     return@withContext Result.success(Unit)
                 }
 

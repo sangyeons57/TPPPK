@@ -22,10 +22,13 @@ import com.example.core_ui.components.project.ProjectImageUpdateEventManager
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.UserId
 import com.example.domain.vo.project.ProjectName
+import com.example.domain.model.ui.data.MemberUiModel
 import com.example.domain_usecase.provider.project.CoreProjectUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectAssetsUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectChannelUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectStructureUseCaseProvider
+import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
+import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.feature_model.CategoryUiModel
 import com.example.feature_model.ChannelUiModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -52,7 +55,12 @@ data class ProjectSettingUiState(
     val showRenameProjectDialog: Boolean = false,
     val showDeleteProjectDialog: Boolean = false,
     val showRemoveImageDialog: Boolean = false,
-    val isRemovingImage: Boolean = false // 기본 프로젝트 프로필 설정 중인지 여부
+    val isRemovingImage: Boolean = false, // 기본 프로젝트 프로필 설정 중인지 여부
+    val isCurrentUserOwner: Boolean = false, // 현재 사용자가 Owner인지 여부
+    val showLeaveProjectDialog: Boolean = false, // 프로젝트 나가기 확인 다이얼로그
+    val showTransferOwnershipDialog: Boolean = false, // 소유권 전달 다이얼로그
+    val projectMembers: List<MemberUiModel> = emptyList(), // 소유권 전달 대상 멤버들
+    val isLoadingMembers: Boolean = false // 멤버 목록 로딩 상태
 )
 
 // --- 이벤트 ---
@@ -71,6 +79,8 @@ class ProjectSettingViewModel @Inject constructor(
     private val projectStructureUseCaseProvider: ProjectStructureUseCaseProvider,
     private val projectChannelUseCaseProvider: ProjectChannelUseCaseProvider,
     private val projectAssetsUseCaseProvider: ProjectAssetsUseCaseProvider,
+    private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider,
+    private val authSessionUseCaseProvider: AuthSessionUseCaseProvider,
     private val projectImageUpdateEventManager: ProjectImageUpdateEventManager
 ) : ViewModel() {
 
@@ -82,6 +92,10 @@ class ProjectSettingViewModel @Inject constructor(
         coreProjectUseCaseProvider.createForProject(projectId, UserId.EMPTY)
     private val projectStructureUseCases =
         projectStructureUseCaseProvider.createForProject(projectId)
+    private val projectMemberUseCases =
+        projectMemberUseCaseProvider.createForProject(projectId)
+    private val authSessionUseCases =
+        authSessionUseCaseProvider.create()
 
     // Note: projectChannelUseCases는 특정 채널 작업 시 필요한 categoryId와 함께 동적으로 생성됨
     private val projectAssetsUseCases =
@@ -96,6 +110,7 @@ class ProjectSettingViewModel @Inject constructor(
 
     init {
         loadProjectStructure()
+        checkUserOwnership()
     }
 
     private fun loadProjectStructure() {
@@ -183,6 +198,34 @@ class ProjectSettingViewModel @Inject constructor(
                 else -> {
                     _uiState.update { it.copy(isLoading = false) }
                 }
+            }
+        }
+    }
+
+    private fun checkUserOwnership() {
+        viewModelScope.launch {
+            try {
+                // 현재 사용자 세션 확인
+                val sessionResult = authSessionUseCases.checkSessionUseCase()
+                if (sessionResult !is CustomResult.Success) {
+                    _uiState.update { it.copy(isCurrentUserOwner = false) }
+                    return@launch
+                }
+
+                val currentUserId = sessionResult.data.userId
+
+                // 프로젝트 정보를 가져와서 ownerId와 비교
+                val projectResult =
+                    coreProjectUseCases.getProjectDetailsStreamUseCase(projectId).first()
+                if (projectResult is CustomResult.Success) {
+                    val isOwner = projectResult.data.ownerId.value == currentUserId.value
+                    _uiState.update { it.copy(isCurrentUserOwner = isOwner) }
+                } else {
+                    _uiState.update { it.copy(isCurrentUserOwner = false) }
+                }
+            } catch (e: Exception) {
+                Log.e("ProjectSettingViewModel", "Error checking user ownership", e)
+                _uiState.update { it.copy(isCurrentUserOwner = false) }
             }
         }
     }
@@ -418,11 +461,182 @@ class ProjectSettingViewModel @Inject constructor(
         }
     }
 
+    // --- 프로젝트 나가기 ---
+    fun requestLeaveProject() {
+        val currentState = _uiState.value
+        if (currentState.isCurrentUserOwner) {
+            // Owner인 경우 멤버 목록을 먼저 로딩한 후 소유권 전달 다이얼로그 표시
+            loadProjectMembersForTransfer()
+        } else {
+            // 일반 멤버인 경우 나가기 확인 다이얼로그 표시
+            _uiState.update { it.copy(showLeaveProjectDialog = true) }
+        }
+    }
+
+    private fun loadProjectMembersForTransfer() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingMembers = true) }
+
+            try {
+                // 현재 사용자 ID 가져오기
+                val sessionResult = authSessionUseCases.checkSessionUseCase()
+                if (sessionResult !is CustomResult.Success) {
+                    _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("사용자 정보를 확인할 수 없습니다."))
+                    _uiState.update { it.copy(isLoadingMembers = false) }
+                    return@launch
+                }
+                val currentUserId = sessionResult.data.userId
+
+                // 프로젝트 멤버 목록 가져오기
+                val membersResult = projectMemberUseCases.observeProjectMembersUseCase().first()
+                when (membersResult) {
+                    is CustomResult.Success -> {
+                        val members = membersResult.data
+
+                        // 자기 자신을 제외한 멤버들만 필터링하고 UI 모델로 변환
+                        val otherMembers = members.filter { it.id.value != currentUserId.value }
+
+                        if (otherMembers.isEmpty()) {
+                            // 다른 멤버가 없는 경우, 프로젝트 삭제 확인
+                            _uiState.update {
+                                it.copy(
+                                    isLoadingMembers = false,
+                                    showDeleteProjectDialog = true
+                                )
+                            }
+                            _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("다른 멤버가 없어 프로젝트를 삭제해야 합니다."))
+                        } else {
+                            // 멤버들을 UI 모델로 변환
+                            val memberUiModels = otherMembers.map { member ->
+                                MemberUiModel(
+                                    userId = UserId.from(member.id),
+                                    userName = com.example.domain.vo.user.UserName(
+                                        "사용자 ${
+                                            member.id.value.take(
+                                                4
+                                            )
+                                        }"
+                                    ), // 임시 이름
+                                    roleNames = emptyList(), // 역할은 나중에 로딩
+                                    joinedAt = member.createdAt
+                                )
+                            }
+
+                            _uiState.update {
+                                it.copy(
+                                    isLoadingMembers = false,
+                                    projectMembers = memberUiModels,
+                                    showTransferOwnershipDialog = true
+                                )
+                            }
+                        }
+                    }
+
+                    is CustomResult.Failure -> {
+                        _uiState.update { it.copy(isLoadingMembers = false) }
+                        _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("멤버 목록을 불러올 수 없습니다: ${membersResult.error.message}"))
+                    }
+
+                    else -> {
+                        _uiState.update { it.copy(isLoadingMembers = false) }
+                        _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("멤버 목록을 불러오는 중 오류가 발생했습니다."))
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoadingMembers = false) }
+                _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("멤버 목록 로딩 실패: ${e.message}"))
+            }
+        }
+    }
+
+    fun confirmLeaveProject() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, showLeaveProjectDialog = false) }
+
+            try {
+                val result = projectMemberUseCases.leaveProjectUseCase(projectId)
+                when (result) {
+                    is CustomResult.Success -> {
+                        _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트에서 나갔습니다."))
+                        navigationManger.navigateBack()
+                    }
+
+                    is CustomResult.Failure -> {
+                        _uiState.update { it.copy(isLoading = false) }
+                        _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 나가기 실패: ${result.error.message}"))
+                    }
+
+                    else -> {
+                        _uiState.update { it.copy(isLoading = false) }
+                        _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 나가기 실패: 알 수 없는 오류"))
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false) }
+                _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("프로젝트 나가기 실패: ${e.message}"))
+            }
+        }
+    }
+
+    fun transferOwnershipAndLeave(newOwnerId: String) {
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isLoading = true,
+                    showTransferOwnershipDialog = false
+                )
+            }
+
+            try {
+                // 1. 소유권 전달
+                val transferResult =
+                    projectMemberUseCases.transferOwnershipUseCase(projectId, newOwnerId)
+                when (transferResult) {
+                    is CustomResult.Success -> {
+                        // 2. 소유권 전달 성공 시 프로젝트에서 나가기
+                        val leaveResult = projectMemberUseCases.leaveProjectUseCase(projectId)
+                        when (leaveResult) {
+                            is CustomResult.Success -> {
+                                _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("소유권을 전달하고 프로젝트에서 나갔습니다."))
+                                navigationManger.navigateBack()
+                            }
+
+                            is CustomResult.Failure -> {
+                                _uiState.update { it.copy(isLoading = false) }
+                                _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("소유권 전달은 성공했지만 프로젝트 나가기 실패: ${leaveResult.error.message}"))
+                            }
+
+                            else -> {
+                                _uiState.update { it.copy(isLoading = false) }
+                                _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("소유권 전달은 성공했지만 프로젝트 나가기에서 알 수 없는 오류가 발생했습니다."))
+                            }
+                        }
+                    }
+
+                    is CustomResult.Failure -> {
+                        _uiState.update { it.copy(isLoading = false) }
+                        _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("소유권 전달 실패: ${transferResult.error.message}"))
+                    }
+
+                    else -> {
+                        _uiState.update { it.copy(isLoading = false) }
+                        _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("소유권 전달에서 알 수 없는 오류가 발생했습니다."))
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false) }
+                _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("소유권 전달 및 나가기 실패: ${e.message}"))
+            }
+        }
+    }
+
     fun dismiss() {
         _uiState.update {
             it.copy(
                 showRenameProjectDialog = false,
-                showDeleteProjectDialog = false
+                showDeleteProjectDialog = false,
+                showLeaveProjectDialog = false,
+                showTransferOwnershipDialog = false
             )
         }
     }

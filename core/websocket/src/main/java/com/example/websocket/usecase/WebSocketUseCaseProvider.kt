@@ -127,12 +127,6 @@ class WebSocketUseCases(
         return webSocketMessageService.getAckEvents()
     }
 
-    /**
-     * Paging3 메시지 새로고침 이벤트 구독
-     */
-    fun subscribeToMessageRefreshEventsUseCase(): Flow<String> {
-        return webSocketMessageService.messageRefreshEvents
-    }
 
     // ================================
     // 상태 확인 Use Cases
@@ -199,28 +193,18 @@ class RoomWebSocketUseCases(
     // ================================
 
     /**
-     * 메시지 전송
+     * 메시지 전송 (도메인 Message 기반 단일 API)
      */
     suspend fun sendMessageUseCase(
-        senderId: UserId,
-        payload: com.example.domain.vo.message.MessagePayload,
-        messageId: DocumentId,
-        replyToMessageId: DocumentId? = null,
-        projectId: String? = null,
-        channelType: String? = null
+        message: com.example.domain.model.base.Message
     ): Result<Unit> {
         return webSocketMessageService.sendMessage(
             roomId = roomId,
-            senderId = senderId,
-            payload = payload,
-            messageId = messageId,
-            replyToMessageId = replyToMessageId,
-            projectId = projectId,
-            channelType = channelType
+            message = message
         )
     }
 
-    // sendMessageWithPayloadUseCase 제거: 통합된 payload 기반 API 사용
+    // 도메인 기반 API 통합: payload 기반 API만 유지
 
     /**
      * 메시지 수정 (payload 기반)
@@ -228,14 +212,12 @@ class RoomWebSocketUseCases(
     suspend fun editMessageUseCase(
         messageId: DocumentId,
         newPayload: com.example.domain.vo.message.MessagePayload,
-        projectId: String? = null,
         channelType: String? = null
     ): Result<Unit> {
         return webSocketMessageService.editMessage(
             roomId = roomId,
             messageId = messageId,
             newPayload = newPayload,
-            projectId = projectId,
             channelType = channelType
         )
     }
@@ -246,11 +228,10 @@ class RoomWebSocketUseCases(
     suspend fun editMessageWithTextUseCase(
         messageId: DocumentId,
         newContent: String,
-        projectId: String? = null,
         channelType: String? = null
     ): Result<Unit> {
         val newPayload = com.example.domain.vo.message.MessagePayload.forText(newContent)
-        return editMessageUseCase(messageId, newPayload, projectId, channelType)
+        return editMessageUseCase(messageId, newPayload, channelType)
     }
 
     /**
@@ -258,13 +239,11 @@ class RoomWebSocketUseCases(
      */
     suspend fun deleteMessageUseCase(
         messageId: DocumentId,
-        projectId: String? = null,
         channelType: String? = null
     ): Result<Unit> {
         return webSocketMessageService.deleteMessage(
             roomId = roomId,
             messageId = messageId,
-            projectId = projectId,
             channelType = channelType
         )
     }

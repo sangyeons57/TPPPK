@@ -19,7 +19,7 @@ data class MessageEntity(
     val id: String,
 
     @ColumnInfo(name = "channelId")
-    val channelId: String, // ✅ 채널 ID 추가
+    val channelId: String,
 
     @ColumnInfo(name = "senderId")
     val senderId: String,

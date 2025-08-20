@@ -8,6 +8,7 @@ import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.vo.DocumentId
+import com.example.domain.vo.ChannelId
 import com.example.domain.vo.task.TaskType
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain_usecase.provider.auth.AuthSessionUseCases
@@ -17,6 +18,7 @@ import com.example.domain_usecase.provider.user.UserUseCaseProvider
 import com.example.domain_usecase.provider.user.UserUseCases
 import com.example.feature_task.mapper.TaskMapper
 import com.example.feature_task.model.TaskUiModel
+import com.example.orchestrator.SyncManagerFactory
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,6 +41,7 @@ class TaskListViewModel @Inject constructor(
     private val authSessionUseCaseProvider: AuthSessionUseCaseProvider,
     private val userUseCaseProvider: UserUseCaseProvider,
     private val navigationManger: NavigationManger,
+    private val syncManagerFactory: SyncManagerFactory,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     
@@ -64,7 +67,22 @@ class TaskListViewModel @Inject constructor(
     val uiState: StateFlow<TaskListUiState> = _uiState.asStateFlow()
     
     init {
-        taskUseCases.observeTasksUseCase()
+        val composed = ChannelId.compose(projectId, channelId)
+
+        // Kick off incremental sync (push outbox + pull remote) for tasks in this channel
+        viewModelScope.launch {
+            try {
+                val coordinator = syncManagerFactory.forChannel(
+                    composed.value,
+                    includeMessages = false,
+                    includeTasks = true
+                )
+                coordinator.syncAll()
+            } catch (_: Exception) {
+                // best-effort
+            }
+        }
+        taskUseCases.observeChannelTasksUseCase(composed)
             .flatMapLatest { taskResult ->
                 if (taskResult is CustomResult.Success) {
                     val tasks = taskResult.data
@@ -100,7 +118,8 @@ class TaskListViewModel @Inject constructor(
         viewModelScope.launch {
             val result = taskUseCases.createTaskUseCase.invoke(
                 content = content,
-                taskType = taskType
+                taskType = taskType,
+                channelId = ChannelId.compose(projectId, channelId)
             )
             
             result.onFailure { error ->
@@ -140,7 +159,7 @@ class TaskListViewModel @Inject constructor(
     
     fun deleteTask(taskId: String) {
         viewModelScope.launch {
-            val result = taskUseCases.deleteTaskUseCase.invoke(taskId)
+            val result = taskUseCases.deleteTaskUseCase(taskId)
             
             result.onFailure { error ->
                 _uiState.value = _uiState.value.copy(
@@ -168,8 +187,9 @@ class TaskListViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(tasks = realtimeOrderedTasks)
                 
                 // 서버에 새로운 순서 저장 (이미 정렬된 순서를 그대로 저장)
+                val composed = ChannelId.compose(projectId, channelId)
                 realtimeOrderedTasks.forEachIndexed { index, task ->
-                    val result = taskUseCases.reorderTaskUseCase(task.id.value, index)
+                    val result = taskUseCases.moveTaskUseCase(task.id.value, composed, index)
                     when (result) {
                         is CustomResult.Success -> {
                             // 성공 시 계속 진행

@@ -2,6 +2,7 @@ package com.example.orchestrator
 
 import android.util.Log
 import com.example.data_datasource.remote.MessageRemoteDataSource
+import com.example.core_common.constants.ChannelConstants
 import com.example.data_model.local.MessageDao
 import com.example.data_model.local.OutboxDao
 import com.example.data_model.local.toModel
@@ -37,7 +38,7 @@ class MessageSyncPort @Inject constructor(
         private const val TAG = "MessageSyncPort"
     }
 
-    override val name = "messages-$channelId"
+    override val name = "${ChannelConstants.STREAM_MESSAGES}-$channelId"
 
     // ================================
     // 서버 → 로컬 (Pull) 동기화
@@ -120,14 +121,6 @@ class MessageSyncPort @Inject constructor(
         }
     }
 
-    /**
-     * 새로운 커서를 저장합니다. (DefaultSyncManager에서 호출)
-     */
-    override suspend fun commitCursor(newCursor: String) {
-        Log.d(TAG, "💾 Committing new cursor: $newCursor")
-        // SyncCursorStore에서 자동으로 처리됨
-    }
-
     // ================================
     // 로컬 → 서버 (Push) 동기화
     // ================================
@@ -139,11 +132,17 @@ class MessageSyncPort @Inject constructor(
      * @return 전송할 OutBox 레코드들
      */
     override suspend fun readOutboxBatch(limit: Int): List<OutBoxRecord> {
-        Log.d(TAG, "📤 Reading outbox batch, limit: $limit")
+        Log.d(TAG, "📤 Reading outbox batch (generic), limit: $limit")
         return try {
-            // 채널 별 PENDING 메시지 조회 후 limit 적용
-            val pending = outboxDao.getPendingMessagesByChannel(channelId)
-            pending.take(limit).map { it.toModel() }
+            val pending = outboxDao.peek(ChannelConstants.STREAM_MESSAGES, limit)
+            pending.mapNotNull { e ->
+                try {
+                    val json = org.json.JSONObject(e.payload)
+                    if (json.optString(ChannelConstants.KEY_CHANNEL_ID) == channelId) e.toModel() else null
+                } catch (_: Exception) {
+                    null
+                }
+            }
         } catch (e: Exception) {
             Log.e(TAG, "❌ Failed to read outbox batch", e)
             emptyList()

@@ -4,6 +4,28 @@ export const TEST_PROJECT_ID = "test-project-123";
 export const TEST_CHANNEL_ID = "test-channel-456";
 export const TEST_INVITE_CODE = "TEST1234";
 
+// Test user data for friend functionality
+export const TEST_USERS = {
+  ALICE: {
+    uid: "alice-123",
+    name: "Alice User",
+    email: "alice@example.com",
+    profileImageUrl: "https://example.com/alice.jpg",
+  },
+  BOB: {
+    uid: "bob-456", 
+    name: "Bob User",
+    email: "bob@example.com",
+    profileImageUrl: "https://example.com/bob.jpg",
+  },
+  CHARLIE: {
+    uid: "charlie-789",
+    name: "Charlie User", 
+    email: "charlie@example.com",
+    profileImageUrl: null,
+  },
+};
+
 export const TestDataFactory = {
   // User data
   createUser: (overrides: Partial<any> = {}) => ({
@@ -27,7 +49,7 @@ export const TestDataFactory = {
     ...overrides,
   }),
 
-  // Friend request data
+  // Friend request data (Root collection style - deprecated)
   createFriendRequest: (overrides: Partial<any> = {}) => ({
     id: "friend-request-123",
     userId: "user-123",
@@ -37,6 +59,41 @@ export const TestDataFactory = {
     updatedAt: new Date("2024-01-01"),
     ...overrides,
   }),
+
+  // Subcollection friend data (new approach)
+  createSubcollectionFriend: (overrides: Partial<any> = {}) => ({
+    name: "Friend User",
+    profileImageUrl: null,
+    status: "PENDING",
+    requestedAt: new Date("2024-01-01"),
+    acceptedAt: null,
+    createdAt: new Date("2024-01-01"),
+    updatedAt: new Date("2024-01-01"),
+    ...overrides,
+  }),
+
+  // Helper to create bilateral friendship data
+  createBilateralFriendship: (userId1: string, userId2: string, status: string, userData: any = {}) => {
+    const user1Data = TestDataFactory.createSubcollectionFriend({
+      name: userData.user2Name || "User 2",
+      profileImageUrl: userData.user2Profile || null,
+      status: status,
+      acceptedAt: status === "ACCEPTED" ? new Date("2024-01-01") : null,
+    });
+
+    const correspondingStatus = status === "REQUESTED" ? "PENDING" : status === "PENDING" ? "REQUESTED" : status;
+    const user2Data = TestDataFactory.createSubcollectionFriend({
+      name: userData.user1Name || "User 1", 
+      profileImageUrl: userData.user1Profile || null,
+      status: correspondingStatus,
+      acceptedAt: status === "ACCEPTED" ? new Date("2024-01-01") : null,
+    });
+
+    return {
+      [`users/${userId1}/friends`]: { [userId2]: user1Data },
+      [`users/${userId2}/friends`]: { [userId1]: user2Data },
+    };
+  },
 
   // DM Channel data
   createDMChannel: (overrides: Partial<any> = {}) => ({
@@ -52,8 +109,8 @@ export const TestDataFactory = {
     id: "dm-wrapper-123",
     userId: "user-123",
     channelId: TEST_CHANNEL_ID,
-    targetUserId: "user-456",
-    targetUserName: "Target User",
+    otherUserId: "user-456",
+    otherUserName: "Target User",
     isBlocked: false,
     createdAt: new Date("2024-01-01"),
     updatedAt: new Date("2024-01-01"),

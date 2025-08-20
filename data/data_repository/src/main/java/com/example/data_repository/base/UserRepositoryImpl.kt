@@ -151,4 +151,9 @@ class UserRepositoryImpl @Inject constructor(
             }
         }
     }
+
+    override suspend fun findUserIdByUserName(userName: UserName): CustomResult<String, Exception> {
+        ensureCollection()
+        return userRemoteDataSource.findUserIdByUserName(userName)
+    }
 }

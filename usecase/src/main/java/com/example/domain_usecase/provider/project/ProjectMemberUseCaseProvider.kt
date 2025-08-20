@@ -4,8 +4,8 @@ import com.example.domain.usecase.project.DeleteProjectMemberUseCase
 import com.example.domain.usecase.project.DeleteProjectMemberUseCaseImpl
 import com.example.domain.usecase.project.GetProjectMemberDetailsUseCase
 import com.example.domain.usecase.project.GetProjectMemberDetailsUseCaseImpl
-import com.example.domain.usecase.project.ObserveProjectMembersUseCase
-import com.example.domain.usecase.project.ObserveProjectMembersUseCaseImpl
+import com.example.domain_usecase.usecase.project.member.ObserveProjectMembersUseCase
+import com.example.domain_usecase.usecase.project.member.ObserveProjectMembersUseCaseImpl
 import com.example.domain.vo.CollectionPath
 import com.example.domain.vo.DocumentId
 import com.example.domain_repository.base.AuthRepository
@@ -14,9 +14,9 @@ import com.example.domain_repository.base.MemberRepository
 import com.example.domain_repository.base.MessageRepository
 import com.example.domain_repository.base.ProjectInvitationRepository
 import com.example.domain_repository.base.ProjectRepository
+import com.example.domain_repository.base.UserRepository
 import com.example.domain_usecase.usecase.dm.AddDmChannelUseCase
 import com.example.domain_usecase.usecase.dm.GetDmChannelUseCase
-import com.example.domain_usecase.usecase.message.SendMessageUseCase
 import com.example.domain_usecase.usecase.project.core.JoinProjectByIdUseCase
 import com.example.domain_usecase.usecase.project.invitation.AcceptProjectInvitationUseCase
 import com.example.domain_usecase.usecase.project.invitation.AcceptProjectInvitationUseCaseImpl
@@ -38,6 +38,15 @@ import com.example.domain_usecase.usecase.project.member.TransferOwnershipUseCas
 import com.example.domain_usecase.usecase.project.member.TransferOwnershipUseCaseImpl
 import com.example.domain_usecase.usecase.project.member.UpdateMemberRolesUseCase
 import com.example.domain_usecase.usecase.project.member.UpdateMemberRolesUseCaseImpl
+import com.example.domain_usecase.usecase.project.member.CheckUserProjectMembershipUseCase
+import com.example.domain_usecase.usecase.project.member.CheckUserProjectMembershipUseCaseImpl
+import com.example.domain_usecase.usecase.project.member.BlockMemberUseCase
+import com.example.domain_usecase.usecase.project.member.BlockMemberUseCaseImpl
+import com.example.domain_usecase.usecase.project.member.VerifyProjectMembershipUseCase
+import com.example.domain_usecase.usecase.project.member.VerifyProjectMembershipUseCaseImpl
+import com.example.domain_usecase.usecase.project.member.RemoveMemberUseCase
+import com.example.domain_usecase.usecase.project.member.RemoveMemberUseCaseImpl
+import com.example.websocket.usecase.WebSocketUseCaseProvider
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -50,11 +59,12 @@ import javax.inject.Singleton
 class ProjectMemberUseCaseProvider @Inject constructor(
     private val memberRepository: MemberRepository,
     private val authRepository: AuthRepository,
+    private val userRepository: UserRepository,
     private val projectRepository: ProjectRepository,
     private val projectInvitationRepository: ProjectInvitationRepository,
     private val messageRepository: MessageRepository,
     private val dmChannelRepository: DMChannelRepository,
-    private val sendMessageUseCase: SendMessageUseCase
+    private val webSocketUseCaseProvider: WebSocketUseCaseProvider,
 ) {
 
     private fun createAddDmChannelUseCase(): AddDmChannelUseCase {
@@ -105,6 +115,10 @@ class ProjectMemberUseCaseProvider @Inject constructor(
             deleteProjectMemberUseCase = DeleteProjectMemberUseCaseImpl(
                 projectMemberRepository = this.memberRepository
             ),
+
+            removeMemberUseCase = RemoveMemberUseCaseImpl(
+                projectRepository = this.projectRepository
+            ),
             
             observeProjectMembersUseCase = ObserveProjectMembersUseCaseImpl(
                 projectMemberRepository = this.memberRepository
@@ -133,10 +147,11 @@ class ProjectMemberUseCaseProvider @Inject constructor(
 
             // 프로젝트 초대 메시지 전송
             sendProjectInviteMessageUseCase = SendProjectInviteMessageUseCaseImpl(
-                addDmChannelUseCase = createAddDmChannelUseCase(),
                 messageRepository = this.messageRepository,
                 projectRepository = this.projectRepository,
-                authRepository = this.authRepository
+                authRepository = this.authRepository,
+                userRepository = this.userRepository,
+                webSocketUseCaseProvider = this.webSocketUseCaseProvider,
             ),
 
             // 프로젝트 초대 관리
@@ -158,7 +173,23 @@ class ProjectMemberUseCaseProvider @Inject constructor(
 
             // ViewModel 오케스트레이션용 DM 유틸 UseCase들
             addDmChannelUseCase = createAddDmChannelUseCase(),
-            getDmChannelUseCase = createGetDmChannelUseCase()
+            getDmChannelUseCase = createGetDmChannelUseCase(),
+
+            // 멤버십 확인
+            checkUserProjectMembershipUseCase = CheckUserProjectMembershipUseCaseImpl(
+                memberRepository = this.memberRepository
+            ),
+
+            // 멤버 차단/금지
+            blockMemberUseCase = BlockMemberUseCaseImpl(
+                projectRepository = this.projectRepository
+            ),
+
+            // 멤버십 검증
+            verifyProjectMembershipUseCase = VerifyProjectMembershipUseCaseImpl(
+                memberRepository = this.memberRepository,
+                authRepository = this.authRepository
+            )
         )
     }
 
@@ -196,6 +227,7 @@ data class ProjectMemberUseCases(
     // 멤버 고급 관리
     val getProjectMemberDetailsUseCase: GetProjectMemberDetailsUseCase,
     val deleteProjectMemberUseCase: DeleteProjectMemberUseCase,
+    val removeMemberUseCase: RemoveMemberUseCase,
     val observeProjectMembersUseCase: ObserveProjectMembersUseCase,
     
     // 멤버 역할 관리
@@ -218,5 +250,14 @@ data class ProjectMemberUseCases(
 
     // ViewModel 오케스트레이션용 DM 유틸 UseCase들
     val addDmChannelUseCase: AddDmChannelUseCase,
-    val getDmChannelUseCase: GetDmChannelUseCase
+    val getDmChannelUseCase: GetDmChannelUseCase,
+
+    // 멤버십 확인
+    val checkUserProjectMembershipUseCase: CheckUserProjectMembershipUseCase,
+
+    // 멤버 차단/금지
+    val blockMemberUseCase: BlockMemberUseCase,
+
+    // 멤버십 검증
+    val verifyProjectMembershipUseCase: VerifyProjectMembershipUseCase
 )

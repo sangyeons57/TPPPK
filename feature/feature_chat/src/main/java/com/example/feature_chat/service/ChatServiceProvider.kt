@@ -71,7 +71,6 @@ class ChatServiceProvider @Inject constructor(
             messageRepository = messageRepository,
             userProfileService = userProfileService,
             fileUseCases = fileUseCases,
-            dmUseCaseProvider = dmUseCaseProvider,
             sendMessageUseCase = sendMessageUseCase,
             roomId = roomId,
             projectId = projectId
@@ -123,7 +122,6 @@ class ChatServiceProvider @Inject constructor(
             messageRepository = messageRepository,
             userProfileService = userProfileService,
             fileUseCases = fileUseCases,
-            dmUseCaseProvider = dmUseCaseProvider,
             sendMessageUseCase = sendMessageUseCase,
             roomId = roomId,
             projectId = null

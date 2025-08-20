@@ -36,6 +36,7 @@ object FirebaseFunctionParameters {
         const val DELETE_PROJECT = "deleteProject"
         const val LEAVE_PROJECT = "leaveProject"
         const val REMOVE_PROJECT_PROFILE_IMAGE = "removeProjectProfileImage"
+        const val BLOCK_MEMBER = "blockMember"
     }
     
     /**
@@ -58,7 +59,7 @@ object FirebaseFunctionParameters {
      */
     object DM {
         const val CURRENT_USER_ID = "currentUserId"
-        const val TARGET_USER_NAME = "targetUserName"
+        const val TARGET_USER_ID = "targetUserId"
         const val CHANNEL_ID = "channelId"
     }
     
@@ -85,5 +86,7 @@ object FirebaseFunctionParameters {
         const val INVITER_ID = "inviterId"
         const val EXPIRES_IN_HOURS = "expiresInHours"
         const val DELETED_BY = "deletedBy"
+        const val TARGET_USER_ID = "targetUserId"
+        const val BLOCK_TYPE = "blockType"
     }
 } 

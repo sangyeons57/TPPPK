@@ -1,6 +1,7 @@
 package com.example.feature_task.mapper
 
 import com.example.domain.model.base.Task
+import com.example.domain.vo.DocumentId
 import com.example.feature_task.model.TaskUiModel
 
 object TaskMapper {
@@ -18,10 +19,11 @@ object TaskMapper {
             updatedAt = task.updatedAt
         )
     }
-    
-    fun toDomainModel(taskUiModel: TaskUiModel): Task {
+
+    fun toDomainModel(taskUiModel: TaskUiModel, channelId: DocumentId): Task {
         return Task.fromDataSource(
             id = taskUiModel.id,
+            channelId = channelId,
             taskType = taskUiModel.taskType,
             status = taskUiModel.status,
             content = taskUiModel.content,

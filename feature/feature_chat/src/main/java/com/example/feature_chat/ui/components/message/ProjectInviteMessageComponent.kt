@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -47,6 +48,7 @@ fun ProjectInviteMessageComponent(
     actionText: String = "참여하기",
     isJoining: Boolean = false,
     isAlreadyJoined: Boolean = false,
+    isSender: Boolean = false,
     onJoinProject: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -125,9 +127,19 @@ fun ProjectInviteMessageComponent(
                     .height(1.dp)
                     .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
             )
-            
-            // 액션 버튼
+
+            // 액션 버튼 (발신자에게는 표시하지 않음)
             when {
+                isSender -> {
+                    // 발신자에게는 버튼을 표시하지 않음
+                    Text(
+                        text = "초대 메시지를 보냈습니다",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
                 isAlreadyJoined -> {
                     // 이미 참여한 경우
                     OutlinedButton(
@@ -186,23 +198,30 @@ private fun ProjectInviteMessageComponentPreview() {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 기본 상태
+            // 기본 상태 (수신자)
             ProjectInviteMessageComponent(
                 projectName = "팀 노바 프로젝트",
                 inviterName = "김개발자"
             )
-            
-            // 참여 처리 중
+
+            // 발신자 상태
             ProjectInviteMessageComponent(
                 projectName = "모바일 앱 개발",
                 inviterName = "박팀장",
-                isJoining = true
+                isSender = true
             )
-            
-            // 이미 참여함
+
+            // 참여 처리 중
             ProjectInviteMessageComponent(
                 projectName = "웹 서비스 구축",
                 inviterName = "이디자이너",
+                isJoining = true
+            )
+
+            // 이미 참여함
+            ProjectInviteMessageComponent(
+                projectName = "데이터 분석 프로젝트",
+                inviterName = "최개발자",
                 isAlreadyJoined = true
             )
         }

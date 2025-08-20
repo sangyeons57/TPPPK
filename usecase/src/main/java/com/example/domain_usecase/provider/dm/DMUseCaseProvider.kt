@@ -8,6 +8,8 @@ import com.example.domain_repository.base.DMWrapperRepository
 import com.example.domain_repository.base.UserRepository
 import com.example.domain_usecase.usecase.dm.AddDmChannelUseCase
 import com.example.domain_usecase.usecase.dm.BlockDMChannelUseCase
+import com.example.domain_usecase.usecase.dm.CheckDmChannelExistsUseCase
+import com.example.domain_usecase.usecase.dm.CheckDmChannelExistsUseCaseImpl
 import com.example.domain_usecase.usecase.dm.GetCurrentUserDmChannelsUseCase
 import com.example.domain_usecase.usecase.dm.GetDmChannelUseCase
 import com.example.domain_usecase.usecase.dm.GetUserDmChannelsUseCase
@@ -73,6 +75,10 @@ class DMUseCaseProvider @Inject constructor(
             getUserDmWrappersUseCase = GetUserDmWrappersUseCase(
                 authRepository = this.authRepository,
                 dmWrapperRepository = this.dmWrapperRepository
+            ),
+
+            checkDmChannelExistsUseCase = CheckDmChannelExistsUseCaseImpl(
+                dmWrapperRepository = this.dmWrapperRepository
             )
         )
     }
@@ -106,7 +112,8 @@ data class DMUseCases(
     val blockDMChannelUseCase: BlockDMChannelUseCase,
     val unblockDMChannelUseCase: UnblockDMChannelUseCase,
     val getDmChannelUseCase: GetDmChannelUseCase,
-    val getUserDmWrappersUseCase: GetUserDmWrappersUseCase
+    val getUserDmWrappersUseCase: GetUserDmWrappersUseCase,
+    val checkDmChannelExistsUseCase: CheckDmChannelExistsUseCase
 )
 
 /**

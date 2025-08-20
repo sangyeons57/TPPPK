@@ -1,6 +1,7 @@
 package com.example.domain_usecase.usecase.task
 
 import com.example.core_common.result.CustomResult
+import com.example.core_common.util.DateTimeUtil
 import com.example.domain.model.base.Task
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.task.TaskContent
@@ -35,27 +36,33 @@ class UpdateTaskUseCaseImpl @Inject constructor(
         order: TaskOrder?
     ): CustomResult<Unit, Exception> {
         val task = when (val result = taskRepository.findById(DocumentId(taskId))) {
-            is CustomResult.Success -> result.data as Task
+            is CustomResult.Success -> result.data
             is CustomResult.Failure -> return CustomResult.Failure(result.error)
             is CustomResult.Initial -> return CustomResult.Initial
             is CustomResult.Loading -> return CustomResult.Loading
             is CustomResult.Progress -> return CustomResult.Progress(result.progress)
         }
 
-        // Update fields if provided
+        // Apply changes, then reconstitute with refreshed updatedAt for sync ordering
         taskType?.let { task.updateTaskType(it) }
         status?.let { task.updateStatus(it) }
         order?.let { task.updateOrder(it) }
-        
-        // Update content if provided
         content?.let { task.updateContent(TaskContent(it)) }
 
-        return when (val result = taskRepository.save(task)) {
-            is CustomResult.Success -> CustomResult.Success(Unit)
-            is CustomResult.Failure -> CustomResult.Failure(result.error)
-            is CustomResult.Initial -> CustomResult.Initial
-            is CustomResult.Loading -> CustomResult.Loading
-            is CustomResult.Progress -> CustomResult.Progress(result.progress)
-        }
+        val updated = Task.fromDataSource(
+            id = task.id,
+            channelId = task.channelId,
+            taskType = task.taskType,
+            status = task.status,
+            content = task.content,
+            order = task.order,
+            checkedBy = task.checkedBy,
+            checkedAt = task.checkedAt,
+            createdAt = task.createdAt,
+            updatedAt = DateTimeUtil.nowInstant()
+        )
+
+        taskRepository.addTask(updated)
+        return CustomResult.Success(Unit)
     }
 }

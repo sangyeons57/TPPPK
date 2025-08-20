@@ -7,11 +7,12 @@ import {
   createLogger, 
   getOrCreateRequestId,
   withTracing,
-  AppError
+  AppError,
+  FRIEND_SUBCOLLECTION_STATUS
 } from "../../../shared";
 
 interface RejectFriendRequestRequest {
-  friendRequestId: string;
+  friendUserId: string; // 친구 요청을 보낸 사용자의 ID
 }
 
 interface RejectFriendRequestResponse {
@@ -44,34 +45,42 @@ export const rejectFriendRequest = onCall(
         },
         async () => {
           const userId = validateAuth(request.auth);
-          const { friendRequestId } = request.data as RejectFriendRequestRequest;
+          const { friendUserId } = request.data as RejectFriendRequestRequest;
 
-          validateRequired(friendRequestId, "friendRequestId");
+          validateRequired(friendUserId, "friendUserId");
 
           const firestore = admin.firestore();
-          const friendRequestRef = firestore.collection("friends").doc(friendRequestId);
-          const friendRequestDoc = await friendRequestRef.get();
+          
+          // Subcollection에서 친구 요청 조회 (수신자 관점)
+          const pendingFriendRef = firestore
+            .collection(`users/${userId}/friends`)
+            .doc(friendUserId);
+          
+          const pendingFriendDoc = await pendingFriendRef.get();
 
-          if (!friendRequestDoc.exists) {
+          if (!pendingFriendDoc.exists) {
             throw new AppError("not-found", "Friend request not found");
           }
 
-          const friendRequestData = friendRequestDoc.data()!;
+          const pendingFriendData = pendingFriendDoc.data()!;
 
-          if (friendRequestData.friendId !== userId) {
-            throw new AppError("permission-denied", "You can only reject friend requests sent to you");
-          }
-
-          if (friendRequestData.status !== "pending") {
+          if (pendingFriendData.status !== FRIEND_SUBCOLLECTION_STATUS.PENDING) {
             throw new AppError("invalid-argument", "Friend request is not pending");
           }
 
-          await friendRequestRef.update({
-            status: "rejected",
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-          });
+          // 요청자 측 문서도 확인
+          const requesterFriendRef = firestore
+            .collection(`users/${friendUserId}/friends`)
+            .doc(userId);
 
-          logger.info("Friend request rejected successfully", { userId, friendRequestId });
+          // 양방향 문서 삭제 (거절 시 관계 완전 제거)
+          const batch = firestore.batch();
+          batch.delete(pendingFriendRef);
+          batch.delete(requesterFriendRef);
+          
+          await batch.commit();
+
+          logger.info("Friend request rejected successfully", { userId, friendUserId });
 
           return {
             success: true,

@@ -44,9 +44,9 @@ class DMChannelRepositoryImpl @Inject constructor(
             is CustomResult.Progress -> CustomResult.Progress(channelIdResult.progress) // Propagate progress
         }
     }
-    
-    override suspend fun createDMChannel(targetUserName: String): CustomResult<Map<String, Any?>, Exception> {
-        return functionsRemoteDataSource.createDMChannel(targetUserName)
+
+    override suspend fun createDMChannel(targetUserId: String): CustomResult<Map<String, Any?>, Exception> {
+        return functionsRemoteDataSource.createDMChannel(targetUserId)
     }
     
     override suspend fun blockDMChannel(channelId: String): CustomResult<Map<String, Any?>, Exception> {
@@ -56,8 +56,8 @@ class DMChannelRepositoryImpl @Inject constructor(
     override suspend fun unblockDMChannel(channelId: String): CustomResult<Map<String, Any?>, Exception> {
         return functionsRemoteDataSource.unblockDMChannel(channelId)
     }
-    
-    override suspend fun unblockDMChannelByUserName(targetUserName: String): CustomResult<Map<String, Any?>, Exception> {
-        return functionsRemoteDataSource.unblockDMChannelByUserName(targetUserName)
+
+    override suspend fun unblockDMChannelByUserId(targetUserId: String): CustomResult<Map<String, Any?>, Exception> {
+        return functionsRemoteDataSource.unblockDMChannelByUserId(targetUserId)
     }
 }

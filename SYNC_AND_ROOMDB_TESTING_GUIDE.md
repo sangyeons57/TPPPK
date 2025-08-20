@@ -73,6 +73,23 @@
 - WebSocket으로 수신된 메시지가 즉시 Room DB에 저장됨
 - Paging3가 자동으로 UI 업데이트 트리거함
 
+### 시나리오 4: OutBox + ACK 연동 확인 (권장)
+
+```
+1. 채팅 화면에서 메시지 전송 (이미지/텍스트 아무거나)
+2. DevMenu에서 OutBox 테이블 PENDING 개수 확인
+3. 서버 ACK 수신 후 PENDING → DISPATCHED 전환 확인
+4. UI 상단 진행 표시줄(OutBox 기반)이 자동으로 해제되는지 확인
+```
+
+**확인 포인트:**
+
+- OutBox가 전송 상태의 진실(SOT)을 유지 (PENDING→DISPATCHED/FAILED)
+- `WebSocketMessageService`가 ACK/FAIL 수신 시 OutBox만 갱신 (SyncManager와 독립)
+- UI는 `observeChannelPendingCount(channelId)`를 통해 로딩 인디케이터를 토글
+- 메시지 행 단위 상태는 `observeMessageOutBoxStatus(messageId)` 또는 `observeChannelOutBoxStatuses(channelId)`로
+  표현 가능
+
 ## 📋 로그 해석 가이드
 
 ### Room DB 상태 로그 예시
