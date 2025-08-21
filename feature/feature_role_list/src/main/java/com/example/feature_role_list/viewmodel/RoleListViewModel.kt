@@ -12,7 +12,9 @@ import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.base.Role
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.Name
+import com.example.domain_repository.base.AuthRepository
 import com.example.domain_usecase.provider.project.ProjectRoleUseCaseProvider
+import com.example.domain_usecase.usecase.project.authorization.GetUserRolesForProjectUseCaseImpl
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,7 +38,8 @@ data class RoleListUiState(
     val projectId: String = "",
     val roles: List<RoleItem> = emptyList(),
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val canManageRoles: Boolean = false
 )
 
 // --- 이벤트 ---
@@ -50,7 +53,9 @@ sealed class RoleListEvent {
 class RoleListViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val projectRoleUseCaseProvider: ProjectRoleUseCaseProvider, // Added
-    private val navigationManger: NavigationManger
+    private val navigationManger: NavigationManger,
+    private val authRepository: AuthRepository,
+    private val getUserRolesForProjectUseCase: GetUserRolesForProjectUseCaseImpl,
 ) : ViewModel() {
 
     private val projectId: String = savedStateHandle.getRequiredString(RouteArgs.PROJECT_ID)
@@ -66,6 +71,7 @@ class RoleListViewModel @Inject constructor(
 
     init {
         _uiState.update { it.copy(projectId = projectId) } // Ensure projectId is set
+        // Observe project roles
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             projectRoleUseCases.getProjectRolesUseCase(DocumentId.from(projectId))
@@ -109,6 +115,21 @@ class RoleListViewModel @Inject constructor(
                     }
                 }
         }
+
+        // Determine role-based capability (currently OWNER role)
+        viewModelScope.launch {
+            val session = authRepository.getCurrentUserSession()
+            if (session is CustomResult.Success) {
+                when (val hasOwner = getUserRolesForProjectUseCase.hasRole(
+                    DocumentId.from(projectId),
+                    DocumentId.from(session.data.userId),
+                    DocumentId("OWNER")
+                )) {
+                    is CustomResult.Success -> _uiState.update { it.copy(canManageRoles = hasOwner.data) }
+                    else -> _uiState.update { it.copy(canManageRoles = false) }
+                }
+            }
+        }
     }
 
     fun navigateBack() {
@@ -118,8 +139,15 @@ class RoleListViewModel @Inject constructor(
      * 역할 추가 버튼 클릭 시 호출
      */
     fun onAddRoleClick() {
+        val state = uiState.value
+        if (!state.canManageRoles) {
+            viewModelScope.launch {
+                _eventFlow.emit(RoleListEvent.ShowSnackbar("역할을 생성할 수 없습니다. 프로젝트 소유자만 가능합니다."))
+            }
+            return
+        }
         navigationManger.navigateTo(
-            AddRoleRoute(uiState.value.projectId)
+            AddRoleRoute(state.projectId)
         )
     }
 
@@ -127,18 +155,39 @@ class RoleListViewModel @Inject constructor(
      * 역할 아이템 클릭 시 호출
      */
     fun onRoleClick(roleId: DocumentId) {
+        val state = uiState.value
+        if (!state.canManageRoles) {
+            viewModelScope.launch {
+                _eventFlow.emit(RoleListEvent.ShowSnackbar("역할을 수정할 수 없습니다. 프로젝트 소유자만 가능합니다."))
+            }
+            return
+        }
         navigationManger.navigateTo(
-            EditRoleRoute(uiState.value.projectId, roleId.value)
+            EditRoleRoute(state.projectId, roleId.value)
         )
     }
 
     fun requestDeleteRole(roleItem: RoleItem) {
+        val state = uiState.value
+        if (!state.canManageRoles) {
+            viewModelScope.launch {
+                _eventFlow.emit(RoleListEvent.ShowSnackbar("역할을 삭제할 수 없습니다. 프로젝트 소유자만 가능합니다."))
+            }
+            return
+        }
         viewModelScope.launch {
             _eventFlow.emit(RoleListEvent.ShowDeleteRoleConfirmDialog(roleItem))
         }
     }
 
     fun confirmDeleteRole(roleId: DocumentId) {
+        val state = uiState.value
+        if (!state.canManageRoles) {
+            viewModelScope.launch {
+                _eventFlow.emit(RoleListEvent.ShowSnackbar("역할을 삭제할 수 없습니다. 프로젝트 소유자만 가능합니다."))
+            }
+            return
+        }
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {

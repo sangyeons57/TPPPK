@@ -170,8 +170,8 @@ service cloud.firestore {
             match /roles/{roleId} {
                 // 역할 목록/정보 읽기: 프로젝트 멤버만
                 allow read: if isProjectMember(projectId);
-                // 역할 생성/수정/삭제: 프로젝트 소유자만
-                allow write: if isProjectOwner(projectId); // create, update, delete 모두 포함
+                // 역할 생성/수정/삭제: 프로젝트 멤버 (UI에서 소유자만 편집 허용)
+                allow write: if isProjectMember(projectId); // create, update, delete 모두 포함
 
                 // 역할에 부여된 권한 (permissions) - 컬렉션 구조 문서에 따름
                 // 경로: /projects/{projectId}/roles/{roleId}/permissions/{permissionId}
@@ -179,8 +179,8 @@ service cloud.firestore {
                 match /permissions/{permissionId} {
                     // 역할에 부여된 권한 읽기: 프로젝트 멤버만
                     allow read: if isProjectMember(projectId);
-                    // 권한 부여/해제 (문서 생성/삭제): 프로젝트 소유자만
-                    allow create, delete: if isProjectOwner(projectId);
+                    // 권한 부여/해제 (문서 생성/삭제): 프로젝트 멤버 (UI에서 소유자만 허용)
+                    allow create, delete: if isProjectMember(projectId);
                 }
             }
 

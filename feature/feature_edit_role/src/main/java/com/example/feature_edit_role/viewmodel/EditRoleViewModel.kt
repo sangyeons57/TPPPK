@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.destination.RouteArgs
-import com.example.core_navigation.extension.getOptionalString
 import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.Name
@@ -37,15 +36,13 @@ data class EditRoleUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val saveSuccess: Boolean = false,
-    val deleteSuccess: Boolean = false,
     val hasChanges: Boolean = false
 )
 
-// --- 이벤트 (기존 정의 사용, ShowDeleteConfirmation 추가) ---
+// --- 이벤트 ---
 sealed class EditRoleEvent {
     data class ShowSnackbar(val message: String) : EditRoleEvent()
     object ClearFocus : EditRoleEvent()
-    object ShowDeleteConfirmation : EditRoleEvent()
 }
 
 @HiltViewModel
@@ -56,10 +53,8 @@ class EditRoleViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val projectId: String = savedStateHandle.getRequiredString(RouteArgs.PROJECT_ID)
-    // 역할 ID는 수정 시에만 전달되므로 옵셔널로 처리
-    private val roleId: String? = savedStateHandle.getOptionalString(RouteArgs.ROLE_ID)
+    private val roleId: String = savedStateHandle.getRequiredString(RouteArgs.ROLE_ID)
     
-    val isEditMode = roleId != null
 
     // Provider를 통해 생성된 UseCase 그룹
     private val projectRoleUseCases =
@@ -67,7 +62,7 @@ class EditRoleViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(
         EditRoleUiState(
-            roleId = roleId?.let { DocumentId.from(roleId) },
+            roleId = roleId.let { DocumentId.from(roleId) },
             isLoading = roleId != null
         )
     )
@@ -77,14 +72,9 @@ class EditRoleViewModel @Inject constructor(
     val eventFlow = _eventFlow.asSharedFlow()
 
     init {
-        if (roleId != null) {
-            loadRoleDetails(projectId, roleId)
-        }
+        loadRoleDetails(projectId, roleId)
     }
 
-    /**
-     * 수정 모드 시 역할 상세 정보 로드
-     */
     private fun loadRoleDetails(projectId: String, roleId: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
@@ -112,25 +102,6 @@ class EditRoleViewModel @Inject constructor(
                             hasChanges = false
                         )
                     }
-                    // Example of how you might call GetRolePermissionsUseCase and update state:
-                    /*
-                    viewModelScope.launch {
-                        val permissionsResult = getRolePermissionsUseCase(projectId, roleId)
-                        if (permissionsResult is CustomResult.Success) {
-                            _uiState.update {
-                                it.copy(
-                                    permissions = permissionsResult.data.associateBy { it.permission } // Assuming data is List<RolePermissionDetail>
-                                        .mapValues { it.value.isEnabled }, // Adjust based on actual data structure
-                                    originalPermissions = permissionsResult.data.associateBy { it.permission }
-                                        .mapValues { it.value.isEnabled }
-                                )
-                            }
-                        } else if (permissionsResult is CustomResult.Failure) {
-                            // Handle permission loading failure
-                             _uiState.update { it.copy(error = "권한 정보를 불러오지 못했습니다: ${permissionsResult.error}") }
-                        }
-                    }
-                    */
                 }
                 is CustomResult.Failure -> {
                     _uiState.update {
@@ -251,43 +222,6 @@ class EditRoleViewModel @Inject constructor(
                 val errorMessage = if (currentState.roleId == null) "역할 생성 실패" else "역할 수정 실패"
                 val errorDetail = (result as CustomResult.Failure).error
                 _uiState.update { it.copy(isLoading = false, error = errorMessage + (errorDetail?.let { ": $it" } ?: "")) }
-            }
-        }
-    }
-
-    /**
-     * 삭제 버튼 클릭 시 (삭제 확인 다이얼로그 표시 요청)
-     */
-    fun requestDeleteRoleConfirmation() {
-        if (uiState.value.roleId != null && !uiState.value.isLoading) {
-            viewModelScope.launch {
-                _eventFlow.emit(EditRoleEvent.ShowDeleteConfirmation)
-            }
-        }
-    }
-
-    /**
-     * 삭제 확인 다이얼로그에서 '삭제' 버튼 클릭 시
-     */
-    fun confirmDeleteRole() {
-        val roleIdToDelete = uiState.value.roleId
-        if (roleIdToDelete == null || uiState.value.isLoading) return
-
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
-            println("ViewModel: Deleting role $roleIdToDelete (UseCase)")
-
-            // --- UseCase 호출 ---
-            val result =
-                projectRoleUseCases.deleteRoleUseCase(roleIdToDelete) // Pass only roleId as DocumentId
-
-            if (result.isSuccess) {
-                _eventFlow.emit(EditRoleEvent.ShowSnackbar("역할이 삭제되었습니다."))
-                _uiState.update { it.copy(isLoading = false, deleteSuccess = true) }
-            } else {
-                val errorDetail = (result as CustomResult.Failure).error
-                _eventFlow.emit(EditRoleEvent.ShowSnackbar("역할 삭제 실패" + (errorDetail?.let { ": $it" } ?: "")))
-                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }

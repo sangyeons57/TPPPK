@@ -3,10 +3,10 @@ package com.example.websocket.usecase
 import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Message
+import com.example.domain.vo.ChannelId
 import com.example.domain.vo.CollectionPath
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.ProjectId
-import com.example.domain.vo.ChannelId
 import com.example.domain_repository.base.MessageRepository
 import javax.inject.Inject
 
@@ -32,7 +32,7 @@ class SendMessageUseCase @Inject constructor(
                 ChannelId.compose(projectId.value, message.channelId.value)
             } else message.channelId
 
-            val channelIdValue = compositeChannelId.value
+            compositeChannelId.value
 
             // Ensure message has a valid ID - no ID regeneration allowed for consistency
             if (message.id.isNotAssigned()) {
@@ -73,8 +73,8 @@ class SendMessageUseCase @Inject constructor(
                     val messageId = saveResult.data
                     // 2) WebSocket send (best-effort; return success on local save)
                     try {
-                        // WebSocket room uses leaf channel id
-                        val roomId = compositeChannelId.last()
+                        // WebSocket room uses composite channel id for project identification
+                        val roomId = compositeChannelId.value
                         val roomUseCases = webSocketUseCaseProvider.createForRoom(roomId)
                         // 도메인 메시지 기반 전송 API 사용
                         val wsResult = roomUseCases.sendMessageUseCase(

@@ -127,6 +127,7 @@ class WebSocketChatViewModel @Inject constructor(
         // 2. 채팅방 즉시 입장 (해당 방 이벤트만 수신/저장하도록 보장)
         viewModelScope.launch {
             try {
+                // WebSocket 연결을 위해서는 composite channelId를 그대로 사용 (서버에서 파싱)
                 val joinResult = webSocketUseCaseProvider.createForRoom(channelId).joinRoomUseCase(
                     userId = AuthUtil.getCurrentUserId()?.let { UserId(it) }
                 )

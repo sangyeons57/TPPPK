@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -40,9 +39,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.core_navigation.core.AddRoleRoute
-import com.example.core_navigation.core.EditRoleRoute
-import com.example.core_navigation.core.NavigationManger
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.vo.DocumentId
@@ -91,8 +87,10 @@ fun RoleListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = viewModel::onAddRoleClick) {
-                Icon(Icons.Filled.Add, contentDescription = "역할 추가")
+            if (uiState.canManageRoles) {
+                FloatingActionButton(onClick = viewModel::onAddRoleClick) {
+                    Icon(Icons.Filled.Add, contentDescription = "역할 추가")
+                }
             }
         }
     ) { paddingValues ->
@@ -123,6 +121,7 @@ fun RoleListScreen(
                 RoleListContent(
                     modifier = Modifier.padding(paddingValues),
                     roles = uiState.roles,
+                    canManageRoles = uiState.canManageRoles,
                     onRoleClick = viewModel::onRoleClick,
                     onRequestDeleteRole = viewModel::requestDeleteRole // Added
                 )
@@ -159,6 +158,7 @@ fun RoleListScreen(
 fun RoleListContent(
     modifier: Modifier = Modifier,
     roles: List<RoleItem>,
+    canManageRoles: Boolean,
     onRoleClick: (DocumentId) -> Unit,
     onRequestDeleteRole: (RoleItem) -> Unit // Added
 ) {
@@ -172,7 +172,8 @@ fun RoleListContent(
             RoleListItem(
                 role = role,
                 onClick = { onRoleClick(role.id) },
-                onDeleteClick = { onRequestDeleteRole(role) } // Pass role item
+                onDeleteClick = { onRequestDeleteRole(role) }, // Pass role item
+                canManageRoles = canManageRoles
             )
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
         }
@@ -187,6 +188,7 @@ fun RoleListItem(
     role: RoleItem,
     onClick: () -> Unit,
     onDeleteClick: () -> Unit, // Added for delete action
+    canManageRoles: Boolean,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -201,8 +203,14 @@ fun RoleListItem(
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f)
         )
-        IconButton(onClick = onDeleteClick) { // Added delete button
-            Icon(Icons.Filled.Delete, contentDescription = "역할 삭제", tint = MaterialTheme.colorScheme.error)
+        if (canManageRoles) {
+            IconButton(onClick = onDeleteClick) {
+                Icon(
+                    Icons.Filled.Delete,
+                    contentDescription = "역할 삭제",
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
         }
         Icon( // Existing navigation arrow
             Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -232,6 +240,7 @@ private fun RoleListContentPreview() {
                     RoleItem(DocumentId("3"), Name("멤버")),
                     RoleItem(DocumentId("4"), Name("방문자"))
                 ),
+                canManageRoles = true,
                 onRoleClick = {},
                 onRequestDeleteRole = {}
             )

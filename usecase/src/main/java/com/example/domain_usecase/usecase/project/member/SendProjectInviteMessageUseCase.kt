@@ -150,8 +150,8 @@ class SendProjectInviteMessageUseCaseImpl @Inject constructor(
                     val messageId = saveResult.data
                     // 2) WebSocket send (best-effort; return success on local save)
                     try {
-                        // WebSocket room uses leaf channel id
-                        val roomId = channelId.last()
+                        // WebSocket room uses composite channel id for project identification  
+                        val roomId = channelId.value
                         val roomUseCases = webSocketUseCaseProvider.createForRoom(roomId)
                         // 도메인 메시지 기반 전송 API 사용
                         val wsResult = roomUseCases.sendMessageUseCase(

@@ -74,25 +74,32 @@ public class FirestoreMessageService {
             
             logger.info("💾 Processing message: roomId={}", roomId);
             
-            // 채널 유형은 roomId 패턴으로 결정 (project_ 또는 dm_ 접두어)
-            if (roomId.startsWith("project_")) {
-                // roomId에서 projectId 추출: "project_{projectId}_{channelId}" 형식
-                String[] parts = roomId.split("_", 3);
-                if (parts.length >= 2) {
-                    String projectId = parts[1];
-                    collectionPath = FirestoreConstants.COLLECTION_PROJECTS + "/" + projectId + "/" + FirestoreConstants.COLLECTION_CHANNELS + "/" + roomId + "/" + FirestoreConstants.COLLECTION_MESSAGES;
-                    logInfo = "projectId=" + projectId + ", channelId=" + roomId;
-                    logger.info("💾 Project channel detected: projectId={}, channelId={}", projectId, roomId);
+            // 채널 유형은 roomId 패턴으로 결정
+            if (roomId.contains(":")) {
+                // Composite 형태 = 프로젝트 채널: "projectId:channelId"
+                String[] parts = roomId.split(":", 2);
+                if (parts.length == 2) {
+                    String projectId = parts[0];
+                    String channelId = parts[1];
+                    collectionPath = FirestoreConstants.COLLECTION_PROJECTS + "/" + projectId + "/" + FirestoreConstants.COLLECTION_CHANNELS + "/" + channelId + "/" + FirestoreConstants.COLLECTION_MESSAGES;
+                    logInfo = "projectId=" + projectId + ", channelId=" + channelId;
+                    logger.info("💾 Project channel detected: projectId={}, channelId={}", projectId, channelId);
                 } else {
-                    // 비정상적인 project roomId 형식, DM으로 폴백
+                    // 비정상적인 composite roomId 형식, DM으로 폴백
                     collectionPath = "dm_channels/" + roomId + "/" + FirestoreConstants.COLLECTION_MESSAGES;
                     logInfo = "dmChannelId=" + roomId;
-                    logger.warn("⚠️ Invalid project roomId format, falling back to DM: {}", roomId);
+                    logger.warn("⚠️ Invalid composite roomId format, falling back to DM: {}", roomId);
                 }
-            } else {
+            } else if (roomId.startsWith("dm_")) {
+                // DM 채널: "dm_uid1_uid2"
                 collectionPath = "dm_channels/" + roomId + "/" + FirestoreConstants.COLLECTION_MESSAGES;
                 logInfo = "dmChannelId=" + roomId;
                 logger.info("💾 DM channel detected: channelId={}", roomId);
+            } else {
+                // Fallback: 기존 순수 channelId (호환성 유지, 에러 로깅)
+                logger.warn("⚠️ Unknown roomId format, falling back to DM: {}", roomId);
+                collectionPath = "dm_channels/" + roomId + "/" + FirestoreConstants.COLLECTION_MESSAGES;
+                logInfo = "dmChannelId=" + roomId;
             }
 
 
@@ -177,17 +184,27 @@ public class FirestoreMessageService {
             String logInfo;
             
             // 채널 유형은 roomId 패턴으로 결정
-            if (roomId.startsWith("project_")) {
-                String[] parts = roomId.split("_", 3);
-                if (parts.length >= 2) {
-                    String projectId = parts[1];
-                    collectionPath = "projects/" + projectId + "/channels/" + roomId + "/messages";
-                    logInfo = "projectId=" + projectId + ", channelId=" + roomId;
+            if (roomId.contains(":")) {
+                // Composite 형태 = 프로젝트 채널: "projectId:channelId"
+                String[] parts = roomId.split(":", 2);
+                if (parts.length == 2) {
+                    String projectId = parts[0];
+                    String channelId = parts[1];
+                    collectionPath = "projects/" + projectId + "/project_channels/" + channelId + "/messages";
+                    logInfo = "projectId=" + projectId + ", channelId=" + channelId;
                 } else {
+                    // 비정상적인 composite roomId 형식, DM으로 폴백
                     collectionPath = "dm_channels/" + roomId + "/messages";
                     logInfo = "dmChannelId=" + roomId;
+                    logger.warn("⚠️ Invalid composite roomId format in updateMessage, falling back to DM: {}", roomId);
                 }
+            } else if (roomId.startsWith("dm_")) {
+                // DM 채널: "dm_uid1_uid2"
+                collectionPath = "dm_channels/" + roomId + "/messages";
+                logInfo = "dmChannelId=" + roomId;
             } else {
+                // Fallback: 기존 순수 channelId (호환성 유지, 에러 로깅)
+                logger.warn("⚠️ Unknown roomId format in updateMessage, falling back to DM: {}", roomId);
                 collectionPath = "dm_channels/" + roomId + "/messages";
                 logInfo = "dmChannelId=" + roomId;
             }
@@ -273,17 +290,27 @@ public class FirestoreMessageService {
             String logInfo;
             
             // 채널 유형은 roomId 패턴으로 결정
-            if (roomId.startsWith("project_")) {
-                String[] parts = roomId.split("_", 3);
-                if (parts.length >= 2) {
-                    String projectId = parts[1];
-                    collectionPath = "projects/" + projectId + "/channels/" + roomId + "/messages";
-                    logInfo = "projectId=" + projectId + ", channelId=" + roomId;
+            if (roomId.contains(":")) {
+                // Composite 형태 = 프로젝트 채널: "projectId:channelId"
+                String[] parts = roomId.split(":", 2);
+                if (parts.length == 2) {
+                    String projectId = parts[0];
+                    String channelId = parts[1];
+                    collectionPath = "projects/" + projectId + "/project_channels/" + channelId + "/messages";
+                    logInfo = "projectId=" + projectId + ", channelId=" + channelId;
                 } else {
+                    // 비정상적인 composite roomId 형식, DM으로 폴백
                     collectionPath = "dm_channels/" + roomId + "/messages";
                     logInfo = "dmChannelId=" + roomId;
+                    logger.warn("⚠️ Invalid composite roomId format in deleteMessage, falling back to DM: {}", roomId);
                 }
+            } else if (roomId.startsWith("dm_")) {
+                // DM 채널: "dm_uid1_uid2"
+                collectionPath = "dm_channels/" + roomId + "/messages";
+                logInfo = "dmChannelId=" + roomId;
             } else {
+                // Fallback: 기존 순수 channelId (호환성 유지, 에러 로깅)
+                logger.warn("⚠️ Unknown roomId format in deleteMessage, falling back to DM: {}", roomId);
                 collectionPath = "dm_channels/" + roomId + "/messages";
                 logInfo = "dmChannelId=" + roomId;
             }

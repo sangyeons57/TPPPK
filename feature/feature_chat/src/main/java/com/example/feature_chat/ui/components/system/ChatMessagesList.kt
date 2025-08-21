@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.Text
@@ -60,27 +61,33 @@ fun ChatMessagesList(
         userScrollEnabled = true // 스크롤 항상 가능하도록 해서 경계 도달 시 페이징이 막히지 않음
     ) {
         // Paging3 loading states + 로깅
+        // 초기 로딩일 때만 스켈레톤 UI 표시 (중간 로딩에서는 표시하지 않음)
         when (val loadState = lazyPagingItems.loadState.refresh) {
             is androidx.paging.LoadState.Loading -> {
-                // Show skeleton UI instead of simple progress indicator
-                items(7) { // Show 5 skeleton items
-                    MessageSkeletonItem()
-                    Spacer(modifier = Modifier.height(16.dp))
+                // 초기 로딩일 때만 스켈레톤 표시 (itemCount가 0일 때)
+                if (lazyPagingItems.itemCount == 0) {
+                    items(7) { // Show 7 skeleton items for initial loading
+                        MessageSkeletonItem()
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
                 }
             }
 
             is androidx.paging.LoadState.Error -> {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp), contentAlignment = Alignment.Center
-                    ) {
-                        Text("Loading error: ${loadState.error.localizedMessage}")
-                        android.util.Log.e(
-                            "ChatMessagesList",
-                            "❌ refresh Error: ${loadState.error}"
-                        )
+                // 초기 로딩 에러일 때만 에러 메시지 표시
+                if (lazyPagingItems.itemCount == 0) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp), contentAlignment = Alignment.Center
+                        ) {
+                            Text("Loading error: ${loadState.error.localizedMessage}")
+                            android.util.Log.e(
+                                "ChatMessagesList",
+                                "❌ refresh Error: ${loadState.error}"
+                            )
+                        }
                     }
                 }
             }
@@ -174,27 +181,89 @@ fun ChatMessagesList(
                 Spacer(modifier = Modifier.height(if (isFirstInGroup) 16.dp else 0.dp))
             }
         }
-        
-        // "채팅 시작" 텍스트 - reverseLayout에서 상단(과거 메시지 영역)에 표시
-        // 진짜 endOfPagination이면서 MAX_SIZE_THRESHOLD 미만일 때만 표시
-        val appendState = lazyPagingItems.loadState.append
-        if (appendState is androidx.paging.LoadState.NotLoading && 
-            appendState.endOfPaginationReached && 
-            lazyPagingItems.itemCount > 0 && 
-            lazyPagingItems.itemCount < PagingConstants.MAX_SIZE_THRESHOLD) {
-            item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 16.dp), 
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        "채팅 시작", 
-                        style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+
+        // Append 로딩 상태 처리 (과거 메시지 로딩 중)
+        when (val appendState = lazyPagingItems.loadState.append) {
+            is androidx.paging.LoadState.Loading -> {
+                // 중간 로딩시에는 작은 로딩 인디케이터만 표시 (스켈레톤 없음)
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp
+                        )
+                    }
                 }
+            }
+
+            is androidx.paging.LoadState.NotLoading -> {
+                // "채팅 시작" 텍스트 - 진짜 endOfPagination이면서 MAX_SIZE_THRESHOLD 미만일 때만 표시
+                if (appendState.endOfPaginationReached &&
+                    lazyPagingItems.itemCount > 0 &&
+                    lazyPagingItems.itemCount < PagingConstants.MAX_SIZE_THRESHOLD
+                ) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "채팅 시작",
+                                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+
+            is androidx.paging.LoadState.Error -> {
+                // Append 에러시에는 작은 에러 표시
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "로딩 실패",
+                            style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                            color = androidx.compose.material3.MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            }
+        }
+
+        // Prepend 로딩 상태 처리 (최신 메시지 로딩 중) - reverseLayout에서는 하단에 표시
+        when (lazyPagingItems.loadState.prepend) {
+            is androidx.paging.LoadState.Loading -> {
+                // 새로운 메시지 로딩시에는 하단에 작은 인디케이터만 표시
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp
+                        )
+                    }
+                }
+            }
+
+            else -> {
+                // No action needed for prepend states
             }
         }
     }

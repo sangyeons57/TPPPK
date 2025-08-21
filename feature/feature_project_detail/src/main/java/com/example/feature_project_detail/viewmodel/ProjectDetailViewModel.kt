@@ -8,6 +8,7 @@ import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.enum.ProjectChannelType
+import com.example.domain.vo.ChannelId
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.Name
 import com.example.domain.vo.project.ProjectName
@@ -15,10 +16,10 @@ import com.example.domain.vo.projectchannel.ProjectChannelOrder
 import com.example.domain_usecase.provider.project.CoreProjectUseCaseProvider
 import com.example.domain_usecase.provider.project.CoreProjectUseCases
 import com.example.domain_usecase.provider.project.ProjectChannelUseCaseProvider
-import com.example.domain_usecase.provider.project.ProjectStructureUseCaseProvider
-import com.example.domain_usecase.provider.project.ProjectStructureUseCases
 import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectMemberUseCases
+import com.example.domain_usecase.provider.project.ProjectStructureUseCaseProvider
+import com.example.domain_usecase.provider.project.ProjectStructureUseCases
 import com.example.feature_model.CategoryUiModel
 import com.example.feature_model.ChannelUiModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -284,7 +285,9 @@ class ProjectDetailViewModel @Inject constructor(
     // === 네비게이션 메서드들 ===
     
     fun navigateToChannel(channelId: String) {
-        navigationManger.navigateToChat(channelId)
+        // 프로젝트 채널의 경우 ChannelId VO의 composite 기능 사용
+        val compositeChannelId = ChannelId.compose(projectId.value, channelId)
+        navigationManger.navigateToChat(compositeChannelId.value)
     }
     
     fun navigateToProjectSettings() {

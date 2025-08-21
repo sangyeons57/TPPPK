@@ -41,9 +41,11 @@ class NavigationService(
             isTaskChannel(channelId) -> {
                 navigationManager.navigateToTaskList(projectId.value, channelId.value)
             }
-            // 일반 채널인 경우 채팅으로 이동
+            // 일반 채널인 경우 채팅으로 이동 (프로젝트 채널이므로 ChannelId VO의 composite 기능 사용)
             else -> {
-                navigationManager.navigateToChat(channelId.value)
+                val compositeChannelId =
+                    com.example.domain.vo.ChannelId.compose(projectId.value, channelId.value)
+                navigationManager.navigateToChat(compositeChannelId.value)
             }
         }
     }
