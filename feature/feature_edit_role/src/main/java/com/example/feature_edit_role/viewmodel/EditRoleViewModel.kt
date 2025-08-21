@@ -7,6 +7,7 @@ import com.example.core_common.result.CustomResult
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
+import com.example.domain.model.data.project.RolePermission
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.Name
 import com.example.domain.vo.permission.PermissionType
@@ -89,16 +90,29 @@ class EditRoleViewModel @Inject constructor(
             when (result) {
                 is CustomResult.Success -> {
                     val role = result.data
+                    // Load permissions for this role (7-permission model)
+                    val permsResult =
+                        projectRoleUseCases.getRolePermissionsUseCase(projectId, roleId)
+                    val enabled = when (permsResult) {
+                        is CustomResult.Success -> permsResult.data.toSet()
+                        is CustomResult.Failure -> emptySet()
+                        else -> emptySet()
+                    }
+
+                    val permissionsMap = PermissionType.entries.associateWith { pt ->
+                        // Map PermissionType to RolePermission by name
+                        enabled.contains(RolePermission.valueOf(pt.name))
+                    }
+
                     _uiState.update {
                         it.copy(
                             isLoading = false,
                             roleName = role.name,
                             originalRoleName = role.name,
-                            isDefault = role.isDefault,             // isDefault 로드
-                            originalIsDefault = role.isDefault,     // originalIsDefault 로드
-                            // Permissions will be loaded separately
-                            // TODO: Call GetRolePermissionsUseCase(projectId, roleId) here
-                            // TODO: and update it.permissions and it.originalPermissions
+                            isDefault = role.isDefault,
+                            originalIsDefault = role.isDefault,
+                            permissions = permissionsMap,
+                            originalPermissions = permissionsMap,
                             hasChanges = false
                         )
                     }
@@ -191,22 +205,43 @@ class EditRoleViewModel @Inject constructor(
             _eventFlow.emit(EditRoleEvent.ClearFocus)
 
             val nameToSave = currentName
-            currentState.permissions.filterValues { it }.keys.toList()
+            val enabledPermissionTypes = currentState.permissions.filterValues { it }.keys.toList()
             val isDefaultToSave = currentState.isDefault
 
             val result = if (currentState.roleId == null) {
                 println("ViewModel: Creating role '$nameToSave' in project $projectId (UseCase)")
-                // Permissions are saved separately after role creation
-                projectRoleUseCases.createProjectRoleUseCase(nameToSave, isDefaultToSave)
-                // TODO: After successful role creation, get the new roleId from the result
-                // TODO: Then call a new SetRolePermissionsUseCase(projectId, newRoleId, permissionsListToSave)
+                val createRes =
+                    projectRoleUseCases.createProjectRoleUseCase(nameToSave, isDefaultToSave)
+                when (createRes) {
+                    is CustomResult.Success -> {
+                        val newRoleId = createRes.data
+                        val enabledRolePermissions =
+                            enabledPermissionTypes.map { RolePermission.valueOf(it.name) }
+                        projectRoleUseCases.setRolePermissionsUseCase(
+                            DocumentId.from(projectId), newRoleId, enabledRolePermissions
+                        )
+                        CustomResult.Success(Unit)
+                    }
+
+                    is CustomResult.Failure -> createRes
+                    else -> createRes
+                }
             } else {
                 println("ViewModel: Updating role ${currentState.roleId} to '$nameToSave' (UseCase)")
-                projectRoleUseCases.updateProjectRoleUseCase(
+                val updateRes = projectRoleUseCases.updateProjectRoleUseCase(
                     currentState.roleId,
                     nameToSave,
                     isDefaultToSave
                 )
+                // After updating role metadata, persist permissions
+                if (updateRes is CustomResult.Success && currentState.roleId != null) {
+                    val enabledRolePermissions =
+                        enabledPermissionTypes.map { RolePermission.valueOf(it.name) }
+                    projectRoleUseCases.setRolePermissionsUseCase(
+                        DocumentId.from(projectId), currentState.roleId, enabledRolePermissions
+                    )
+                }
+                updateRes
             }
 
             if (result.isSuccess) {

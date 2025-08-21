@@ -29,8 +29,8 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -66,6 +66,7 @@ import com.example.feature_chat.ui.components.dialog.EditDeleteChatDialog
 import com.example.feature_chat.ui.components.dialog.ImageViewerDialog
 import com.example.feature_chat.ui.components.dialog.UserProfileDialog
 import com.example.feature_chat.ui.components.input.AttachmentPreviewTray
+import com.example.feature_chat.ui.components.input.MentionSuggestionsPopup
 import com.example.feature_chat.ui.components.input.MessageInput
 import com.example.feature_chat.ui.components.system.ChatMessagesList
 import com.example.feature_chat.viewmodel.WebSocketChatViewModel
@@ -293,96 +294,113 @@ fun ChatScreen(
             }
         }
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // 채널 OutBox PENDING이 존재하면 상단에 얇은 진행 표시줄 표시
-            if (uiState.isSendingMessage) {
-                LinearProgressIndicator(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("outbox_sending_indicator")
-                )
-            }
-            ConnectionStatusBar(
-                connectionState = uiState.connectionState,
-                queuedMessagesCount = uiState.queuedMessagesCount,
-                onRetryConnection = { viewModel.retryConnection() }
-            )
-
-            // Anchor Jump 테스트 버튼 제거됨
-
-            when {
-                uiState.error != null && uiState.error?.contains("WebSocket 구현 예정") == true -> {
-                    Box(
+            // 메인 콘텐츠
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                // 채널 OutBox PENDING이 존재하면 상단에 얇은 진행 표시줄 표시
+                if (uiState.isSendingMessage) {
+                    LinearProgressIndicator(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "채팅 기능을 현재 사용할 수 없습니다.\n(WebSocket 구현 예정)",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                            .fillMaxWidth()
+                            .testTag("outbox_sending_indicator")
+                    )
                 }
+                ConnectionStatusBar(
+                    connectionState = uiState.connectionState,
+                    queuedMessagesCount = uiState.queuedMessagesCount,
+                    onRetryConnection = { viewModel.retryConnection() }
+                )
 
-                uiState.isLoadingHistory -> {
-                    // 초기 채팅 아이템 로딩 중일 때 표시할 UI
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                // Anchor Jump 테스트 버튼 제거됨
+
+                when {
+                    uiState.error != null && uiState.error?.contains("WebSocket 구현 예정") == true -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(48.dp),
-                                color = MaterialTheme.colorScheme.primary
-                            )
                             Text(
-                                text = "채팅 메시지를 불러오는 중...",
-                                style = MaterialTheme.typography.bodyLarge,
+                                text = "채팅 기능을 현재 사용할 수 없습니다.\n(WebSocket 구현 예정)",
+                                style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = "잠시만 기다려주세요",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                             )
                         }
                     }
-                }
 
-                else -> {
-                    // ChatMessagesList는 components/ChatMessagesList.kt로 분리됨
-                    // 여기서는 import된 컴포넌트를 사용
-                    ChatMessagesList(
-                        modifier = Modifier.fillMaxSize(),
-                        uiState = uiState,
-                        lazyPagingItems = lazyPagingItems,
-                        listState = listState,
-                        onMessageLongClick = viewModel::onMessageLongClick,
-                        onUserProfileClick = viewModel::onUserProfileClick,
-                        onRetryMessage = viewModel::retryMessage,
-                        onImageClick = { imageUrl, imageUrls, index ->
-                            currentImageUrls = imageUrls
-                            currentImageIndex = index
-                            showImageViewer = true
-                        },
-                        onJoinProject = viewModel::onJoinProject,
-                        onCheckMembership = viewModel::checkProjectMembership,
-                        projectMembershipStatesFlow = viewModel.projectMembershipStates,
-                        onAddMember = viewModel::onAddMember,
-                        initialMessageId = viewModel.getInitialMessageId()
-                    )
+                    uiState.isLoadingHistory -> {
+                        // 초기 채팅 아이템 로딩 중일 때 표시할 UI
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(48.dp),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = "채팅 메시지를 불러오는 중...",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "잠시만 기다려주세요",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
+                    }
+
+                    else -> {
+                        // ChatMessagesList는 components/ChatMessagesList.kt로 분리됨
+                        // 여기서는 import된 컴포넌트를 사용
+                        ChatMessagesList(
+                            modifier = Modifier.fillMaxSize(),
+                            uiState = uiState,
+                            lazyPagingItems = lazyPagingItems,
+                            listState = listState,
+                            onMessageLongClick = viewModel::onMessageLongClick,
+                            onUserProfileClick = viewModel::onUserProfileClick,
+                            onRetryMessage = viewModel::retryMessage,
+                            onImageClick = { imageUrl, imageUrls, index ->
+                                currentImageUrls = imageUrls
+                                currentImageIndex = index
+                                showImageViewer = true
+                            },
+                            onJoinProject = viewModel::onJoinProject,
+                            onCheckMembership = viewModel::checkProjectMembership,
+                            projectMembershipStatesFlow = viewModel.projectMembershipStates,
+                            onAddMember = viewModel::onAddMember,
+                            initialMessageId = viewModel.getInitialMessageId()
+                        )
+                    }
                 }
+            }
+
+            // 멘션 제안 오버레이 (입력창 위쪽, 메시지 영역 내에 표시)
+            if (uiState.isMentionSuggestionVisible && uiState.mentionSuggestions.isNotEmpty()) {
+                MentionSuggestionsPopup(
+                    suggestions = uiState.mentionSuggestions,
+                    onSuggestionClick = viewModel::onMentionSuggestionClick,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth(),
+                    maxVisibleItems = 7
+                )
             }
         }
     }

@@ -161,9 +161,9 @@ service cloud.firestore {
                 // TEMP: 로그인 사용자에 한해 읽기 허용 (임시 완화)
                 allow read: if isAuthenticated();
                 // 멤버 추가/역할 수정: 프로젝트 소유자만
-                allow create, update: if isProjectOwner(projectId);
+                allow create, update: if isProjectMember(projectId);
                 // 멤버 삭제 (추방/탈퇴): 프로젝트 소유자 또는 본인 탈퇴
-                allow delete: if isProjectOwner(projectId) || isCurrentUser(memberUserId);
+                allow delete: if isProjectMember(projectId) || isCurrentUser(memberUserId);
             }
 
             // 역할 정의 (roles)
@@ -198,7 +198,7 @@ service cloud.firestore {
                 // 프로젝트 채널 정보 읽기: 프로젝트 멤버만
                 allow read: if isProjectMember(projectId);
                 // 프로젝트 채널 생성/수정/삭제: 프로젝트 소유자만 (또는 특정 역할)
-                allow write: if isProjectOwner(projectId);
+                allow write: if isProjectMember(projectId);
 
                 // 프로젝트 채널 메시지 (messages)
                 match /messages/{messageId} {

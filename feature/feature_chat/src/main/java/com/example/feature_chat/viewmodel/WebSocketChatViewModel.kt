@@ -11,9 +11,11 @@ import com.example.core_common.result.CustomResult
 import com.example.core_common.util.AuthUtil
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
+import com.example.domain.vo.ChannelId
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.MentionType
 import com.example.domain.vo.UserId
+import com.example.domain.vo.message.MentionInfo
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain_usecase.provider.dm.DMUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
@@ -65,18 +67,36 @@ class WebSocketChatViewModel @Inject constructor(
     private val dmUseCaseProvider: DMUseCaseProvider
 ) : ViewModel() {
 
-    private val channelId: String = savedStateHandle.getRequiredString(RouteArgs.CHANNEL_ID)
-    private val projectId: String? = savedStateHandle.get<String>(RouteArgs.PROJECT_ID)
+    // 멘션 제안 최대 표시 개수 (기본 7, 필요 시 변경 가능)
+    private var mentionSuggestionLimit: Int = 7
+
+    fun setMentionSuggestionLimit(limit: Int) {
+        mentionSuggestionLimit = limit.coerceAtLeast(1)
+    }
+
+
+    private val compositeChannelId: ChannelId =
+        ChannelId(savedStateHandle.getRequiredString(RouteArgs.CHANNEL_ID))
+
+    private val _channelIdAndProjectId: Pair<ChannelId, String?> = run {
+        if (compositeChannelId.isProject()) {
+            Pair(compositeChannelId, compositeChannelId.firstOrNull())
+        } else {
+            Pair(compositeChannelId, null)
+        }
+    }
+    private val channelId: ChannelId = _channelIdAndProjectId.first
+    private val projectId: String? = _channelIdAndProjectId.second
     private val initialMessageId: String? = savedStateHandle.get<String>("initialMessageId")
 
     // Services are initialized lazily once we determine the channel type
     private val services by lazy {
         if (projectId != null) {
             Log.d(TAG, "Creating services for project channel: $projectId/$channelId")
-            chatServiceProvider.createForProjectChannel(projectId, channelId)
+            chatServiceProvider.createForProjectChannel(projectId, channelId.value)
         } else {
             Log.d(TAG, "Creating services for DM channel: $channelId")
-            chatServiceProvider.createForDMChannel(channelId)
+            chatServiceProvider.createForDMChannel(channelId.value)
         }
     }
     
@@ -128,7 +148,8 @@ class WebSocketChatViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 // WebSocket 연결을 위해서는 composite channelId를 그대로 사용 (서버에서 파싱)
-                val joinResult = webSocketUseCaseProvider.createForRoom(channelId).joinRoomUseCase(
+                val joinResult =
+                    webSocketUseCaseProvider.createForRoom(channelId.value).joinRoomUseCase(
                     userId = AuthUtil.getCurrentUserId()?.let { UserId(it) }
                 )
                 if (joinResult.isSuccess) {
@@ -137,7 +158,7 @@ class WebSocketChatViewModel @Inject constructor(
                     // 채널 입장 시 초기 동기화 실행 (SyncMetadata 기반) - 커서 기준 멱등
                     Log.d(TAG, "🚀 채널 입장시 초기 동기화 시작: $channelId")
                     try {
-                        val result = syncUseCase.syncChannel(channelId)
+                        val result = syncUseCase.syncChannel(channelId.value)
                         if (result.isSuccess) {
                             Log.d(TAG, "✅ 초기 동기화 완료: $channelId")
                         } else {
@@ -180,6 +201,9 @@ class WebSocketChatViewModel @Inject constructor(
 
         // 5. 연결 상태 모니터링
         observeConnectionState()
+
+        // 6. 멘션용 데이터 로드
+        loadMentionData()
 
         // 6.1 OutBox 기반 채널 전송 진행 상태를 UI에 연결
         services.messageService.observeChannelPendingCount()
@@ -424,7 +448,7 @@ class WebSocketChatViewModel @Inject constructor(
      */
     private fun observeWebSocketEventsForUiEvents() {
         viewModelScope.launch {
-            webSocketUseCaseProvider.createForRoom(channelId).subscribeToRoomEventsUseCase()
+            webSocketUseCaseProvider.createForRoom(channelId.value).subscribeToRoomEventsUseCase()
                 .onEach { event ->
                     when (event) {
                         is WebSocketDomainEvent.Connected -> {
@@ -506,11 +530,92 @@ class WebSocketChatViewModel @Inject constructor(
      * 멘션 제안 목록 생성
      */
     fun getMentionSuggestions(query: String): List<MentionSuggestion> {
-        // TODO: 실제 사용자 목록에서 검색
-        return listOf(
-            MentionSuggestion(MentionType.USER, "user1", "사용자1"),
-            MentionSuggestion(MentionType.USER, "user2", "사용자2")
-        ).filter { it.displayName.contains(query, ignoreCase = true) }
+        val suggestions = mutableListOf<MentionSuggestion>()
+
+        // 프로젝트 채널인지 DM 채널인지에 따라 다른 멘션 대상 제공
+        if (projectId != null) {
+            // 프로젝트 채널: 프로젝트 멤버와 역할 모두 포함
+            val currentState = uiState.value
+
+            // 프로젝트 멤버 검색
+            currentState.projectMembers
+                .filter { member ->
+                    query.isEmpty() || member.displayName.contains(query, ignoreCase = true)
+                }
+                .forEach { member ->
+                    suggestions.add(
+                        MentionSuggestion(
+                            type = MentionType.USER,
+                            id = member.userId,
+                            displayName = member.displayName,
+                            profileUrl = member.profileUrl,
+                            subtitle = member.roleName ?: "멤버"
+                        )
+                    )
+                }
+
+            // 프로젝트 역할 검색
+            currentState.projectRoles
+                .filter { role ->
+                    query.isEmpty() || role.roleName.contains(query, ignoreCase = true)
+                }
+                .forEach { role ->
+                    suggestions.add(
+                        MentionSuggestion(
+                            type = MentionType.ROLE,
+                            id = role.roleId,
+                            displayName = role.roleName,
+                            profileUrl = null,
+                            subtitle = "${role.memberCount}명의 멤버"
+                        )
+                    )
+                }
+        } else {
+            // DM 채널: 채팅 참여자만 포함
+            val currentState = uiState.value
+            currentState.participants
+                .filter { participant ->
+                    query.isEmpty() || participant.displayName.contains(query, ignoreCase = true)
+                }
+                .forEach { participant ->
+                    suggestions.add(
+                        MentionSuggestion(
+                            type = MentionType.USER,
+                            id = participant.userId,
+                            displayName = participant.displayName,
+                            profileUrl = participant.profileUrl,
+                            subtitle = if (participant.isOnline) "온라인" else "오프라인"
+                        )
+                    )
+                }
+        }
+
+        // 결과 정렬: 접두사(prefix) 매치 우선, 그 다음 사전순
+        val (prefix, containsOnly) = suggestions.partition {
+            it.displayName.startsWith(
+                query,
+                ignoreCase = true
+            )
+        }
+        val ordered =
+            (prefix.sortedBy { it.displayName.lowercase() } + containsOnly.sortedBy { it.displayName.lowercase() })
+
+        // @everyone 고정 1칸 예약 (프로젝트 채널에서만, 쿼리 비어있거나 'everyone' 포함 시)
+        val reserved = if (projectId != null && (query.isEmpty() || "everyone".contains(
+                query,
+                ignoreCase = true
+            ))
+        ) listOf(
+            MentionSuggestion(
+                type = MentionType.EVERYONE,
+                id = "everyone",
+                displayName = "everyone",
+                subtitle = "모든 멤버에게 알림"
+            )
+        ) else emptyList()
+
+        val remainingSlots = (mentionSuggestionLimit - reserved.size).coerceAtLeast(0)
+        return (reserved + ordered.take(remainingSlots))
     }
 
     /**
@@ -553,21 +658,12 @@ class WebSocketChatViewModel @Inject constructor(
         // 방 퇴장 처리로 WebSocket 메시지 저장 범위를 정리
         viewModelScope.launch {
             try {
-                webSocketUseCaseProvider.createForRoom(channelId).leaveRoomUseCase()
+                webSocketUseCaseProvider.createForRoom(channelId.value).leaveRoomUseCase()
             } catch (e: Exception) {
                 Log.w(TAG, "leaveRoom 실패 (무시 가능): ${e.message}")
             }
         }
     }
-
-    // ================================
-    // 🎯 ChatScreen에서 호출하는 UI 메서드들
-    // ================================
-
-
-    // ================================
-    // 🎯 ChatScreen에서 호출하는 UI 메서드들
-    // ================================
 
     /**
      * 이미지 선택 처리
@@ -622,12 +718,73 @@ class WebSocketChatViewModel @Inject constructor(
     fun onMessageInputChange(text: String) {
         viewModelScope.launch {
             try {
-                _uiState.update { it.copy(pendingMessageText = text) }
+                // 멘션 감지 로직
+                val mentionDetectionResult = detectMentionInput(text)
+
+                Log.d(
+                    "WebSocketChatViewModel",
+                    "멘션 감지 결과: ${mentionDetectionResult.shouldShowSuggestions}"
+                )
+                _uiState.update { currentState ->
+                    currentState.copy(
+                        pendingMessageText = text,
+                        isMentionSuggestionVisible = mentionDetectionResult.shouldShowSuggestions,
+                        mentionQueryText = mentionDetectionResult.query,
+                        mentionQueryStartPosition = mentionDetectionResult.startPosition,
+                        mentionSuggestions = if (mentionDetectionResult.shouldShowSuggestions) {
+                            getMentionSuggestions(mentionDetectionResult.query)
+                        } else {
+                            emptyList()
+                        }
+                    )
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "❌ 메시지 입력 변경 처리 실패", e)
             }
         }
     }
+
+    /**
+     * 텍스트에서 멘션 입력 감지
+     */
+    private fun detectMentionInput(text: String): MentionDetectionResult {
+        // 현재 커서 위치를 텍스트 끝으로 가정 (실제로는 커서 위치를 받아야 함)
+        val cursorPosition = text.length
+
+        // 커서 이전 텍스트에서 마지막 @ 문자 찾기
+        val lastAtIndex = text.lastIndexOf('@', cursorPosition - 1)
+
+        if (lastAtIndex == -1) {
+            // @ 문자가 없으면 멘션 모드 아님
+            return MentionDetectionResult(false, "", -1)
+        }
+
+        // 이전 글자 조건 제거: 어디서든 '@' 입력 시 제안 표시
+
+        // @ 이후의 텍스트 추출
+        val afterAtText = text.substring(lastAtIndex + 1, cursorPosition)
+
+        // @ 이후에 공백이 있으면 멘션 모드 종료
+        if (afterAtText.contains(' ')) {
+            return MentionDetectionResult(false, "", -1)
+        }
+
+        // 멘션 쿼리가 너무 길면 제한
+        if (afterAtText.length > 20) {
+            return MentionDetectionResult(false, "", -1)
+        }
+
+        return MentionDetectionResult(true, afterAtText, lastAtIndex)
+    }
+
+    /**
+     * 멘션 감지 결과
+     */
+    private data class MentionDetectionResult(
+        val shouldShowSuggestions: Boolean,
+        val query: String,
+        val startPosition: Int
+    )
 
     /**
      * 메시지 수정 확인
@@ -689,14 +846,20 @@ class WebSocketChatViewModel @Inject constructor(
                     is CustomResult.Success -> {
                         Log.d(TAG, "✅ 메시지 전송 성공: ${result.data}")
                         _eventFlow.emit(ChatEvent.ScrollToBottom)
-                        // 전송 성공 시 입력/첨부 초기화
+                        // 전송 성공 시 입력/첨부/멘션 초기화
                         _uiState.update {
                             it.copy(
                                 pendingMessageText = "",
                                 selectedAttachmentUris = emptyList(),
-                                isAttachmentAreaVisible = false
+                                isAttachmentAreaVisible = false,
+                                pendingMessageMentions = emptyList(),
+                                isMentionSuggestionVisible = false,
+                                mentionQueryText = "",
+                                mentionQueryStartPosition = -1
                             )
                         }
+                        // 멘션 매핑도 초기화
+                        currentMentionMappings.clear()
                     }
 
                     is CustomResult.Failure -> {
@@ -783,10 +946,77 @@ class WebSocketChatViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 Log.d(TAG, "👤 멘션 제안 클릭: ${suggestion.displayName}")
-                // TODO: 멘션 처리 로직 구현
+
+                val currentState = uiState.value
+                val currentText = currentState.pendingMessageText
+                val queryStartPosition = currentState.mentionQueryStartPosition
+
+                if (queryStartPosition >= 0 && queryStartPosition < currentText.length) {
+                    // @ 부터 현재 쿼리까지를 선택한 멘션으로 교체
+                    val beforeMention = currentText.substring(0, queryStartPosition)
+                    val afterMention =
+                        currentText.substring(queryStartPosition + 1 + currentState.mentionQueryText.length)
+
+                    // 간단한 멘션 표시: @displayName 형태로 삽입
+                    val mentionText = "@${suggestion.displayName}"
+                    val newText = "$beforeMention$mentionText$afterMention"
+
+                    // 현재 메시지의 멘션 리스트에 추가
+                    val mentionInfo = MentionInfo.create(
+                        type = suggestion.type,
+                        id = suggestion.id,
+                        displayName = suggestion.displayName
+                    )
+                    addMentionToPendingMessage(mentionInfo)
+
+                    // 상태 업데이트
+                    _uiState.update { state ->
+                        state.copy(
+                            pendingMessageText = newText,
+                            isMentionSuggestionVisible = false,
+                            mentionQueryText = "",
+                            mentionQueryStartPosition = -1,
+                            mentionSuggestions = emptyList()
+                        )
+                    }
+
+                    // 멘션 매핑 업데이트 (인덱스 기반)
+                    val mentionIndex = uiState.value.pendingMessageMentions.size - 1
+                    currentMentionMappings["@${suggestion.displayName}"] =
+                        "$mentionIndex:${suggestion.type.name}:${suggestion.id}"
+
+                    Log.d(TAG, "✅ 멘션 추가 완료: $mentionText (인덱스: $mentionIndex)")
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "❌ 멘션 제안 클릭 처리 실패", e)
             }
+        }
+    }
+
+    /**
+     * 현재 메시지의 멘션 리스트 반환
+     */
+    private fun getCurrentMessageMentions(): List<MentionInfo> {
+        return uiState.value.pendingMessageMentions
+    }
+
+    /**
+     * 현재 메시지에 멘션 추가
+     */
+    private fun addMentionToPendingMessage(mentionInfo: MentionInfo) {
+        _uiState.update { state ->
+            val currentMentions = state.pendingMessageMentions.toMutableList()
+            currentMentions.add(mentionInfo)
+            state.copy(pendingMessageMentions = currentMentions)
+        }
+    }
+
+    /**
+     * 현재 메시지의 멘션 리스트 초기화
+     */
+    private fun clearPendingMessageMentions() {
+        _uiState.update { state ->
+            state.copy(pendingMessageMentions = emptyList())
         }
     }
 
@@ -1092,6 +1322,100 @@ class WebSocketChatViewModel @Inject constructor(
     fun isProjectMember(projectId: String): Boolean {
         return _projectMembershipStates.value[projectId] ?: false
     }
+
+    /**
+     * 멘션용 데이터 로드 (참가자, 프로젝트 멤버, 역할)
+     */
+    private fun loadMentionData() {
+        viewModelScope.launch {
+            try {
+                if (projectId != null) {
+                    // 프로젝트 채널: 프로젝트 멤버와 역할 로드
+                    loadProjectMentionData(projectId)
+                } else {
+                    // DM 채널: 참가자 로드
+                    loadDMMentionData()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ 멘션 데이터 로드 실패", e)
+            }
+        }
+    }
+
+    /**
+     * 프로젝트 채널의 멘션 데이터 로드
+     */
+    private suspend fun loadProjectMentionData(projectId: String) {
+        try {
+            val memberService = services.memberService
+            val roleService = services.roleService
+
+            // 실제 프로젝트 멤버 로드 (UserProfileService로 이름/이미지 포함)
+            val projectMembers = memberService?.loadMembers() ?: emptyList()
+
+            // 실제 프로젝트 역할 로드 (GetProjectRolesUseCase 활용, +@everyone 추가)
+            val projectRoles = roleService?.loadRoles() ?: emptyList()
+
+            _uiState.update { state ->
+                state.copy(
+                    projectMembers = projectMembers,
+                    projectRoles = projectRoles,
+                    isLoadingProjectData = false
+                )
+            }
+
+            // 멘션 입력 중이면 최신 데이터로 제안 재생성
+            val current = uiState.value
+            if (current.isMentionSuggestionVisible) {
+                _uiState.update { it.copy(mentionSuggestions = getMentionSuggestions(current.mentionQueryText)) }
+            }
+
+            Log.d(TAG, "✅ 프로젝트 멘션 데이터 로드 완료: 멤버 ${projectMembers.size}명, 역할 ${projectRoles.size}개")
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ 프로젝트 멘션 데이터 로드 예외", e)
+            _uiState.update { state ->
+                state.copy(
+                    projectMembers = emptyList(),
+                    projectRoles = emptyList(),
+                    isLoadingProjectData = false
+                )
+            }
+        }
+    }
+
+    /**
+     * DM 채널의 멘션 데이터 로드
+     */
+    private suspend fun loadDMMentionData() {
+        try {
+            val participantService = services.participantService
+            val participants = participantService?.loadParticipants() ?: emptyList()
+
+            _uiState.update { state ->
+                state.copy(
+                    participants = participants,
+                    isLoadingParticipants = false
+                )
+            }
+
+            // 멘션 입력 중이면 최신 데이터로 제안 재생성
+            val current = uiState.value
+            if (current.isMentionSuggestionVisible) {
+                _uiState.update { it.copy(mentionSuggestions = getMentionSuggestions(current.mentionQueryText)) }
+            }
+
+            Log.d(TAG, "✅ DM 멘션 데이터 로드 완료: 참가자 ${participants.size}명")
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ DM 멘션 데이터 로드 예외", e)
+            _uiState.update { state ->
+                state.copy(
+                    participants = emptyList(),
+                    isLoadingParticipants = false
+                )
+            }
+        }
+    }
+    
 
     companion object {
         private const val TAG = "JEONJU_CHAT"

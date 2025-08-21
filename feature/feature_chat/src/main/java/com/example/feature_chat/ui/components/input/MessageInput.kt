@@ -38,12 +38,17 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.example.feature_chat.model.ChatParticipant
 import com.example.feature_chat.model.MentionSuggestion
 import com.example.feature_chat.model.ProjectMember
 import com.example.feature_chat.model.ProjectRole
+import java.util.regex.Pattern
 
 /**
  * 개선된 메시지 입력 컴포넌트
@@ -84,6 +89,7 @@ fun MessageInput(
     projectRoles: List<ProjectRole> = emptyList(),
     mentionSuggestions: List<MentionSuggestion> = emptyList(),
     isMentionSuggestionVisible: Boolean = false,
+    maxMentionItems: Int = 7,
 ) {
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -162,14 +168,7 @@ fun MessageInput(
                 }
             }
 
-            // 멘션 제안 팝업 (입력 필드 위에 표시)
-            AnimatedVisibility(visible = isMentionSuggestionVisible) {
-                MentionSuggestionsPopup(
-                    suggestions = mentionSuggestions,
-                    onSuggestionClick = onMentionSuggestionClick,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
+            // 멘션 제안 팝업은 ChatScreen의 content overlay로 이동 (bottomBar 클리핑 회피)
 
             // 메시지 입력 영역
             Row(
@@ -193,7 +192,7 @@ fun MessageInput(
                     )
                 }
 
-                // 텍스트 입력창
+                // 텍스트 입력창 (멘션 하이라이팅 지원)
                 OutlinedTextField(
                     value = text,
                     onValueChange = onTextChange,
@@ -232,6 +231,8 @@ fun MessageInput(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
                         unfocusedBorderColor = MaterialTheme.colorScheme.outline
                     )
+                    // TODO: 향후 BasicTextField로 교체하여 완전한 멘션 하이라이팅 지원
+                    // 현재는 OutlinedTextField 사용으로 하이라이팅이 제한적임
                 )
 
                 // 전송 버튼
@@ -271,5 +272,47 @@ fun MessageInput(
         keyboardController?.hide()
         focusManager.clearFocus()
         isKeyboardVisible = false
+    }
+}
+
+/**
+ * 텍스트에서 멘션을 감지하고 하이라이팅된 AnnotatedString 생성
+ */
+@Composable
+private fun createHighlightedText(
+    text: String,
+    mentionColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primary,
+    mentionBackgroundColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primaryContainer.copy(
+        alpha = 0.2f
+    )
+): AnnotatedString {
+    return buildAnnotatedString {
+        val mentionPattern = Pattern.compile("@([a-zA-Z0-9_가-힣]+)")
+        val matcher = mentionPattern.matcher(text)
+        var lastIndex = 0
+
+        while (matcher.find()) {
+            // 멘션 이전 텍스트 추가
+            if (matcher.start() > lastIndex) {
+                append(text.substring(lastIndex, matcher.start()))
+            }
+
+            // 멘션 텍스트를 하이라이팅하여 추가
+            withStyle(
+                style = SpanStyle(
+                    color = mentionColor,
+                    background = mentionBackgroundColor
+                )
+            ) {
+                append(matcher.group())
+            }
+
+            lastIndex = matcher.end()
+        }
+
+        // 마지막 멘션 이후 텍스트 추가
+        if (lastIndex < text.length) {
+            append(text.substring(lastIndex))
+        }
     }
 } 

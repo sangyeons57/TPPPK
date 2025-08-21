@@ -5,6 +5,7 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.vo.DocumentId
 import com.example.domain_usecase.provider.project.ProjectRoleUseCaseProvider
 import com.example.feature_chat.model.ProjectRole
+import kotlinx.coroutines.flow.first
 
 /**
  * 프로젝트 역할 관리를 담당하는 Service
@@ -25,61 +26,62 @@ class RoleService(
         
         return try {
             val roleUseCases = projectRoleUseCaseProvider.createForProject(DocumentId(projectId))
-            
-            // Collect the first emission from the Flow to get initial role list
-            val rolesFlow = roleUseCases.getProjectRolesUseCase(DocumentId(projectId))
-            
-            // Collect first successful result
-            var roles = emptyList<ProjectRole>()
-            rolesFlow.collect { result ->
-                when (result) {
-                    is CustomResult.Success -> {
-                        val domainRoles = result.data
-                        Log.d(tag, "loadRoles: Successfully loaded ${domainRoles.size} roles")
-                        
-                        // Convert domain roles to UI models
-                        val projectRoles = domainRoles.map { role ->
-                            ProjectRole(
-                                roleId = role.id.value,
-                                roleName = role.name.value,
-                                memberCount = 0 // We'll calculate this from members
-                            )
-                        }
-                        
-                        // Add special @everyone role
-                        roles = projectRoles + ProjectRole(
+
+            // Get first emission from the Flow
+            val result = roleUseCases.getProjectRolesUseCase(DocumentId(projectId)).first()
+
+            when (result) {
+                is CustomResult.Success -> {
+                    val domainRoles = result.data
+                    Log.d(tag, "loadRoles: Successfully loaded ${domainRoles.size} roles")
+
+                    // Convert domain roles to UI models
+                    val projectRoles = domainRoles.map { role ->
+                        ProjectRole(
+                            roleId = role.id.value,
+                            roleName = role.name.value,
+                            memberCount = 0, // We'll calculate this from members
+                            color = role.color
+                        )
+                    }
+
+                    // Add special @everyone role
+                    val roles = projectRoles + ProjectRole(
+                        roleId = "everyone",
+                        roleName = "everyone",
+                        memberCount = 0, // Will be calculated based on total members
+                        color = "#6B7280" // Gray color for @everyone
+                    )
+
+                    Log.d(tag, "loadRoles: Converted ${roles.size} roles to UI models")
+                    roles
+                }
+
+                is CustomResult.Failure -> {
+                    Log.e(tag, "loadRoles: Failed to load project roles", result.error)
+                    // Return at least the @everyone role
+                    listOf(
+                        ProjectRole(
                             roleId = "everyone",
                             roleName = "everyone",
-                            memberCount = 0 // Will be calculated based on total members
+                            memberCount = 0,
+                            color = "#6B7280"
                         )
-                        
-                        Log.d(tag, "loadRoles: Converted ${roles.size} roles to UI models")
-                        return@collect // Exit after first successful result
-                    }
-                    is CustomResult.Failure -> {
-                        Log.e(tag, "loadRoles: Failed to load project roles", result.error)
-                        // Return at least the @everyone role
-                        roles = listOf(
-                            ProjectRole(
-                                roleId = "everyone",
-                                roleName = "everyone",
-                                memberCount = 0
-                            )
+                    )
+                }
+
+                else -> {
+                    Log.d(tag, "loadRoles: Loading or other state")
+                    listOf(
+                        ProjectRole(
+                            roleId = "everyone",
+                            roleName = "everyone",
+                            memberCount = 0,
+                            color = "#6B7280"
                         )
-                        return@collect // Exit on failure
-                    }
-                    is CustomResult.Loading -> {
-                        Log.d(tag, "loadRoles: Loading project roles...")
-                        // Continue collecting
-                    }
-                    else -> {
-                        Log.d(tag, "loadRoles: State: ${result::class.simpleName}")
-                        // Continue collecting for other states
-                    }
+                    )
                 }
             }
-            
-            roles
         } catch (e: Exception) {
             Log.e(tag, "loadRoles: Exception while loading roles", e)
             // Return at least the @everyone role
@@ -87,7 +89,8 @@ class RoleService(
                 ProjectRole(
                     roleId = "everyone",
                     roleName = "everyone",
-                    memberCount = 0
+                    memberCount = 0,
+                    color = "#6B7280"
                 )
             )
         }

@@ -142,7 +142,6 @@ export const createDMChannel = onCall(
 
             if (!channelSnap.exists) {
               batch.set(channelRef, {
-                id: channelId,
                 participants: [currentUserId, targetUserId],
                 createdAt: admin.firestore.FieldValue.serverTimestamp(),
                 updatedAt: admin.firestore.FieldValue.serverTimestamp(),

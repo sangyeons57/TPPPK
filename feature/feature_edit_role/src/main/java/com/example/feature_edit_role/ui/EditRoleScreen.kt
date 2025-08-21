@@ -329,7 +329,7 @@ private fun EditRoleContent_Preview() {
                 roleId = DocumentId("r1"),
                 roleName = Name("운영진"),
                 isDefault = RoleIsDefault(false),
-                permissions = mapOf(PermissionType.MANAGE_ROLES to true)
+                permissions = mapOf(PermissionType.ROLE_EDIT to true)
             ),
             onRoleNameChange = {},
             onIsDefaultChange = {},

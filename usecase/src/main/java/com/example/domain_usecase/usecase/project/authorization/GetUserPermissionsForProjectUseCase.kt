@@ -34,7 +34,6 @@ interface GetUserPermissionsForProjectUseCase {
 class GetUserPermissionsForProjectUseCaseImpl @Inject constructor(
     private val memberRepository: MemberRepository,
     private val projectRoleRepository: ProjectRoleRepository,
-    private val getUserRolesForProjectUseCase: GetUserRolesForProjectUseCase
 ) : GetUserPermissionsForProjectUseCase {
 
     override suspend fun invoke(
@@ -46,13 +45,12 @@ class GetUserPermissionsForProjectUseCaseImpl @Inject constructor(
         // projectRoleRepository may manage permissions per role via explicit method below
 
         // Get user's role ids first
-        val rolesResult = getUserRolesForProjectUseCase(projectId, userId)
-        val roleIds = when (rolesResult) {
-            is CustomResult.Success -> rolesResult.data
-            is CustomResult.Failure -> return CustomResult.Failure(rolesResult.error)
+        val roleIds = when (val memberResult = memberRepository.findById(userId)) {
+            is CustomResult.Success -> memberResult.data.roleIds
+            is CustomResult.Failure -> return CustomResult.Failure(memberResult.error)
             is CustomResult.Initial -> return CustomResult.Initial
             is CustomResult.Loading -> return CustomResult.Loading
-            is CustomResult.Progress -> return CustomResult.Progress(rolesResult.progress)
+            is CustomResult.Progress -> return CustomResult.Progress(memberResult.progress)
         }
 
         val aggregated = mutableSetOf<RolePermission>()

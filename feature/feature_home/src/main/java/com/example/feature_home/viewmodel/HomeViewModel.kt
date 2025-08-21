@@ -6,9 +6,12 @@ import androidx.lifecycle.viewModelScope
 import com.example.core_common.result.CustomResult
 import com.example.core_navigation.core.NavigationManger
 import com.example.domain.model.base.Category
+import com.example.domain.model.data.project.RolePermission
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.UserId
+import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
 import com.example.domain_usecase.provider.user.UserUseCaseProvider
+import com.example.domain_usecase.usecase.project.authorization.GetUserPermissionsForProjectUseCaseImpl
 import com.example.feature_home.model.CategoryUiModel
 import com.example.feature_home.model.ChannelUiModel
 import com.example.feature_home.model.DmUiModel
@@ -37,7 +40,9 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val homeServiceProvider: HomeServiceProvider,
     private val userUseCaseProvider: UserUseCaseProvider,
-    private val navigationManger: NavigationManger
+    private val navigationManger: NavigationManger,
+    private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider,
+    private val getUserPermissionsForProjectUseCase: GetUserPermissionsForProjectUseCaseImpl,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -499,10 +504,51 @@ class HomeViewModel @Inject constructor(
      */
     fun onChannelClick(channel: ChannelUiModel) {
         Log.d("HomeViewModel", "Channel clicked: ${channel.name}")
-        
+
         val projectId = _uiState.value.selectedProjectId ?: return
         val currentServices = services ?: return
-        currentServices.navigationService.handleChannelClick(projectId, channel)
+
+        // 권한 게이트: OWNER 우선, 아니면 CHANNEL_READ 필요
+        viewModelScope.launch {
+            // 1) OWNER helper로 우선 확인
+            val memberUseCases = projectMemberUseCaseProvider.createForProject(projectId)
+            when (val ownerRes = memberUseCases.isCurrentUserOwnerUseCase(projectId)) {
+                is CustomResult.Success -> {
+                    if (ownerRes.data) {
+                        currentServices.navigationService.handleChannelClick(projectId, channel)
+                        return@launch
+                    }
+                }
+
+                else -> { /* ignore and fallback */
+                }
+            }
+
+            // 2) CHANNEL_READ 권한 확인
+            val userId = currentUserId
+            if (userId.isBlank()) {
+                _eventFlow.emit(HomeEvent.ShowSnackbar("로그인이 필요합니다."))
+                return@launch
+            }
+
+            when (val perm = getUserPermissionsForProjectUseCase.hasPermission(
+                projectId = projectId,
+                userId = DocumentId.from(userId),
+                permission = RolePermission.CHANNEL_READ
+            )) {
+                is CustomResult.Success -> {
+                    if (perm.data) {
+                        currentServices.navigationService.handleChannelClick(projectId, channel)
+                    } else {
+                        _eventFlow.emit(HomeEvent.ShowSnackbar("채널에 접근할 수 없습니다. 채널 읽기 권한이 필요합니다."))
+                    }
+                }
+
+                else -> {
+                    _eventFlow.emit(HomeEvent.ShowSnackbar("채널 접근 권한 확인 중 오류가 발생했습니다."))
+                }
+            }
+        }
     }
 
     /**

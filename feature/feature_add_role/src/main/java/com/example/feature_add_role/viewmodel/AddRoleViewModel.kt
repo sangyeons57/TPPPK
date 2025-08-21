@@ -7,6 +7,7 @@ import com.example.core_common.result.CustomResult
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
+import com.example.domain.model.data.project.RolePermission
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.Name
 import com.example.domain.vo.permission.PermissionType
@@ -119,24 +120,25 @@ class AddRoleViewModel @Inject constructor(
             val enabledPermissions = currentState.permissions
                 .filterValues { it }
                 .keys
+                .map { RolePermission.valueOf(it.name) }
                 .toList()
 
             println("ViewModel: Creating role '$trimmedName' in project $projectId (UseCase)")
             println("ViewModel: Enabled permissions: $enabledPermissions")
 
             // UseCase 호출
-            val result = projectRoleUseCases.createProjectRoleUseCase(
-                roleName,
-                isDefault
-            )
+            val result = projectRoleUseCases.createProjectRoleUseCase(roleName, isDefault)
 
             when (result) {
                 is CustomResult.Success -> {
-                    // TODO: 권한 설정을 위한 별도 UseCase 호출
-                    // val roleId = result.data // 새로 생성된 역할 ID
-                    // val permissionsResult = projectRoleUseCases.setRolePermissionsUseCase(
-                    //     roleId, enabledPermissions
-                    // )
+                    // Set permissions for the newly created role
+                    val roleId = result.data
+                    val setRes = projectRoleUseCases.setRolePermissionsUseCase(
+                        DocumentId.from(projectId), roleId, enabledPermissions
+                    )
+                    if (setRes is CustomResult.Failure) {
+                        _eventFlow.emit(AddRoleEvent.ShowSnackbar("권한 설정 실패: ${setRes.error.localizedMessage}"))
+                    }
                     
                     _eventFlow.emit(AddRoleEvent.ShowSnackbar("역할이 생성되었습니다."))
                     _uiState.update { it.copy(isLoading = false) }

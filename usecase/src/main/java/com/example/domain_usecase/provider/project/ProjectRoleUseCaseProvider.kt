@@ -3,8 +3,13 @@ package com.example.domain_usecase.provider.project
 import com.example.domain.vo.CollectionPath
 import com.example.domain.vo.DocumentId
 import com.example.domain_repository.base.AuthRepository
+import com.example.domain_repository.base.MemberRepository
 import com.example.domain_repository.base.PermissionRepository
 import com.example.domain_repository.base.ProjectRoleRepository
+import com.example.domain_usecase.usecase.project.authorization.GetUserPermissionsForProjectUseCase
+import com.example.domain_usecase.usecase.project.authorization.GetUserPermissionsForProjectUseCaseImpl
+import com.example.domain_usecase.usecase.project.authorization.GetUserRolesForProjectUseCase
+import com.example.domain_usecase.usecase.project.authorization.GetUserRolesForProjectUseCaseImpl
 import com.example.domain_usecase.usecase.project.role.CreateProjectRoleUseCase
 import com.example.domain_usecase.usecase.project.role.CreateProjectRoleUseCaseImpl
 import com.example.domain_usecase.usecase.project.role.CreateRoleUseCase
@@ -19,6 +24,7 @@ import com.example.domain_usecase.usecase.project.role.GetRoleDetailsUseCase
 import com.example.domain_usecase.usecase.project.role.GetRoleDetailsUseCaseImpl
 import com.example.domain_usecase.usecase.project.role.GetRolePermissionsUseCase
 import com.example.domain_usecase.usecase.project.role.GetRolePermissionsUseCaseImpl
+import com.example.domain_usecase.usecase.project.role.SetRolePermissionsUseCase
 import com.example.domain_usecase.usecase.project.role.UpdateProjectRoleUseCase
 import com.example.domain_usecase.usecase.project.role.UpdateProjectRoleUseCaseImpl
 import javax.inject.Inject
@@ -32,6 +38,7 @@ import javax.inject.Singleton
 @Singleton
 class ProjectRoleUseCaseProvider @Inject constructor(
     private val projectRoleRepository: ProjectRoleRepository,
+    private val memberRepository: MemberRepository,
     private val permissionRepository: PermissionRepository,
     private val authRepository: AuthRepository
 ) {
@@ -48,9 +55,7 @@ class ProjectRoleUseCaseProvider @Inject constructor(
             CollectionPath.projectRoles(projectId.value)
         )
 
-        permissionRepository.setCollection(
-            CollectionPath.projectRolePermissions(projectId.value, "")
-        )
+        // Do not set permissionRepository collection here; scope per role in use cases
 
         return ProjectRoleUseCases(
             // 역할 기본 CRUD
@@ -83,10 +88,20 @@ class ProjectRoleUseCaseProvider @Inject constructor(
             getRoleDetailsUseCase = GetRoleDetailsUseCaseImpl(
                 projectRoleRepository = this.projectRoleRepository
             ),
+            getUserRolesForProjectUseCase = GetUserRolesForProjectUseCaseImpl(
+                memberRepository = this.memberRepository
+            ),
             
             // 권한 관리
             getRolePermissionsUseCase = GetRolePermissionsUseCaseImpl(
+                projectRoleRepository = this.projectRoleRepository
+            ),
+            setRolePermissionsUseCase = com.example.domain_usecase.usecase.project.role.SetRolePermissionsUseCaseImpl(
                 permissionRepository = this.permissionRepository
+            ),
+            getUserPermissionsForProjectUseCase = GetUserPermissionsForProjectUseCaseImpl(
+                memberRepository = this.memberRepository,
+                projectRoleRepository = this.projectRoleRepository,
             )
         )
     }
@@ -127,7 +142,10 @@ data class ProjectRoleUseCases(
     val getProjectRoleUseCase: GetProjectRoleUseCase,
     val getProjectRolesUseCase: GetProjectRolesUseCase,
     val getRoleDetailsUseCase: GetRoleDetailsUseCase,
-    
+    val getUserRolesForProjectUseCase: GetUserRolesForProjectUseCase,
+
     // 권한 관리
-    val getRolePermissionsUseCase: GetRolePermissionsUseCase
+    val getRolePermissionsUseCase: GetRolePermissionsUseCase,
+    val setRolePermissionsUseCase: SetRolePermissionsUseCase,
+    val getUserPermissionsForProjectUseCase: GetUserPermissionsForProjectUseCase,
 )

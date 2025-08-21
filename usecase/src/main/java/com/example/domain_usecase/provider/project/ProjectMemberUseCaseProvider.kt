@@ -4,8 +4,6 @@ import com.example.domain.usecase.project.DeleteProjectMemberUseCase
 import com.example.domain.usecase.project.DeleteProjectMemberUseCaseImpl
 import com.example.domain.usecase.project.GetProjectMemberDetailsUseCase
 import com.example.domain.usecase.project.GetProjectMemberDetailsUseCaseImpl
-import com.example.domain_usecase.usecase.project.member.ObserveProjectMembersUseCase
-import com.example.domain_usecase.usecase.project.member.ObserveProjectMembersUseCaseImpl
 import com.example.domain.vo.CollectionPath
 import com.example.domain.vo.DocumentId
 import com.example.domain_repository.base.AuthRepository
@@ -17,6 +15,8 @@ import com.example.domain_repository.base.ProjectRepository
 import com.example.domain_repository.base.UserRepository
 import com.example.domain_usecase.usecase.dm.AddDmChannelUseCase
 import com.example.domain_usecase.usecase.dm.GetDmChannelUseCase
+import com.example.domain_usecase.usecase.project.authorization.IsCurrentUserOwnerUseCase
+import com.example.domain_usecase.usecase.project.authorization.IsCurrentUserOwnerUseCaseImpl
 import com.example.domain_usecase.usecase.project.core.JoinProjectByIdUseCase
 import com.example.domain_usecase.usecase.project.invitation.AcceptProjectInvitationUseCase
 import com.example.domain_usecase.usecase.project.invitation.AcceptProjectInvitationUseCaseImpl
@@ -26,10 +26,20 @@ import com.example.domain_usecase.usecase.project.member.AcceptProjectInviteFrom
 import com.example.domain_usecase.usecase.project.member.AcceptProjectInviteFromMessageUseCaseImpl
 import com.example.domain_usecase.usecase.project.member.AddProjectMemberUseCase
 import com.example.domain_usecase.usecase.project.member.AddProjectMemberUseCaseImpl
+import com.example.domain_usecase.usecase.project.member.BlockMemberUseCase
+import com.example.domain_usecase.usecase.project.member.BlockMemberUseCaseImpl
+import com.example.domain_usecase.usecase.project.member.CheckUserProjectMembershipUseCase
+import com.example.domain_usecase.usecase.project.member.CheckUserProjectMembershipUseCaseImpl
 import com.example.domain_usecase.usecase.project.member.GetProjectMemberUseCase
 import com.example.domain_usecase.usecase.project.member.GetProjectMemberUseCaseImpl
+import com.example.domain_usecase.usecase.project.member.GetProjectMembersUseCase
+import com.example.domain_usecase.usecase.project.member.GetProjectMembersUseCaseImpl
 import com.example.domain_usecase.usecase.project.member.LeaveProjectUseCase
 import com.example.domain_usecase.usecase.project.member.LeaveProjectUseCaseImpl
+import com.example.domain_usecase.usecase.project.member.ObserveProjectMembersUseCase
+import com.example.domain_usecase.usecase.project.member.ObserveProjectMembersUseCaseImpl
+import com.example.domain_usecase.usecase.project.member.RemoveMemberUseCase
+import com.example.domain_usecase.usecase.project.member.RemoveMemberUseCaseImpl
 import com.example.domain_usecase.usecase.project.member.RemoveProjectMemberUseCase
 import com.example.domain_usecase.usecase.project.member.RemoveProjectMemberUseCaseImpl
 import com.example.domain_usecase.usecase.project.member.SendProjectInviteMessageUseCase
@@ -38,14 +48,8 @@ import com.example.domain_usecase.usecase.project.member.TransferOwnershipUseCas
 import com.example.domain_usecase.usecase.project.member.TransferOwnershipUseCaseImpl
 import com.example.domain_usecase.usecase.project.member.UpdateMemberRolesUseCase
 import com.example.domain_usecase.usecase.project.member.UpdateMemberRolesUseCaseImpl
-import com.example.domain_usecase.usecase.project.member.CheckUserProjectMembershipUseCase
-import com.example.domain_usecase.usecase.project.member.CheckUserProjectMembershipUseCaseImpl
-import com.example.domain_usecase.usecase.project.member.BlockMemberUseCase
-import com.example.domain_usecase.usecase.project.member.BlockMemberUseCaseImpl
 import com.example.domain_usecase.usecase.project.member.VerifyProjectMembershipUseCase
 import com.example.domain_usecase.usecase.project.member.VerifyProjectMembershipUseCaseImpl
-import com.example.domain_usecase.usecase.project.member.RemoveMemberUseCase
-import com.example.domain_usecase.usecase.project.member.RemoveMemberUseCaseImpl
 import com.example.websocket.usecase.WebSocketUseCaseProvider
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -100,6 +104,9 @@ class ProjectMemberUseCaseProvider @Inject constructor(
             ),
             
             getProjectMemberUseCase = GetProjectMemberUseCaseImpl(
+                projectMemberRepository = this.memberRepository
+            ),
+            getProjectMembersUseCase = GetProjectMembersUseCaseImpl(
                 projectMemberRepository = this.memberRepository
             ),
             
@@ -189,6 +196,12 @@ class ProjectMemberUseCaseProvider @Inject constructor(
             verifyProjectMembershipUseCase = VerifyProjectMembershipUseCaseImpl(
                 memberRepository = this.memberRepository,
                 authRepository = this.authRepository
+            ),
+
+            // OWNER helper
+            isCurrentUserOwnerUseCase = IsCurrentUserOwnerUseCaseImpl(
+                authRepository = this.authRepository,
+                memberRepository = this.memberRepository
             )
         )
     }
@@ -222,6 +235,7 @@ data class ProjectMemberUseCases(
     // 멤버 기본 CRUD
     val addProjectMemberUseCase: AddProjectMemberUseCase,
     val getProjectMemberUseCase: GetProjectMemberUseCase,
+    val getProjectMembersUseCase: GetProjectMembersUseCase,
     val removeProjectMemberUseCase: RemoveProjectMemberUseCase,
     
     // 멤버 고급 관리
@@ -259,5 +273,8 @@ data class ProjectMemberUseCases(
     val blockMemberUseCase: BlockMemberUseCase,
 
     // 멤버십 검증
-    val verifyProjectMembershipUseCase: VerifyProjectMembershipUseCase
+    val verifyProjectMembershipUseCase: VerifyProjectMembershipUseCase,
+
+    // OWNER helper
+    val isCurrentUserOwnerUseCase: IsCurrentUserOwnerUseCase
 )

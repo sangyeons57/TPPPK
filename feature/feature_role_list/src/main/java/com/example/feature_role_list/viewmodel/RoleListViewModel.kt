@@ -10,11 +10,13 @@ import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.base.Role
+import com.example.domain.model.data.project.RolePermission
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.Name
 import com.example.domain_repository.base.AuthRepository
+import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectRoleUseCaseProvider
-import com.example.domain_usecase.usecase.project.authorization.GetUserRolesForProjectUseCaseImpl
+import com.example.domain_usecase.usecase.project.authorization.GetUserPermissionsForProjectUseCaseImpl
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -53,15 +55,18 @@ sealed class RoleListEvent {
 class RoleListViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val projectRoleUseCaseProvider: ProjectRoleUseCaseProvider, // Added
+    private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider,
     private val navigationManger: NavigationManger,
     private val authRepository: AuthRepository,
-    private val getUserRolesForProjectUseCase: GetUserRolesForProjectUseCaseImpl,
+    private val getUserPermissionsForProjectUseCase: GetUserPermissionsForProjectUseCaseImpl,
 ) : ViewModel() {
 
     private val projectId: String = savedStateHandle.getRequiredString(RouteArgs.PROJECT_ID)
 
     // Create UseCase groups via provider
     private val projectRoleUseCases = projectRoleUseCaseProvider.createForProject(DocumentId.from(projectId))
+    private val projectMemberUseCases =
+        projectMemberUseCaseProvider.createForProject(DocumentId.from(projectId))
 
     private val _uiState = MutableStateFlow(RoleListUiState(projectId = projectId, isLoading = true))
     val uiState: StateFlow<RoleListUiState> = _uiState.asStateFlow()
@@ -116,18 +121,35 @@ class RoleListViewModel @Inject constructor(
                 }
         }
 
-        // Determine role-based capability (currently OWNER role)
+        // Determine capability: OWNER shortcut via provider, else ROLE_EDIT permission
         viewModelScope.launch {
+            // 1) OWNER check via provider helper (using only projectId)
+            when (val ownerRes =
+                projectMemberUseCases.isCurrentUserOwnerUseCase(DocumentId.from(projectId))) {
+                is CustomResult.Success -> {
+                    if (ownerRes.data) {
+                        _uiState.update { it.copy(canManageRoles = true) }
+                        return@launch
+                    }
+                }
+
+                else -> { /* ignore and fallback */
+                }
+            }
+
+            // 2) Fallback to ROLE_EDIT permission
             val session = authRepository.getCurrentUserSession()
             if (session is CustomResult.Success) {
-                when (val hasOwner = getUserRolesForProjectUseCase.hasRole(
+                when (val hasRoleEdit = getUserPermissionsForProjectUseCase.hasPermission(
                     DocumentId.from(projectId),
                     DocumentId.from(session.data.userId),
-                    DocumentId("OWNER")
+                    RolePermission.ROLE_EDIT
                 )) {
-                    is CustomResult.Success -> _uiState.update { it.copy(canManageRoles = hasOwner.data) }
+                    is CustomResult.Success -> _uiState.update { it.copy(canManageRoles = hasRoleEdit.data) }
                     else -> _uiState.update { it.copy(canManageRoles = false) }
                 }
+            } else {
+                _uiState.update { it.copy(canManageRoles = false) }
             }
         }
     }
@@ -142,7 +164,7 @@ class RoleListViewModel @Inject constructor(
         val state = uiState.value
         if (!state.canManageRoles) {
             viewModelScope.launch {
-                _eventFlow.emit(RoleListEvent.ShowSnackbar("역할을 생성할 수 없습니다. 프로젝트 소유자만 가능합니다."))
+                _eventFlow.emit(RoleListEvent.ShowSnackbar("역할을 생성할 수 없습니다. 역할 수정 권한이 필요합니다."))
             }
             return
         }
@@ -158,7 +180,7 @@ class RoleListViewModel @Inject constructor(
         val state = uiState.value
         if (!state.canManageRoles) {
             viewModelScope.launch {
-                _eventFlow.emit(RoleListEvent.ShowSnackbar("역할을 수정할 수 없습니다. 프로젝트 소유자만 가능합니다."))
+                _eventFlow.emit(RoleListEvent.ShowSnackbar("역할을 수정할 수 없습니다. 역할 수정 권한이 필요합니다."))
             }
             return
         }
@@ -171,7 +193,7 @@ class RoleListViewModel @Inject constructor(
         val state = uiState.value
         if (!state.canManageRoles) {
             viewModelScope.launch {
-                _eventFlow.emit(RoleListEvent.ShowSnackbar("역할을 삭제할 수 없습니다. 프로젝트 소유자만 가능합니다."))
+                _eventFlow.emit(RoleListEvent.ShowSnackbar("역할을 삭제할 수 없습니다. 역할 수정 권한이 필요합니다."))
             }
             return
         }
@@ -184,7 +206,7 @@ class RoleListViewModel @Inject constructor(
         val state = uiState.value
         if (!state.canManageRoles) {
             viewModelScope.launch {
-                _eventFlow.emit(RoleListEvent.ShowSnackbar("역할을 삭제할 수 없습니다. 프로젝트 소유자만 가능합니다."))
+                _eventFlow.emit(RoleListEvent.ShowSnackbar("역할을 삭제할 수 없습니다. 역할 수정 권한이 필요합니다."))
             }
             return
         }

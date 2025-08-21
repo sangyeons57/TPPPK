@@ -20,7 +20,7 @@ class GetDmChannelUseCase @Inject constructor(
             return CustomResult.Failure(IllegalArgumentException("Target user ID cannot be blank."))
         }
         return dmRepository.findById(dmChannelId).successProcess {
-            it as DMChannel
+            it
         }
     }
 

@@ -7,56 +7,26 @@ import com.example.domain.vo.DocumentId
  * These permissions control what actions users with a specific role can perform.
  */
 enum class RolePermission {
-    // Project permissions
-    MANAGE_PROJECT,
-    EDIT_PROJECT_DETAILS,
-    DELETE_PROJECT,
-    
-    // Member management permissions
-    MANAGE_MEMBERS,
-    INVITE_MEMBERS,
-    REMOVE_MEMBERS,
-    EDIT_MEMBER_ROLES,
-    
-    // Role management permissions
-    MANAGE_ROLES,
-    CREATE_ROLES,
-    EDIT_ROLES,
-    DELETE_ROLES,
-    
-    // Channel permissions
-    MANAGE_CHANNELS,
-    CREATE_CHANNELS,
-    EDIT_CHANNELS,
-    DELETE_CHANNELS,
-    
-    // Category permissions
-    MANAGE_CATEGORIES,
-    CREATE_CATEGORIES,
-    EDIT_CATEGORIES,
-    DELETE_CATEGORIES,
-    
-    // Message permissions
-    SEND_MESSAGES,
-    MANAGE_MESSAGES,
-    DELETE_MESSAGES,
-    
-    // File permissions
-    UPLOAD_FILES,
-    DOWNLOAD_FILES,
-    DELETE_FILES,
-    
-    // Meeting permissions
-    SCHEDULE_MEETINGS,
-    MANAGE_MEETINGS,
-    
-    // Task permissions
-    CREATE_TASKS,
-    ASSIGN_TASKS,
-    MANAGE_TASKS,
-    
-    // Admin permissions (full access)
-    ADMINISTRATOR;
+    // 1) 역할 수정 권한
+    ROLE_EDIT,
+
+    // 2) 멤버 초대 권한
+    MEMBER_INVITE,
+
+    // 3) 멤버 관리 권한
+    MEMBER_MANAGE,
+
+    // 4) 구조 편집 권한
+    STRUCTURE_EDIT,
+
+    // 5) 프로젝트 설정 권한
+    PROJECT_SETTINGS,
+
+    // 6) 채널 쓰기 권한
+    CHANNEL_WRITE,
+
+    // 7) 채널 읽기 권한
+    CHANNEL_READ;
     
     companion object {
         fun from (value: String): RolePermission {
@@ -71,9 +41,8 @@ enum class RolePermission {
          * @param value The value to set for all permissions.
          * @return A map of all permissions to the specified value.
          */
-        fun allPermissions(value: Boolean = true): Map<String, Boolean> {
-            return entries.associate { it.name to value }
-        }
+        fun allPermissions(value: Boolean = true): Map<String, Boolean> =
+            entries.associate { it.name to value }
         
         /**
          * Returns a map with all permissions set to false.
@@ -88,21 +57,10 @@ enum class RolePermission {
          * @param isAdmin Whether the role is an admin role.
          * @return A map of permissions with appropriate defaults.
          */
-        fun defaultPermissions(isAdmin: Boolean = false): Map<String, Boolean> {
-            return if (isAdmin) {
-                allPermissions(true)
-            } else {
-                // Default non-admin permissions
-                val permissions = mutableMapOf<String, Boolean>()
-                
-                // Basic permissions for all non-admin roles
-                permissions[SEND_MESSAGES.name] = true
-                permissions[UPLOAD_FILES.name] = true
-                permissions[DOWNLOAD_FILES.name] = true
-                permissions[CREATE_TASKS.name] = true
-                
-                permissions
-            }
-        }
+        fun defaultPermissions(isAdmin: Boolean = false): Map<String, Boolean> =
+            if (isAdmin) allPermissions(true) else mapOf(
+                CHANNEL_READ.name to true,
+                CHANNEL_WRITE.name to true
+            )
     }
 }

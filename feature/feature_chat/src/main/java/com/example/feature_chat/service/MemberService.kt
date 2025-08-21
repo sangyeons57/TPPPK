@@ -28,58 +28,48 @@ class MemberService(
         
         return try {
             val memberUseCases = projectMemberUseCaseProvider.createForProject(DocumentId(projectId))
-            
-            // Collect the first emission from the Flow to get initial member list
-            val membersFlow = memberUseCases.observeProjectMembersUseCase()
-            
-            // Collect first successful result
-            var members = emptyList<ProjectMember>()
-            membersFlow.collect { result ->
-                when (result) {
-                    is CustomResult.Success -> {
-                        val domainMembers = result.data
-                        Log.d(tag, "loadMembers: Successfully loaded ${domainMembers.size} members")
-                        
-                        // Convert domain members to UI models
-                        members = domainMembers.map { member ->
-                            // Load user profile to get real display name
-                            userProfileService.loadUserProfile(member.id.value)
-                            
-                            val displayName = userProfileService.getUserDisplayName(member.id.value)
-                            val profileUrl = userProfileService.getCachedProfileUrl(member.id.value)
-                            
-                            // Get role name from the first role (simplified for now)
-                            val roleId = member.roleIds.firstOrNull()?.value
-                            val roleName = roleId // We'll enhance this when we get role names
-                            
-                            ProjectMember(
-                                userId = member.id.value,
-                                displayName = displayName,
-                                profileUrl = profileUrl,
-                                roleId = roleId,
-                                roleName = roleName
-                            )
-                        }
-                        
-                        Log.d(tag, "loadMembers: Converted ${members.size} members to UI models")
-                        return@collect // Exit after first successful result
+
+            // Use single-shot UseCase instead of Flow
+            when (val result = memberUseCases.getProjectMembersUseCase()) {
+                is CustomResult.Success -> {
+                    val domainMembers = result.data
+                    Log.d(tag, "loadMembers: Successfully loaded ${domainMembers.size} members")
+
+                    // Convert domain members to UI models
+                    val members = domainMembers.map { member ->
+                        // Load user profile to get real display name
+                        userProfileService.loadUserProfile(member.id.value)
+
+                        val displayName = userProfileService.getUserDisplayName(member.id.value)
+                        val profileUrl = userProfileService.getCachedProfileUrl(member.id.value)
+
+                        // Get role name from the first role (simplified for now)
+                        val roleId = member.roleIds.firstOrNull()?.value
+                        val roleName = roleId // We'll enhance this when we get role names
+
+                        ProjectMember(
+                            userId = member.id.value,
+                            displayName = displayName,
+                            profileUrl = profileUrl,
+                            roleId = roleId,
+                            roleName = roleName
+                        )
                     }
-                    is CustomResult.Failure -> {
-                        Log.e(tag, "loadMembers: Failed to load project members", result.error)
-                        return@collect // Exit on failure
-                    }
-                    is CustomResult.Loading -> {
-                        Log.d(tag, "loadMembers: Loading project members...")
-                        // Continue collecting
-                    }
-                    else -> {
-                        Log.d(tag, "loadMembers: State: ${result::class.simpleName}")
-                        // Continue collecting for other states
-                    }
+
+                    Log.d(tag, "loadMembers: Converted ${members.size} members to UI models")
+                    members
+                }
+
+                is CustomResult.Failure -> {
+                    Log.e(tag, "loadMembers: Failed to load project members", result.error)
+                    emptyList()
+                }
+
+                else -> {
+                    Log.d(tag, "loadMembers: Loading or other state")
+                    emptyList()
                 }
             }
-            
-            members
         } catch (e: Exception) {
             Log.e(tag, "loadMembers: Exception while loading members", e)
             emptyList()

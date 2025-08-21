@@ -33,6 +33,13 @@ value class DocumentId(val value: String) {
         fun from(value: UserId): DocumentId {
             return DocumentId(value.value)
         }
+        fun from(value: ChannelId): DocumentId {
+            if (value.isProject()) {
+                throw Exception("프로젝트 체널인 경우 DocumentId가 projectId 인지 channelId인지 알수없음으로 exception반환 ")
+            } else {
+                return DocumentId(value.value)
+            }
+        }
         fun from(value: RolePermission): DocumentId {
             return DocumentId(value.name)
         }

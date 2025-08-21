@@ -2,6 +2,7 @@ package com.example.feature_chat.model
 
 import android.net.Uri
 import com.example.domain.vo.MentionType
+import com.example.domain.vo.message.MentionInfo
 import com.example.websocket.core.WebSocketConnectionState
 
 /**
@@ -52,6 +53,10 @@ data class ChatUiState(
     val isMentionSuggestionVisible: Boolean = false,
     val mentionQueryText: String = "",
     val mentionQueryStartPosition: Int = -1,
+    val selectedMentionIndex: Int = -1, // -1 means no selection
+
+    // Current message mentions (for composing message)
+    val pendingMessageMentions: List<MentionInfo> = emptyList(),
     
     // Channel participants (for DM channels)
     val participants: List<ChatParticipant> = emptyList(),

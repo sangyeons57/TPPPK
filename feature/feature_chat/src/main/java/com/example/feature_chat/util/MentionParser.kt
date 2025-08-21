@@ -5,8 +5,8 @@ import com.example.domain.vo.message.MentionInfo
 import java.util.regex.Pattern
 
 /**
- * 메시지 텍스트에서 멘션을 파싱하는 유틸리티 클래스
- * @username 패턴을 감지하여 MentionInfo 리스트로 변환
+ * 단순화된 멘션 파싱 유틸리티 클래스
+ * 복잡한 인코딩/디코딩 없이 간단한 @username 패턴 처리
  */
 object MentionParser {
 
@@ -14,33 +14,29 @@ object MentionParser {
     private val MENTION_PATTERN = Pattern.compile("@([a-zA-Z0-9_가-힣]+)")
 
     /**
-     * 메시지 텍스트에서 멘션을 파싱
+     * 단순화된 멘션 파싱 - 텍스트에서 @username 패턴만 감지
      * @param text 파싱할 메시지 텍스트
-     * @param getUserIdByUsername username으로 실제 userId를 찾는 함수
+     * @param mentionMappings 미리 정의된 멘션 매핑 (displayName -> MentionInfo)
      * @return 파싱된 MentionInfo 리스트
      */
-    suspend fun parseMentions(
+    fun parseMentionsSimple(
         text: String,
-        getUserIdByUsername: suspend (String) -> String?
+        mentionMappings: Map<String, MentionInfo> = emptyMap()
     ): List<MentionInfo> {
         val mentions = mutableListOf<MentionInfo>()
         val matcher = MENTION_PATTERN.matcher(text)
 
         while (matcher.find()) {
-            val username = matcher.group(1) ?: continue
-            matcher.start()
-            matcher.end()
+            val fullMatch = matcher.group() ?: continue // @username 전체
+            val username = matcher.group(1) ?: continue // username 부분만
 
-            // username으로 실제 userId 조회
-            val userId = getUserIdByUsername(username)
-            if (userId != null) {
-                val mentionInfo = MentionInfo.create(
-                    type = MentionType.USER,
-                    id = userId,
-                    displayName = "@$username"
-                )
-                mentions.add(mentionInfo)
-            }
+            // 미리 정의된 매핑에서 찾기
+            val mentionInfo = mentionMappings[fullMatch] ?: MentionInfo.create(
+                type = MentionType.USER,
+                id = username, // 임시로 username을 id로 사용
+                displayName = fullMatch
+            )
+            mentions.add(mentionInfo)
         }
 
         return mentions
@@ -66,35 +62,25 @@ object MentionParser {
             mentions.add(mentionInfo)
         }
 
-        // @here 패턴 찾기
-        val herePattern = Pattern.compile("@here")
-        val hereMatcher = herePattern.matcher(text)
-        while (hereMatcher.find()) {
-            val mentionInfo = MentionInfo.create(
-                type = MentionType.HERE,
-                id = "here", // 특수 ID
-                displayName = "@here"
-            )
-            mentions.add(mentionInfo)
-        }
+        // @here 제거됨
 
         return mentions
     }
 
     /**
-     * 텍스트와 멘션 정보를 결합하여 전체 멘션 리스트 생성
+     * 모든 멘션 파싱 (일반 사용자 + 특수 멘션)
      * @param text 파싱할 메시지 텍스트
-     * @param getUserIdByUsername username으로 실제 userId를 찾는 함수
+     * @param mentionMappings 미리 정의된 멘션 매핑
      * @return 모든 멘션 정보가 포함된 리스트
      */
-    suspend fun parseAllMentions(
+    fun parseAllMentionsSimple(
         text: String,
-        getUserIdByUsername: suspend (String) -> String?
+        mentionMappings: Map<String, MentionInfo> = emptyMap()
     ): List<MentionInfo> {
-        val userMentions = parseMentions(text, getUserIdByUsername)
+        val userMentions = parseMentionsSimple(text, mentionMappings)
         val specialMentions = parseSpecialMentions(text)
 
-        return (userMentions + specialMentions)
+        return (userMentions + specialMentions).distinctBy { it.displayName }
     }
 
     /**
@@ -105,7 +91,6 @@ object MentionParser {
     fun extractPlainText(text: String): String {
         return text.replace(MENTION_PATTERN.toRegex(), "")
             .replace("@everyone", "")
-            .replace("@here", "")
             .trim()
             .replace(Regex("\\s+"), " ") // 연속된 공백을 하나로 축약
     }
@@ -117,8 +102,7 @@ object MentionParser {
      */
     fun hasMentions(text: String): Boolean {
         return MENTION_PATTERN.matcher(text).find() ||
-                text.contains("@everyone") ||
-                text.contains("@here")
+                text.contains("@everyone")
     }
 
     /**
@@ -131,7 +115,7 @@ object MentionParser {
         return mentions.any { mention ->
             when (mention.type) {
                 MentionType.USER -> mention.id == userId
-                MentionType.EVERYONE, MentionType.HERE -> true
+                MentionType.EVERYONE -> true
                 else -> false
             }
         }

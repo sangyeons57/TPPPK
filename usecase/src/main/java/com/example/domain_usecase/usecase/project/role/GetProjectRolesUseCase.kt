@@ -37,11 +37,14 @@ class GetProjectRolesUseCaseImpl @Inject constructor(
         return projectRoleRepository.observeAll().map { customResult ->
             when (customResult) {
                 is CustomResult.Success -> {
+                    var roles = customResult.data
                     // 🚨 모든 역할을 보여주되, 시스템 역할(OWNER 등)만 제외
                     // filterIsInstance를 사용하여 타입 안전성 확보 + 시스템 역할 필터링
-                    var roles = customResult.data.filterIsInstance<Role>().filter { role ->
+                    /**
+                    roles = customResult.data.filterIsInstance<Role>().filter { role ->
                         !Role.isSystemRole(role.id.value)
                     }
+                     **/
 
                     // Apply sorting if specified
                     sortBy?.let { option ->
