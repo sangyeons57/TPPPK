@@ -8,10 +8,11 @@ import com.google.firebase.firestore.Source
 import kotlinx.coroutines.flow.Flow
 
 interface TaskRepository : DefaultRepository<Task> {
-    suspend fun addTask(payload: Task)
+    suspend fun createTask(payload: Task)
+    suspend fun updateTask(payload: Task)
 
     override suspend fun findById(id: DocumentId, source: Source): CustomResult<Task, Exception>
-
+    override suspend fun delete(id: DocumentId): CustomResult<Unit, Exception>
     /**
      * Observe tasks by projectId using Room as SSOT
      */

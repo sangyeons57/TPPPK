@@ -17,7 +17,12 @@ interface ObserveChannelTasksUseCase {
 class ObserveChannelTasksUseCaseImpl @Inject constructor(
     private val taskRepository: TaskRepository
 ) : ObserveChannelTasksUseCase {
-    override fun invoke(channelId: ChannelId): Flow<CustomResult<List<Task>, Exception>> =
-        taskRepository.observeByChannel(channelId.value)
+    override fun invoke(channelId: ChannelId): Flow<CustomResult<List<Task>, Exception>> {
+        android.util.Log.d(
+            "ObserveChannelTasksUseCase",
+            "Starting observe for channelId=${channelId.value}"
+        )
+        return taskRepository.observeByChannel(channelId.value)
+    }
 }
 

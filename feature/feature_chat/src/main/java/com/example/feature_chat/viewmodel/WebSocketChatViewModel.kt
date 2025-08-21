@@ -15,8 +15,8 @@ import com.example.domain.vo.DocumentId
 import com.example.domain.vo.MentionType
 import com.example.domain.vo.UserId
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
-import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
 import com.example.domain_usecase.provider.dm.DMUseCaseProvider
+import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
 import com.example.domain_usecase.usecase.sync.SyncUseCase
 import com.example.feature_chat.model.ChatEvent
 import com.example.feature_chat.model.ChatMessageUiModel
@@ -27,7 +27,6 @@ import com.example.websocket.core.WebSocketConnectionState
 import com.example.websocket.event.WebSocketDomainEvent
 import com.example.websocket.usecase.WebSocketUseCaseProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -40,7 +39,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -182,9 +180,6 @@ class WebSocketChatViewModel @Inject constructor(
         // 5. 연결 상태 모니터링
         observeConnectionState()
 
-        // 6. 오프라인 큐 모니터링
-        observeOfflineQueue()
-
         // 6.1 OutBox 기반 채널 전송 진행 상태를 UI에 연결
         services.messageService.observeChannelPendingCount()
             .onEach { pendingCount ->
@@ -192,10 +187,6 @@ class WebSocketChatViewModel @Inject constructor(
             }
             .launchIn(viewModelScope)
 
-        // 7. 주기적인 캐시 정리 (1시간마다)
-        startPeriodicCacheCleanup()
-
-        // Note: messagesFlow는 lazy property로 설정되어 처음 접근 시점에 생성됨
     }
 
     /**
@@ -341,11 +332,11 @@ class WebSocketChatViewModel @Inject constructor(
                 val result = services.messageService.deleteMessage(DocumentId(messageId))
                 
                 when (result) {
-                    is CustomResult.Success<*> -> {
+                    is CustomResult.Success -> {
                         Log.d(TAG, "✅ 메시지 삭제 요청 전송(낙관적 적용됨)")
                     }
 
-                    is CustomResult.Failure<*> -> {
+                    is CustomResult.Failure -> {
                         Log.e(TAG, "❌ 메시지 삭제 실패: ${result.error}")
                         _eventFlow.emit(ChatEvent.ShowSnackbar("메시지 삭제에 실패했습니다"))
                     }
@@ -503,67 +494,6 @@ class WebSocketChatViewModel @Inject constructor(
                     _uiState.update { it.copy(connectionState = state) }
                 }
                 .launchIn(viewModelScope)
-        }
-    }
-
-    /**
-     * 오프라인 큐 상태 모니터링
-     */
-    private fun observeOfflineQueue() {
-        viewModelScope.launch {
-            // 주기적으로 큐 상태 업데이트 (5초마다)
-            while (isActive) {
-                try {
-                    val (pendingCount, failedCount) = services.messageService.offlineMessageQueue.getQueueInfo()
-
-                    _uiState.update { currentState ->
-                        currentState.copy(
-                            queuedMessagesCount = pendingCount,
-                            failedMessagesCount = failedCount,
-                            isRetryingMessages = pendingCount > 0 || failedCount > 0
-                        )
-                    }
-
-                    if (pendingCount > 0 || failedCount > 0) {
-                        Log.d(TAG, "📋 큐 상태 업데이트: 대기 ${pendingCount}개, 실패 ${failedCount}개")
-                    }
-                } catch (e: CancellationException) {
-                    // 취소는 정상 종료로 간주
-                    Log.d(TAG, "ℹ️ 큐 상태 모니터링 취소됨")
-                    break
-                } catch (e: Exception) {
-                    Log.e(TAG, "❌ 큐 상태 모니터링 실패", e)
-                }
-
-                delay(5000) // 5초마다 확인
-            }
-        }
-    }
-
-    /**
-     * 주기적인 캐시 정리 (메모리 및 디스크 사용량 최적화)
-     */
-    private fun startPeriodicCacheCleanup() {
-        viewModelScope.launch {
-            while (isActive) {
-                try {
-                    delay(60 * 60 * 1000L) // 1시간 대기
-
-                    Log.d(TAG, "🧹 주기적 캐시 정리 시작")
-                    withContext(Dispatchers.IO) {
-                        // cleanupCache 메서드 제거됨 - Room의 자동 무효화로 대체
-                        Log.d(TAG, "캐시 정리는 Room 자동 무효화로 처리됨")
-                    }
-                    Log.d(TAG, "✅ 주기적 캐시 정리 완료")
-                } catch (e: CancellationException) {
-                    // 취소는 정상 종료로 간주
-                    Log.d(TAG, "ℹ️ 주기적 캐시 정리 취소됨")
-                    break
-                } catch (e: Exception) {
-                    Log.e(TAG, "❌ 주기적 캐시 정리 실패", e)
-                    // 실패해도 계속 시도
-                }
-            }
         }
     }
 

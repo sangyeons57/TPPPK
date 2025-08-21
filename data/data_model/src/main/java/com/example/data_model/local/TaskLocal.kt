@@ -59,7 +59,7 @@ interface TaskDao {
         """
         SELECT * FROM tasks
         WHERE channelId = :channelId
-        ORDER BY `order` ASC, updatedAt DESC
+        ORDER BY `order` ASC, createdAt ASC
         """
     )
     suspend fun getTasksByChannel(channelId: String): List<TaskEntity>
@@ -83,7 +83,7 @@ interface TaskDao {
         """
         SELECT * FROM tasks
         WHERE channelId = :channelId
-        ORDER BY `order` ASC, updatedAt DESC
+        ORDER BY `order` ASC, createdAt ASC
         """
     )
     fun observeByChannel(channelId: String): Flow<List<TaskEntity>>

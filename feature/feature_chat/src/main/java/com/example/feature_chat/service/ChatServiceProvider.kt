@@ -10,9 +10,8 @@ import com.example.domain_usecase.provider.file.FileManagementUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectRoleUseCaseProvider
 import com.example.domain_usecase.provider.user.UserUseCaseProvider
-import com.example.feature_chat.queue.OfflineMessageQueue
-import com.example.websocket.usecase.WebSocketUseCaseProvider
 import com.example.websocket.usecase.SendMessageUseCase
+import com.example.websocket.usecase.WebSocketUseCaseProvider
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
@@ -30,7 +29,6 @@ class ChatServiceProvider @Inject constructor(
     private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider,
     private val projectRoleUseCaseProvider: ProjectRoleUseCaseProvider,
     private val webSocketUseCaseProvider: WebSocketUseCaseProvider,
-    private val offlineMessageQueue: OfflineMessageQueue,
     private val navigationManger: NavigationManger,
     private val messageRepository: MessageRepository,
     private val sendMessageUseCase: SendMessageUseCase,
@@ -67,7 +65,6 @@ class ChatServiceProvider @Inject constructor(
         val messageService = MessageService(
             context = context,
             webSocketUseCaseProvider = webSocketUseCaseProvider,
-            offlineMessageQueue = offlineMessageQueue,
             messageRepository = messageRepository,
             userProfileService = userProfileService,
             fileUseCases = fileUseCases,
@@ -118,7 +115,6 @@ class ChatServiceProvider @Inject constructor(
         val messageService = MessageService(
             context = context,
             webSocketUseCaseProvider = webSocketUseCaseProvider,
-            offlineMessageQueue = offlineMessageQueue,
             messageRepository = messageRepository,
             userProfileService = userProfileService,
             fileUseCases = fileUseCases,

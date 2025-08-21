@@ -22,11 +22,9 @@ import com.example.domain.vo.UserId
 import com.example.domain.vo.message.MessagePayload
 import com.example.domain.vo.message.MessageType
 import com.example.domain_repository.base.MessageRepository
-import com.example.domain_usecase.provider.dm.DMUseCaseProvider
 import com.example.domain_usecase.provider.file.FileManagementUseCases
 import com.example.feature_chat.model.ChatMessageUiModel
 import com.example.feature_chat.model.MessageDeliveryState
-import com.example.feature_chat.queue.OfflineMessageQueue
 import com.example.websocket.usecase.SendMessageUseCase
 import com.example.websocket.usecase.WebSocketUseCaseProvider
 import kotlinx.coroutines.delay
@@ -34,9 +32,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
@@ -56,7 +51,6 @@ import javax.inject.Inject
 class MessageService @Inject constructor(
     private val context: Context,
     private val webSocketUseCaseProvider: WebSocketUseCaseProvider,
-    val offlineMessageQueue: OfflineMessageQueue,
     private val messageRepository: MessageRepository,
     private val userProfileService: UserProfileService,
     private val fileUseCases: FileManagementUseCases,
@@ -158,7 +152,7 @@ class MessageService @Inject constructor(
                 val outboxStatus = try {
                     runBlocking {
                         val result = messageRepository.getMessageOutBoxStatus(message.id)
-                        if (result is CustomResult.Success) result.data else null
+                        if (result is Success) result.data else null
                     }
                 } catch (e: Exception) {
                     null
@@ -523,7 +517,6 @@ class MessageService @Inject constructor(
                 projectId = projectId?.let { com.example.domain.vo.ProjectId(it) }
             )
 
-            // OutBox 상태는 save() 내부에서 자동으로 PENDING 상태로 생성됩니다
 
             result
 
@@ -590,7 +583,7 @@ class MessageService @Inject constructor(
                 channelId = ChannelId(roomId)
             )
 
-            val saveResult = messageRepository.save(placeholderMessage)
+            val saveResult = messageRepository.sendMessage(placeholderMessage)
             if (saveResult.isFailure) {
                 return CustomResult.Failure(Exception("메시지 로컬 저장 실패"))
             }
@@ -780,7 +773,7 @@ class MessageService @Inject constructor(
             if (message != null) {
                 message.updatePayload(finalPayload)
 
-                val saveResult = messageRepository.save(message)
+                val saveResult = messageRepository.sendMessage(message)
                 if (saveResult.isSuccess) {
                     Log.d(
                         TAG,
@@ -865,7 +858,6 @@ class MessageService @Inject constructor(
                 projectId = projectId?.let { com.example.domain.vo.ProjectId(it) }
             )
 
-            // OutBox 상태는 save() 내부에서 자동으로 PENDING 상태로 생성됩니다
 
             result
         } catch (e: Exception) {
@@ -1011,7 +1003,7 @@ class MessageService @Inject constructor(
                 val optimisticPayload = MessagePayload(updatedPayload.value)
                     .addOptimisticEdit(currentPayload.value)
                 existing.updatePayload(optimisticPayload)
-                messageRepository.save(existing)
+                messageRepository.sendMessage(existing)
             } else {
                 // 업서트: 없는 경우 임시 메시지 생성
                 val temp = Message.create(
@@ -1023,7 +1015,7 @@ class MessageService @Inject constructor(
                     mentions = emptyList(),
                     channelId = ChannelId(roomId)
                 )
-                messageRepository.save(temp)
+                messageRepository.sendMessage(temp)
             }
         } catch (e: Exception) {
             Log.e(TAG, "applyOptimisticEdit 실패", e)
@@ -1039,7 +1031,7 @@ class MessageService @Inject constructor(
                 val newPayload = cur.payload.addOptimisticDelete(cur.payload.value)
                 cur.updatePayload(newPayload)
                 cur.delete()
-                messageRepository.save(cur)
+                messageRepository.sendMessage(cur)
             } else {
                 // 업서트: 없는 경우 삭제된 임시 메시지 생성
                 val temp = Message.create(
@@ -1052,7 +1044,7 @@ class MessageService @Inject constructor(
                     channelId = ChannelId(roomId)
                 )
                 temp.delete()
-                messageRepository.save(temp)
+                messageRepository.sendMessage(temp)
             }
         } catch (e: Exception) {
             Log.e(TAG, "applyOptimisticDelete 실패", e)
@@ -1066,7 +1058,7 @@ class MessageService @Inject constructor(
             if (cur != null) {
                 val cleaned = MessagePayload(cur.payload.value).clearOptimisticMeta()
                 cur.updatePayload(cleaned)
-                messageRepository.save(cur)
+                messageRepository.sendMessage(cur)
 
                 // Room이 자동으로 invalidation을 처리하므로 수동 invalidation 불필요
             }
@@ -1113,7 +1105,7 @@ class MessageService @Inject constructor(
                 }
                 val cleaned = MessagePayload(restoredPayload).clearOptimisticMeta().value
                 cur.updatePayload(MessagePayload(cleaned))
-                messageRepository.save(cur)
+                messageRepository.sendMessage(cur)
             } else {
                 // 없던 메시지면 단순 제거
                 messageRepository.delete(DocumentId(messageId))
@@ -1152,7 +1144,7 @@ class MessageService @Inject constructor(
                     mentions = cur.mentions,
                     channelId = cur.channelId
                 )
-                messageRepository.save(rebuilt)
+                messageRepository.sendMessage(rebuilt)
             } else {
                 // 없던 메시지면 제거 시도 취소: 아무 것도 하지 않음
             }

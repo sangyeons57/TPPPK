@@ -43,7 +43,7 @@ class UpdateTaskStatusUseCaseImpl @Inject constructor(
             updatedAt = DateTimeUtil.nowInstant()
         )
 
-        taskRepository.addTask(updated)
+        taskRepository.updateTask(updated)
         return CustomResult.Success(Unit)
     }
 }

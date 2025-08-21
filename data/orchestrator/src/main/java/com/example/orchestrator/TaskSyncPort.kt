@@ -1,8 +1,8 @@
 package com.example.orchestrator
 
 import android.util.Log
-import com.example.data_datasource.remote.TaskRemoteDataSource
 import com.example.core_common.constants.ChannelConstants
+import com.example.data_datasource.remote.TaskRemoteDataSource
 import com.example.data_model.local.OutboxDao
 import com.example.data_model.local.TaskDao
 import com.example.data_model.local.toModel
@@ -14,9 +14,9 @@ import com.example.domain.model.sync.OutBoxRecord
 import com.example.domain.model.sync.PushResult
 import com.example.domain.model.sync.RemoteBatch
 import com.example.domain.model.sync.SyncPort
+import com.example.domain.vo.ChannelId
 import com.example.domain.vo.CollectionPath
 import com.example.mapper.task.TaskMapper
-import com.example.domain.vo.ChannelId
 import org.json.JSONObject
 import javax.inject.Inject
 
@@ -63,18 +63,51 @@ class TaskSyncPort @Inject constructor(
         resolver: ConflictResolver<Task>
     ): ApplyOutcome {
         return try {
+            Log.d(TAG, "applyRemote started for ${batch.items.size} tasks in channel=$channelId")
             var success = 0
             var fail = 0
-            batch.items.forEach { task ->
+
+            batch.items.forEach { remoteTask ->
                 try {
-                    val entity = taskMapper.domainToEntity(task)
+                    Log.d(
+                        TAG,
+                        "Processing remote task: id=${remoteTask.id.value}, updatedAt=${remoteTask.updatedAt}"
+                    )
+
+                    // Check if local version exists and is newer (conflict detection)
+                    val localTask = taskDao.findById(remoteTask.id.value)
+                    if (localTask != null) {
+                        val localUpdatedAt = localTask.updatedAt
+                        val remoteUpdatedAt = remoteTask.updatedAt.toEpochMilli()
+
+                        if (localUpdatedAt > remoteUpdatedAt) {
+                            Log.d(
+                                TAG,
+                                "Skipping remote task ${remoteTask.id.value} - local is newer (local: $localUpdatedAt, remote: $remoteUpdatedAt)"
+                            )
+                            success++ // Count as success but don't override local
+                            return@forEach
+                        } else {
+                            Log.d(
+                                TAG,
+                                "Applying remote task ${remoteTask.id.value} - remote is newer or equal (local: $localUpdatedAt, remote: $remoteUpdatedAt)"
+                            )
+                        }
+                    } else {
+                        Log.d(TAG, "Applying new remote task ${remoteTask.id.value}")
+                    }
+
+                    val entity = taskMapper.domainToEntity(remoteTask)
                     taskDao.upsert(entity)
+                    Log.d(TAG, "Successfully applied remote task ${remoteTask.id.value}")
                     success++
                 } catch (e: Exception) {
-                    Log.e(TAG, "applyRemote failed for task=${task.id.value}", e)
+                    Log.e(TAG, "applyRemote failed for task=${remoteTask.id.value}", e)
                     fail++
                 }
             }
+
+            Log.d(TAG, "applyRemote completed: success=$success, fail=$fail")
             ApplyOutcome(success = success > 0)
         } catch (e: Exception) {
             Log.e(TAG, "applyRemote exception", e)

@@ -1,5 +1,6 @@
 package com.example.data_repository.base
 
+import androidx.room.Transaction
 import com.example.core_common.result.CustomResult
 import com.example.data_datasource.remote.TaskRemoteDataSource
 import com.example.data_model.local.OutboxDao
@@ -30,43 +31,165 @@ class TaskRepositoryImpl @Inject constructor(
     private val taskFullMapper: Mapper<TaskEntity, Task, TaskDTO>,
 ) : DefaultRepositoryImpl<Task, TaskDTO>(taskRemoteDataSource, taskMapper), TaskRepository {
 
-    override suspend fun addTask(payload: Task) {
-        // 1) 로컬 Room에 선저장 (SSOT 기반)
-        val local = TaskEntity(
-            id = payload.id.value,
-            channelId = payload.channelId.value,
-            taskType = payload.taskType.value,
-            status = payload.status.value,
-            content = payload.content.value,
-            order = payload.order.value,
-            checkedBy = payload.checkedBy?.value,
-            checkedAt = payload.checkedAt?.toEpochMilli(),
-            createdAt = payload.createdAt.toEpochMilli(),
-            updatedAt = payload.updatedAt.toEpochMilli(),
-        )
-        taskDao.upsert(local)
+    @Transaction
+    override suspend fun createTask(payload: Task) {
+        try {
+            android.util.Log.d(
+                "TaskRepository",
+                "[CREATE] Starting createTask for NEW taskId=${payload.id.value}, channelId=${payload.channelId.value}"
+            )
 
-        // 2) Outbox에 enqueue하여 비동기 서버 동기화 위임
-        val outBoxRecord = OutBoxRecord(
-            id = UUID.randomUUID().toString(),
-            stream = Task.COLLECTION_NAME,
-            aggregateId = local.id,
-            op = OutBoxRecord.Op.UPSERT,
-            payload = OutboxPayloadUtil.toPayload(local),
-            createdAt = System.currentTimeMillis(),
-        )
+            // 1) NEW TASK 검증: 기존 태스크가 있다면 오류
+            val existing = taskDao.findById(payload.id.value)
+            if (existing != null) {
+                throw IllegalStateException("Task already exists: ${payload.id.value}. Use updateTask() instead.")
+            }
 
-        outboxDao.enqueue(outBoxRecord.toEntity(OutBoxStatus.PENDING))
+            // 2) 로컬 Room에 INSERT (SSOT 기반) - CREATE 전용
+            val local = TaskEntity(
+                id = payload.id.value,
+                channelId = payload.channelId.value,
+                taskType = payload.taskType.value,
+                status = payload.status.value,
+                content = payload.content.value,
+                order = payload.order.value,
+                checkedBy = payload.checkedBy?.value,
+                checkedAt = payload.checkedAt?.toEpochMilli(),
+                createdAt = payload.createdAt.toEpochMilli(),
+                updatedAt = payload.updatedAt.toEpochMilli(),
+            )
+
+            taskDao.upsert(local)
+            android.util.Log.d(
+                "TaskRepository",
+                "[CREATE] Room insert completed for NEW taskId=${payload.id.value}"
+            )
+
+            // 3) Outbox에 CREATE 전용 enqueue (서버에 새 태스크 생성 요청)
+            val outBoxRecord = OutBoxRecord(
+                id = UUID.randomUUID().toString(),
+                stream = Task.COLLECTION_NAME,
+                aggregateId = local.id,
+                op = OutBoxRecord.Op.UPSERT, // 서버에서는 새 문서 생성
+                payload = OutboxPayloadUtil.toPayload(local),
+                createdAt = System.currentTimeMillis(),
+            )
+
+            outboxDao.enqueue(outBoxRecord.toEntity(OutBoxStatus.PENDING))
+            android.util.Log.d(
+                "TaskRepository",
+                "[CREATE] Outbox CREATE enqueue completed for taskId=${payload.id.value}"
+            )
+
+        } catch (e: Exception) {
+            android.util.Log.e(
+                "TaskRepository",
+                "[CREATE] Failed to createTask for taskId=${payload.id.value}",
+                e
+            )
+            throw e
+        }
+    }
+
+    @Transaction
+    override suspend fun updateTask(payload: Task) {
+        try {
+            android.util.Log.d(
+                "TaskRepository",
+                "[UPDATE] Starting updateTask for EXISTING taskId=${payload.id.value}"
+            )
+
+            // 1) EXISTING TASK 검증: 기존 태스크가 없다면 오류
+            val existing = taskDao.findById(payload.id.value)
+            if (existing == null) {
+                throw IllegalStateException("Task not found: ${payload.id.value}. Use createTask() instead.")
+            }
+
+            // 2) 변경사항 감지 (성능 최적화)
+            val hasChanges = existing.content != payload.content.value ||
+                    existing.taskType != payload.taskType.value ||
+                    existing.status != payload.status.value ||
+                    existing.order != payload.order.value ||
+                    existing.checkedBy != payload.checkedBy?.value
+
+            if (!hasChanges) {
+                android.util.Log.d(
+                    "TaskRepository",
+                    "[UPDATE] No changes detected for taskId=${payload.id.value}, skipping update"
+                )
+                return
+            }
+
+            // 3) 로컬 Room에 UPDATE (SSOT 기반) - UPDATE 전용
+            val local = TaskEntity(
+                id = payload.id.value,
+                channelId = payload.channelId.value,
+                taskType = payload.taskType.value,
+                status = payload.status.value,
+                content = payload.content.value,
+                order = payload.order.value,
+                checkedBy = payload.checkedBy?.value,
+                checkedAt = payload.checkedAt?.toEpochMilli(),
+                createdAt = existing.createdAt, // 기존 생성시간 유지
+                updatedAt = payload.updatedAt.toEpochMilli(), // 수정시간만 업데이트
+            )
+
+            taskDao.upsert(local)
+            android.util.Log.d(
+                "TaskRepository",
+                "[UPDATE] Room update completed for taskId=${payload.id.value}"
+            )
+
+            // 4) Outbox에 UPDATE 전용 enqueue (서버에 기존 문서 수정 요청)
+            val outBoxRecord = OutBoxRecord(
+                id = UUID.randomUUID().toString(),
+                stream = Task.COLLECTION_NAME,
+                aggregateId = local.id,
+                op = OutBoxRecord.Op.UPSERT, // 서버에서는 기존 문서 업데이트
+                payload = OutboxPayloadUtil.toPayload(local),
+                createdAt = System.currentTimeMillis(),
+            )
+
+            outboxDao.enqueue(outBoxRecord.toEntity(OutBoxStatus.PENDING))
+            android.util.Log.d(
+                "TaskRepository",
+                "[UPDATE] Outbox UPDATE enqueue completed for taskId=${payload.id.value}"
+            )
+
+        } catch (e: Exception) {
+            android.util.Log.e(
+                "TaskRepository",
+                "[UPDATE] Failed to updateTask for taskId=${payload.id.value}",
+                e
+            )
+            throw e
+        }
     }
 
     override fun observeByProject(projectId: String): Flow<CustomResult<List<Task>, Exception>> {
+        android.util.Log.d("TaskRepository", "Starting observeByProject for projectId=$projectId")
         return taskDao.observeByProject(projectId).map { entities ->
+            android.util.Log.d(
+                "TaskRepository",
+                "observeByProject emitted ${entities.size} tasks for projectId=$projectId"
+            )
             CustomResult.Success(entities.map { taskFullMapper.entityToDomain(it) })
         }
     }
 
     override fun observeByChannel(channelId: String): Flow<CustomResult<List<Task>, Exception>> {
+        android.util.Log.d("TaskRepository", "Starting observeByChannel for channelId=$channelId")
         return taskDao.observeByChannel(channelId).map { entities ->
+            android.util.Log.d(
+                "TaskRepository",
+                "observeByChannel emitted ${entities.size} tasks for channelId=$channelId"
+            )
+            entities.forEach { entity ->
+                android.util.Log.d(
+                    "TaskRepository",
+                    "Task: id=${entity.id}, content=${entity.content}, order=${entity.order}"
+                )
+            }
             CustomResult.Success(entities.map { taskFullMapper.entityToDomain(it) })
         }
     }
@@ -84,10 +207,17 @@ class TaskRepositoryImpl @Inject constructor(
         }
     }
 
+    @Transaction
     override suspend fun delete(id: DocumentId): CustomResult<Unit, Exception> {
         return try {
+            android.util.Log.d("TaskRepository", "Starting delete for taskId=${id.value}")
+            
             // 1) Local delete
-            taskDao.deleteById(id.value)
+            val deletedRows = taskDao.deleteById(id.value)
+            android.util.Log.d(
+                "TaskRepository",
+                "Room delete completed for taskId=${id.value}, deletedRows=$deletedRows"
+            )
 
             // 2) Enqueue Outbox DELETE
             val now = System.currentTimeMillis()
@@ -101,9 +231,14 @@ class TaskRepositoryImpl @Inject constructor(
                 createdAt = now
             )
             outboxDao.enqueue(record.toEntity(OutBoxStatus.PENDING))
+            android.util.Log.d(
+                "TaskRepository",
+                "Outbox delete enqueue completed for taskId=${id.value}"
+            )
 
             CustomResult.Success(Unit)
         } catch (e: Exception) {
+            android.util.Log.e("TaskRepository", "Failed to delete taskId=${id.value}", e)
             CustomResult.Failure(e)
         }
     }
@@ -113,16 +248,18 @@ class TaskRepositoryImpl @Inject constructor(
             ❌ TaskRepository에서 save() 사용 금지!
 
             태스크 저장은 SSOT(로컬 우선 + Outbox) 방식을 사용하세요:
-            - addTask(): 로컬 업서트 + Outbox enqueue
+            - createTask(): 새로운 태스크 생성 + Outbox enqueue
+            - updateTask(): 기존 태스크 업데이트 + Outbox enqueue
 
             올바른 사용법:
-            taskRepository.addTask(task)
+            taskRepository.createTask(task)  // 새 태스크
+            taskRepository.updateTask(task)  // 기존 태스크 수정
         """.trimIndent()
 
         android.util.Log.e("TaskRepository", errorMessage)
         return CustomResult.Failure(
             UnsupportedOperationException(
-                "Use addTask() (SSOT+Outbox) instead of save()"
+                "Use createTask() or updateTask() (SSOT+Outbox) instead of save()"
             )
         )
     }

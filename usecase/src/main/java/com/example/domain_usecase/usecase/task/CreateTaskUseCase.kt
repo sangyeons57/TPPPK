@@ -2,8 +2,8 @@ package com.example.domain_usecase.usecase.task
 
 import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Task
-import com.example.domain.vo.DocumentId
 import com.example.domain.vo.ChannelId
+import com.example.domain.vo.DocumentId
 import com.example.domain.vo.task.TaskContent
 import com.example.domain.vo.task.TaskOrder
 import com.example.domain.vo.task.TaskType
@@ -41,7 +41,7 @@ class CreateTaskUseCaseImpl @Inject constructor(
             order = TaskOrder(order)
         )
 
-        taskRepository.addTask(newTask)
+        taskRepository.createTask(newTask)
         return CustomResult.Success(id.value)
     }
 }

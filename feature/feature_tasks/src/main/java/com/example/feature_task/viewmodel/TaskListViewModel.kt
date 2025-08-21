@@ -7,8 +7,8 @@ import com.example.core_common.result.CustomResult
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
-import com.example.domain.vo.DocumentId
 import com.example.domain.vo.ChannelId
+import com.example.domain.vo.DocumentId
 import com.example.domain.vo.task.TaskType
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain_usecase.provider.auth.AuthSessionUseCases
@@ -83,6 +83,24 @@ class TaskListViewModel @Inject constructor(
             }
         }
         taskUseCases.observeChannelTasksUseCase(composed)
+            .onEach { taskResult ->
+                android.util.Log.d(
+                    "TaskListViewModel",
+                    "observeChannelTasks emitted result: ${taskResult::class.simpleName}"
+                )
+                if (taskResult is CustomResult.Success) {
+                    android.util.Log.d(
+                        "TaskListViewModel",
+                        "Received ${taskResult.data.size} tasks from repository"
+                    )
+                    taskResult.data.forEach { task ->
+                        android.util.Log.d(
+                            "TaskListViewModel",
+                            "Task: id=${task.id.value}, content=${task.content.value}, order=${task.order.value}"
+                        )
+                    }
+                }
+            }
             .flatMapLatest { taskResult ->
                 if (taskResult is CustomResult.Success) {
                     val tasks = taskResult.data
@@ -101,28 +119,46 @@ class TaskListViewModel @Inject constructor(
                 }
             }
             .onEach { (tasks, userMap) ->
+                android.util.Log.d(
+                    "TaskListViewModel",
+                    "Processing ${tasks.size} tasks for UI update"
+                )
                 val uiTasks = tasks.map { task ->
                     val checkedByName = task.checkedBy?.let { userMap[DocumentId.from(it)]?.name?.value }
                     TaskMapper.toUiModel(task, checkedByName)
                 }
+
+                android.util.Log.d(
+                    "TaskListViewModel",
+                    "Updating UI state with ${uiTasks.size} tasks"
+                )
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     tasks = uiTasks,
                     errorMessage = null
                 )
+                android.util.Log.d("TaskListViewModel", "UI state updated successfully")
             }
             .launchIn(viewModelScope)
     }
     
     fun createTask(content: String, taskType: TaskType = TaskType.CHECKLIST) {
         viewModelScope.launch {
+            android.util.Log.d(
+                "TaskListViewModel",
+                "Creating task with content='$content', taskType=$taskType"
+            )
             val result = taskUseCases.createTaskUseCase.invoke(
                 content = content,
                 taskType = taskType,
                 channelId = ChannelId.compose(projectId, channelId)
             )
-            
+
+            result.onSuccess {
+                android.util.Log.d("TaskListViewModel", "Successfully created task")
+            }
             result.onFailure { error ->
+                android.util.Log.e("TaskListViewModel", "Failed to create task: ${error.message}")
                 _uiState.value = _uiState.value.copy(
                     errorMessage = error.message
                 )
@@ -132,9 +168,20 @@ class TaskListViewModel @Inject constructor(
     
     fun updateTaskStatus(taskId: String, isCompleted: Boolean) {
         viewModelScope.launch {
+            android.util.Log.d("TaskListViewModel", "Toggling task check status for taskId=$taskId")
             val result = taskUseCases.toggleTaskCheckUseCase(taskId)
-            
+
+            result.onSuccess {
+                android.util.Log.d(
+                    "TaskListViewModel",
+                    "Successfully toggled task check for taskId=$taskId"
+                )
+            }
             result.onFailure { error ->
+                android.util.Log.e(
+                    "TaskListViewModel",
+                    "Failed to toggle task check for taskId=$taskId: ${error.message}"
+                )
                 _uiState.value = _uiState.value.copy(
                     errorMessage = error.message
                 )
@@ -144,12 +191,23 @@ class TaskListViewModel @Inject constructor(
     
     fun editTask(taskId: String, content: String) {
         viewModelScope.launch {
+            android.util.Log.d(
+                "TaskListViewModel",
+                "Editing task taskId=$taskId with content='$content'"
+            )
             val result = taskUseCases.updateTaskUseCase(
                 taskId = taskId,
                 content = content
             )
-            
+
+            result.onSuccess {
+                android.util.Log.d("TaskListViewModel", "Successfully edited task taskId=$taskId")
+            }
             result.onFailure { error ->
+                android.util.Log.e(
+                    "TaskListViewModel",
+                    "Failed to edit task taskId=$taskId: ${error.message}"
+                )
                 _uiState.value = _uiState.value.copy(
                     errorMessage = error.message
                 )
@@ -159,9 +217,17 @@ class TaskListViewModel @Inject constructor(
     
     fun deleteTask(taskId: String) {
         viewModelScope.launch {
+            android.util.Log.d("TaskListViewModel", "Deleting task taskId=$taskId")
             val result = taskUseCases.deleteTaskUseCase(taskId)
-            
+
+            result.onSuccess {
+                android.util.Log.d("TaskListViewModel", "Successfully deleted task taskId=$taskId")
+            }
             result.onFailure { error ->
+                android.util.Log.e(
+                    "TaskListViewModel",
+                    "Failed to delete task taskId=$taskId: ${error.message}"
+                )
                 _uiState.value = _uiState.value.copy(
                     errorMessage = error.message
                 )

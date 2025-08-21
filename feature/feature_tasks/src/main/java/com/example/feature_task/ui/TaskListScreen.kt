@@ -1,5 +1,6 @@
 package com.example.feature_task.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,7 +46,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -84,6 +86,39 @@ fun TaskListScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var fabExpanded by remember { mutableStateOf(false) }
     var isEditMode by remember { mutableStateOf(false) }
+
+    // Global editing state management
+    var currentEditingTaskId by remember { mutableStateOf<String?>(null) }
+    var previousEditingTaskId by remember { mutableStateOf<String?>(null) }
+    var editingContentMap by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+
+    // Automatic save when editing card changes
+    LaunchedEffect(currentEditingTaskId) {
+        // Save previous card (if not first edit)
+        val prevId = previousEditingTaskId
+        if (!prevId.isNullOrEmpty()) {
+            val editingContent = editingContentMap[prevId]
+            val originalTask = uiState.tasks.find { it.id.value == prevId }
+            if (editingContent != null && editingContent != originalTask?.content?.value) {
+                viewModel.editTask(prevId, editingContent)
+            }
+        }
+
+        // Start editing new card
+        val currId = currentEditingTaskId
+        if (!currId.isNullOrEmpty()) {
+            val newTask = uiState.tasks.find { it.id.value == currId }
+            newTask?.let {
+                editingContentMap = editingContentMap + (currId to it.content.value)
+            }
+        } else {
+            // Clear map when editing complete
+            editingContentMap = emptyMap()
+        }
+
+        // Update previous ID
+        previousEditingTaskId = currentEditingTaskId
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -222,11 +257,17 @@ fun TaskListScreen(
                             isCurrentlyDragging = isCurrentlyDragging,
                             draggableListState = listState,
                             index = index,
+                            currentEditingTaskId = currentEditingTaskId,
+                            editingContentMap = editingContentMap,
+                            onEditingStateChange = { taskId ->
+                                currentEditingTaskId =
+                                    if (currentEditingTaskId == taskId) null else taskId
+                            },
+                            onContentChange = { taskId, content ->
+                                editingContentMap = editingContentMap + (taskId to content)
+                            },
                             onStatusChange = { taskId, isCompleted ->
                                 viewModel.updateTaskStatus(taskId, isCompleted)
-                            },
-                            onEdit = { taskId, content ->
-                                viewModel.editTask(taskId, content)
                             },
                             onDelete = { taskId ->
                                 viewModel.deleteTask(taskId)
@@ -268,24 +309,16 @@ fun TaskItem(
     isCurrentlyDragging: Boolean = false,
     draggableListState: DraggableListState<TaskUiModel>? = null,
     index: Int = -1,
+    currentEditingTaskId: String?,
+    editingContentMap: Map<String, String>,
+    onEditingStateChange: (String) -> Unit,
+    onContentChange: (String, String) -> Unit,
     onStatusChange: (String, Boolean) -> Unit,
-    onEdit: (String, String) -> Unit,
     onDelete: (String) -> Unit
 ) {
-    var editingContent by remember { mutableStateOf(task.content.value) }
-    var isFocused by remember { mutableStateOf(false) }
-    
-    // Auto-save when content changes and not focused (debounced)
-    LaunchedEffect(editingContent, isFocused) {
-        if (!isFocused && editingContent.trim() != task.content.value && editingContent.trim().isNotBlank()) {
-            onEdit(task.id.value, editingContent.trim())
-        }
-    }
-    
-    // Update local state when task content changes
-    LaunchedEffect(task.content.value) {
-        editingContent = task.content.value
-    }
+    // Global state-based editing status
+    val isEditingThisCard = currentEditingTaskId == task.id.value
+    val editingContent = editingContentMap[task.id.value] ?: task.content.value
 
 
     // Wrap with DraggableListItem when in edit mode and draggable state is available
@@ -309,10 +342,10 @@ fun TaskItem(
             TaskCard(
                 task = task,
                 isEditMode = isEditMode,
+                isEditingThisCard = isEditingThisCard,
                 editingContent = editingContent,
-                isFocused = isFocused,
-                onEditingContentChange = { editingContent = it },
-                onFocusChange = { isFocused = it },
+                onEditingStateChange = onEditingStateChange,
+                onContentChange = onContentChange,
                 onStatusChange = onStatusChange,
                 onDelete = onDelete,
                 isCurrentlyDragging = isCurrentlyDragging
@@ -322,10 +355,10 @@ fun TaskItem(
         TaskCard(
             task = task,
             isEditMode = isEditMode,
+            isEditingThisCard = isEditingThisCard,
             editingContent = editingContent,
-            isFocused = isFocused,
-            onEditingContentChange = { editingContent = it },
-            onFocusChange = { isFocused = it },
+            onEditingStateChange = onEditingStateChange,
+            onContentChange = onContentChange,
             onStatusChange = onStatusChange,
             onDelete = onDelete,
             isCurrentlyDragging = false
@@ -337,14 +370,28 @@ fun TaskItem(
 private fun TaskCard(
     task: TaskUiModel,
     isEditMode: Boolean,
+    isEditingThisCard: Boolean,
     editingContent: String,
-    isFocused: Boolean,
-    onEditingContentChange: (String) -> Unit,
-    onFocusChange: (Boolean) -> Unit,
+    onEditingStateChange: (String) -> Unit,
+    onContentChange: (String, String) -> Unit,
     onStatusChange: (String, Boolean) -> Unit,
     onDelete: (String) -> Unit,
     isCurrentlyDragging: Boolean = false
 ) {
+    val focusRequester = remember(task.id) { FocusRequester() }
+
+    // Auto-focus when editing starts - use try-catch for safety
+    LaunchedEffect(isEditingThisCard) {
+        if (isEditingThisCard) {
+            try {
+                kotlinx.coroutines.delay(50) // Small delay to ensure composition is complete
+                focusRequester.requestFocus()
+            } catch (e: IllegalStateException) {
+                // Ignore focus request errors during composition
+                android.util.Log.w("TaskCard", "Focus request failed: ${e.message}")
+            }
+        }
+    }
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(
@@ -382,21 +429,23 @@ private fun TaskCard(
                 }
                 
                 Column(modifier = Modifier.weight(1f)) {
-                    if (isEditMode) {
+                    if (isEditMode && isEditingThisCard) {
+                        // 편집 중: OutlinedTextField 사용
                         val focusManager = LocalFocusManager.current
                         
                         OutlinedTextField(
-                            value = editingContent,
-                            onValueChange = onEditingContentChange,
+                            value = editingContent,  // Use global editing content
+                            onValueChange = { newContent ->
+                                onContentChange(task.id.value, newContent)  // Update global state
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .onFocusChanged { focusState ->
-                                    onFocusChange(focusState.isFocused)
-                                },
+                                .focusRequester(focusRequester),
                             textStyle = MaterialTheme.typography.bodyLarge,
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                             keyboardActions = KeyboardActions(
                                 onDone = {
+                                    onEditingStateChange(task.id.value)  // End editing
                                     focusManager.clearFocus()
                                 }
                             ),
@@ -406,7 +455,26 @@ private fun TaskCard(
                                 unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
                             )
                         )
+                    } else if (isEditMode) {
+                        // 편집 모드이지만 편집 중이 아님: 클릭 가능한 텍스트
+                        Text(
+                            text = task.content.value,  // Use Room Flow value
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = if (task.isCompleted) {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            } else {
+                                MaterialTheme.colorScheme.onSurface
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp) // Add padding to make click area larger
+                                .clickable {
+                                    // Start editing when clicked
+                                    onEditingStateChange(task.id.value)
+                                }
+                        )
                     } else {
+                        // 보기 모드: 일반 텍스트
                         Text(
                             text = task.content.value,
                             style = MaterialTheme.typography.bodyLarge,

@@ -53,7 +53,7 @@ class MoveTaskUseCaseImpl @Inject constructor(
         )
 
         // 3) SSOT 저장 (Room upsert) + Outbox UPSERT enq
-        taskRepository.addTask(moved)
+        taskRepository.updateTask(moved)
         return CustomResult.Success(Unit)
     }
 }

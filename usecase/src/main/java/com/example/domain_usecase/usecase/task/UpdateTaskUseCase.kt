@@ -35,34 +35,89 @@ class UpdateTaskUseCaseImpl @Inject constructor(
         status: TaskStatus?,
         order: TaskOrder?
     ): CustomResult<Unit, Exception> {
-        val task = when (val result = taskRepository.findById(DocumentId(taskId))) {
-            is CustomResult.Success -> result.data
-            is CustomResult.Failure -> return CustomResult.Failure(result.error)
-            is CustomResult.Initial -> return CustomResult.Initial
-            is CustomResult.Loading -> return CustomResult.Loading
-            is CustomResult.Progress -> return CustomResult.Progress(result.progress)
+        return try {
+            android.util.Log.d(
+                "UpdateTaskUseCase",
+                "Starting update for taskId=$taskId, content=$content, taskType=$taskType, status=$status, order=$order"
+            )
+
+            val task = when (val result = taskRepository.findById(DocumentId(taskId))) {
+                is CustomResult.Success -> result.data
+                is CustomResult.Failure -> {
+                    android.util.Log.e(
+                        "UpdateTaskUseCase",
+                        "Failed to find task: ${result.error.message}"
+                    )
+                    return CustomResult.Failure(result.error)
+                }
+
+                is CustomResult.Initial -> return CustomResult.Initial
+                is CustomResult.Loading -> return CustomResult.Loading
+                is CustomResult.Progress -> return CustomResult.Progress(result.progress)
+            }
+
+            android.util.Log.d(
+                "UpdateTaskUseCase",
+                "Found task: id=${task.id.value}, currentContent=${task.content.value}"
+            )
+
+            // Apply changes, then reconstitute with refreshed updatedAt for sync ordering
+            taskType?.let {
+                android.util.Log.d(
+                    "UpdateTaskUseCase",
+                    "Updating taskType from ${task.taskType.value} to ${it.value}"
+                )
+                task.updateTaskType(it)
+            }
+            status?.let {
+                android.util.Log.d(
+                    "UpdateTaskUseCase",
+                    "Updating status from ${task.status.value} to ${it.value}"
+                )
+                task.updateStatus(it)
+            }
+            order?.let {
+                android.util.Log.d(
+                    "UpdateTaskUseCase",
+                    "Updating order from ${task.order.value} to ${it.value}"
+                )
+                task.updateOrder(it)
+            }
+            content?.let {
+                android.util.Log.d(
+                    "UpdateTaskUseCase",
+                    "Updating content from ${task.content.value} to $it"
+                )
+                task.updateContent(TaskContent(it))
+            }
+
+            val updated = Task.fromDataSource(
+                id = task.id,
+                channelId = task.channelId,
+                taskType = task.taskType,
+                status = task.status,
+                content = task.content,
+                order = task.order,  // 🔥 Preserve original order - don't change position
+                checkedBy = task.checkedBy,
+                checkedAt = task.checkedAt,
+                createdAt = task.createdAt,  // 🔥 Preserve original createdAt
+                updatedAt = DateTimeUtil.nowInstant()  // Only update timestamp
+            )
+
+            android.util.Log.d(
+                "UpdateTaskUseCase",
+                "Calling taskRepository.updateTask for updated task"
+            )
+            taskRepository.updateTask(updated)
+            android.util.Log.d(
+                "UpdateTaskUseCase",
+                "Successfully completed update for taskId=$taskId"
+            )
+
+            CustomResult.Success(Unit)
+        } catch (e: Exception) {
+            android.util.Log.e("UpdateTaskUseCase", "Failed to update taskId=$taskId", e)
+            CustomResult.Failure(e)
         }
-
-        // Apply changes, then reconstitute with refreshed updatedAt for sync ordering
-        taskType?.let { task.updateTaskType(it) }
-        status?.let { task.updateStatus(it) }
-        order?.let { task.updateOrder(it) }
-        content?.let { task.updateContent(TaskContent(it)) }
-
-        val updated = Task.fromDataSource(
-            id = task.id,
-            channelId = task.channelId,
-            taskType = task.taskType,
-            status = task.status,
-            content = task.content,
-            order = task.order,
-            checkedBy = task.checkedBy,
-            checkedAt = task.checkedAt,
-            createdAt = task.createdAt,
-            updatedAt = DateTimeUtil.nowInstant()
-        )
-
-        taskRepository.addTask(updated)
-        return CustomResult.Success(Unit)
     }
 }
