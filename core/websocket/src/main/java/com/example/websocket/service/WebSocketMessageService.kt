@@ -12,7 +12,6 @@ import com.example.domain.vo.message.MessageType
 import com.example.domain_repository.base.MessageRepository
 import com.example.websocket.constant.OperationStatus
 import com.example.websocket.constant.WebSocketEventTypes
-import com.example.websocket.constant.WebSocketFieldConstants
 import com.example.websocket.core.WebSocketConnectionState
 import com.example.websocket.core.WebSocketManager
 import com.example.websocket.core.WebSocketMessage
@@ -23,16 +22,12 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonPrimitive
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -214,54 +209,32 @@ class WebSocketMessageService @Inject constructor(
                     Log.d(TAG, "메시지 ACK 이벤트 처리: ${event.messageId}, ackType: ${event.ackType}")
 
                     when (event.ackType) {
-                        WebSocketMessage.TYPE_MESSAGE_ACK -> {
-                            // OutBox에서 메시지 상태를 ACKED로 업데이트
+                        WebSocketMessage.TYPE_MESSAGE_ACK,
+                        WebSocketMessage.TYPE_EDIT_MESSAGE_ACK,
+                        WebSocketMessage.TYPE_DELETE_MESSAGE_ACK -> {
+                            // 모든 ACK 타입을 동일하게 처리: OutBox 상태만 업데이트
                             val result = messageRepository.handleMessageAck(event.messageId)
 
                             when (result) {
                                 is CustomResult.Success -> {
-                                    // 메시지 ACK 처리 완료
-
-                                    // ACK 수신 시, 로컬 payload의 업로딩 표식을 정리하여 로딩 인디케이터 재등장을 방지
-                                    try {
-                                        val existing = messageRepository.findById(event.messageId)
-                                        if (existing != null) {
-                                            var payload = existing.payload
-                                            payload = payload.updateValue(
-                                                MessagePayload.KEY_UPLOADING,
-                                                false
-                                            )
-                                            payload = payload.updateValue(
-                                                MessagePayload.KEY_UPLOAD_PROGRESS,
-                                                100
-                                            )
-                                            existing.updatePayload(payload)
-                                            messageRepository.saveReceivedMessage(existing)
-                                            Log.d(TAG, "ACK 후 업로딩 플래그 정리 완료: ${event.messageId}")
-                                        }
-                                    } catch (e: Exception) {
-                                        Log.w(TAG, "ACK 후 업로딩 플래그 정리 실패: ${event.messageId}", e)
-                                    }
-
-                                    // Paging3 새로고침 이벤트는 Room invalidation으로 충분하므로 생략
+                                    Log.d(TAG, "✅ ${event.ackType} 처리 완료: ${event.messageId}")
                                 }
 
                                 is CustomResult.Failure -> {
-                                    Log.e(TAG, "메시지 ACK 처리 실패: ${event.messageId}", result.error)
+                                    Log.e(
+                                        TAG,
+                                        "❌ ${event.ackType} 처리 실패: ${event.messageId}",
+                                        result.error
+                                    )
                                 }
 
                                 else -> {
-                                    Log.w(TAG, "메시지 ACK 처리 결과 알 수 없음: ${event.messageId}")
+                                    Log.w(
+                                        TAG,
+                                        "⚠️ ${event.ackType} 처리 결과 알 수 없음: ${event.messageId}"
+                                    )
                                 }
                             }
-                        }
-
-                        WebSocketMessage.TYPE_EDIT_MESSAGE_ACK -> {
-                            Log.d(TAG, "메시지 수정 ACK 처리 완료: ${event.messageId}")
-                        }
-
-                        WebSocketMessage.TYPE_DELETE_MESSAGE_ACK -> {
-                            Log.d(TAG, "메시지 삭제 ACK 처리 완료: ${event.messageId}")
                         }
                     }
                 } catch (e: Exception) {

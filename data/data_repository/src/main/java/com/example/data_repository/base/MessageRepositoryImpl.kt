@@ -5,7 +5,6 @@ import androidx.paging.PagingSource
 import androidx.room.RoomDatabase
 import androidx.room.withTransaction
 import com.example.core_common.result.CustomResult
-import com.example.core_common.util.AuthUtil
 import com.example.data_datasource.remote.MessageRemoteDataSource
 import com.example.data_model.local.MessageDao
 import com.example.data_model.local.MessageEntity
@@ -18,11 +17,7 @@ import com.example.data_repository.util.OutboxPayloadUtil
 import com.example.domain.enum.OutBoxStatus
 import com.example.domain.model.base.Message
 import com.example.domain.model.sync.OutBoxRecord
-import com.example.domain.vo.ChannelId
 import com.example.domain.vo.DocumentId
-import com.example.domain.vo.UserId
-import com.example.domain.vo.message.MessagePayload
-import com.example.domain.vo.message.MessageType
 import com.example.domain_repository.base.MessageRepository
 import com.example.mapper.DtoMapper
 import com.example.mapper.message.MessageMapper
@@ -281,6 +276,8 @@ class MessageRepositoryImpl @Inject constructor(
         return try {
             val updatedCount = outboxDao.markMessageDispatched(messageId)
             if (updatedCount > 0) {
+                // Message의 updatedAt도 변경하여 Room이 변경사항을 감지하도록 함
+                messageDao.updateTimestamp(messageId, java.time.Instant.now().toEpochMilli())
                 Log.d("MessageRepository", "Message ACK processed: $messageId")
             }
             CustomResult.Success(Unit)

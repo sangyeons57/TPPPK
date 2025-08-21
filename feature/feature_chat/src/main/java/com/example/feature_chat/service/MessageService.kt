@@ -193,36 +193,16 @@ class MessageService @Inject constructor(
             }
         }
 
-        // OutBox 상태 기반 동적 상태 계산
-        val isSending = outboxStatus == OutBoxStatus.PENDING
-        val sendFailed = outboxStatus == OutBoxStatus.FAILED
+        // OutBox 상태 기반 단순 상태 계산 (내가 보낸 메시지이면서 OutBox가 있을 때만)
+        val isSending = (senderId == currentUserId) && (outboxStatus == OutBoxStatus.PENDING)
+        val sendFailed = (senderId == currentUserId) && (outboxStatus == OutBoxStatus.FAILED)
 
-        // 이미지 URL 추출
+        // 이미지 URL 추출 (OutBox와 독립적)
         val imageUrls = extractImageUrlsFromPayload(message.payload.value)
         val hasImages = imageUrls.isNotEmpty()
 
-        // 로그는 extractImageUrlsFromPayload 내에서만 처리하여 중복 방지
-
-        // 낙관적 편집/삭제 인디케이터 계산 (payload 메타 기반)
-        val pendingOp = message.payload.getOptimisticOp()
-        val hasPendingOptimisticOp =
-            pendingOp == MessagePayload.OP_EDIT || pendingOp == MessagePayload.OP_DELETE
-
-        // 메시지 수정 여부 확인 (createdAt != updatedAt 또는 낙관적 편집 중)
-        val isModified = pendingOp == MessagePayload.OP_EDIT
-
-        // 디버깅 로그 추가 - 타임스탬프 차이 계산
-        val timestampDiff =
-            kotlin.math.abs(message.updatedAt.toEpochMilli() - message.createdAt.toEpochMilli())
-
-        if (isModified) {
-            Log.d(TAG, "🔧 수정된 메시지 감지: ${message.id.value}")
-            Log.d(TAG, "   createdAt: ${message.createdAt}")
-            Log.d(TAG, "   updatedAt: ${message.updatedAt}")
-            Log.d(TAG, "   timestampDiff: ${timestampDiff}ms")
-            Log.d(TAG, "   pendingOp: $pendingOp")
-            Log.d(TAG, "   timesDifferent: ${message.createdAt != message.updatedAt}")
-        }
+        // 메시지 수정 여부 확인 (타임스탬프 기반만)
+        val isModified = message.createdAt != message.updatedAt
 
         return ChatMessageUiModel(
             messageId = message.id.value,
@@ -240,16 +220,15 @@ class MessageService @Inject constructor(
             imageUrls = imageUrls, // 새로운 이미지 URL 목록
             hasImages = hasImages, // 이미지 포함 여부
             isMyMessage = senderId == currentUserId,
-            isSending = isSending || hasPendingOptimisticOp,
+            isSending = isSending, // OutBox 상태만 확인
             sendFailed = sendFailed,
             isDeleted = message.isDeleted.value,
-            deliveryState = when {
-                hasPendingOptimisticOp -> MessageDeliveryState.Sending
-                outboxStatus == OutBoxStatus.PENDING -> MessageDeliveryState.Sending
-                outboxStatus == OutBoxStatus.FAILED -> MessageDeliveryState.Failed("send_failed")
+            deliveryState = when (outboxStatus) {
+                OutBoxStatus.PENDING -> MessageDeliveryState.Sending
+                OutBoxStatus.FAILED -> MessageDeliveryState.Failed("send_failed")
                 else -> MessageDeliveryState.Sent
             },
-            isOptimistic = hasPendingOptimisticOp,
+            isOptimistic = false, // OutBox 중심 처리로 단순화
             clientSentAt = null,
             retryCount = 0,
             canRetry = outboxStatus == OutBoxStatus.FAILED,

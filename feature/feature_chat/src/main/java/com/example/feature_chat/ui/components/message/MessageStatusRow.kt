@@ -15,8 +15,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.feature_chat.model.ChatMessageUiModel
 
@@ -35,8 +35,6 @@ fun MessageStatusRow(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         modifier = modifier
     ) {
-        // 수정 표시 (이름 옆에서는 제거)
-
         // 시간 표시
         Text(
             text = message.formattedTimestamp,
@@ -46,7 +44,6 @@ fun MessageStatusRow(
 
         // 수정 표시
         if (message.isModified) {
-            android.util.Log.d("MessageStatusRow", "🔧 수정됨 표시 렌더링: ${message.messageId}")
             Text(
                 text = "(수정됨)",
                 fontSize = 9.sp,
@@ -55,7 +52,7 @@ fun MessageStatusRow(
             )
         }
 
-        // 내 메시지인 경우 전송 상태 표시
+        // 내 메시지인 경우 전송 상태 표시 (OutBox 상태만 확인)
         if (message.isMyMessage) {
             when {
                 message.isSending -> {
@@ -78,35 +75,18 @@ fun MessageStatusRow(
                             .size(12.dp)
                             .testTag("delivery_indicator")
                     )
-                    if (message.canRetry) {
-                        IconButton(
-                            onClick = { onRetryMessage(message.messageId) },
-                            modifier = Modifier.size(16.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Refresh,
-                                contentDescription = "재전송",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(12.dp)
-                            )
-                        }
+                    // 재전송 버튼
+                    IconButton(
+                        onClick = { onRetryMessage(message.messageId) },
+                        modifier = Modifier.size(16.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = "재전송",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(12.dp)
+                        )
                     }
-                }
-
-                message.deliveryState is com.example.feature_chat.model.MessageDeliveryState.Retry -> {
-                    // 재전송 대기 인디케이터
-                    Icon(
-                        Icons.Default.Refresh,
-                        contentDescription = "재전송 대기",
-                        tint = MaterialTheme.colorScheme.tertiary,
-                        modifier = Modifier
-                            .size(12.dp)
-                            .testTag("delivery_indicator")
-                    )
-                }
-
-                else -> {
-                    // 성공적으로 전송된 경우 아무것도 표시하지 않음
                 }
             }
         }

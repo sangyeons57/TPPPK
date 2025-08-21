@@ -16,7 +16,9 @@ public final class FirestoreConstants {
     public static final String COLLECTION_MESSAGES = "messages";
 
     /** 채널 컬렉션 */
-    public static final String COLLECTION_CHANNELS = "channels";
+    public static final String COLLECTION_DM_CHANNELS = "dm_channels";
+
+    public static final String COLLECTION_PROJECT_CHANNELS = "project_channels";
 
     /** 프로젝트 컬렉션 */
     public static final String COLLECTION_PROJECTS = "projects";
@@ -25,22 +27,7 @@ public final class FirestoreConstants {
     public static final String COLLECTION_USERS = "users";
 
     /** 프로젝트 멤버 컬렉션 */
-    public static final String COLLECTION_PROJECT_MEMBERS = "projectMembers";
-
-    /** 채널 멤버 컬렉션 */
-    public static final String COLLECTION_CHANNEL_MEMBERS = "channelMembers";
-
-    /** 초대 컬렉션 */
-    public static final String COLLECTION_INVITATIONS = "invitations";
-
-    /** 알림 컬렉션 */
-    public static final String COLLECTION_NOTIFICATIONS = "notifications";
-
-    /** 파일 메타데이터 컬렉션 */
-    public static final String COLLECTION_FILES = "files";
-
-    /** 사용자 세션 컬렉션 */
-    public static final String COLLECTION_USER_SESSIONS = "userSessions";
+    public static final String COLLECTION_PROJECT_MEMBERS = "members";
 
     // ================================
     // 공통 필드 이름
@@ -284,44 +271,12 @@ public final class FirestoreConstants {
     // 유틸리티 메서드
     // ================================
 
-    /**
-     * 메시지 컬렉션 경로 생성
-     * @param channelId 채널 ID
-     * @return 메시지 컬렉션 경로
-     */
-    public static String getMessagesCollectionPath(String channelId) {
-        return COLLECTION_CHANNELS + "/" + channelId + "/" + COLLECTION_MESSAGES;
+    public static String getDMChannelsCollectionPath(String channelId) {
+        return COLLECTION_DM_CHANNELS + "/" + channelId + "/" + COLLECTION_MESSAGES;
+     }
+
+    public static String getProjectChannelsCollectionPath(String projectId, String channelId) {
+        return COLLECTION_PROJECTS + "/" + projectId + "/" + COLLECTION_PROJECT_CHANNELS + "/" + channelId + "/" + COLLECTION_MESSAGES;
     }
 
-    /**
-     * 프로젝트 멤버 컬렉션 경로 생성
-     * @param projectId 프로젝트 ID
-     * @return 프로젝트 멤버 컬렉션 경로
-     */
-    public static String getProjectMembersCollectionPath(String projectId) {
-        return COLLECTION_PROJECTS + "/" + projectId + "/" + COLLECTION_PROJECT_MEMBERS;
-    }
-
-    /**
-     * 채널 멤버 컬렉션 경로 생성
-     * @param channelId 채널 ID
-     * @return 채널 멤버 컬렉션 경로
-     */
-    public static String getChannelMembersCollectionPath(String channelId) {
-        return COLLECTION_CHANNELS + "/" + channelId + "/" + COLLECTION_CHANNEL_MEMBERS;
-    }
-
-    /**
-     * 사용자 알림 컬렉션 경로 생성
-     * @param userId 사용자 ID
-     * @return 사용자 알림 컬렉션 경로
-     */
-    public static String getUserNotificationsCollectionPath(String userId) {
-        return COLLECTION_USERS + "/" + userId + "/" + COLLECTION_NOTIFICATIONS;
-    }
-
-    // Private constructor to prevent instantiation
-    private FirestoreConstants() {
-        throw new AssertionError("Cannot instantiate utility class");
-    }
 }

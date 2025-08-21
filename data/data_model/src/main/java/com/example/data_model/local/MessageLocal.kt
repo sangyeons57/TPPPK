@@ -111,6 +111,9 @@ interface MessageDao {
     @Query("UPDATE messages SET isDeleted = 1, updatedAt = :ts WHERE id = :id")
     suspend fun tombstone(id: String, ts: Long)
 
+    @Query("UPDATE messages SET updatedAt = :ts WHERE id = :id")
+    suspend fun updateTimestamp(id: String, ts: Long)
+
     /**
      * 동일 채널/발신자/페이로드(내용)가 이미 존재하는지 확인하여 중복 업서트를 방지하기 위한 헬퍼.
      * 서버 반영본이 도착했을 때 낙관적 로컬본과 페이로드가 동일하면 기존 ID를 반환한다.
