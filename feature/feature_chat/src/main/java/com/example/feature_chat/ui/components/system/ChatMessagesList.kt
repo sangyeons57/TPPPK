@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.paging.compose.LazyPagingItems
 import com.example.core_common.constants.PagingConstants
+import com.example.domain.vo.message.MessageType
 import com.example.feature_chat.model.ChatMessageUiModel
 import com.example.feature_chat.model.ChatUiState
 import com.example.feature_chat.ui.components.message.ChatMessageItemComposable
@@ -134,9 +135,10 @@ fun ChatMessagesList(
                 val isLastItem = index == lazyPagingItems.itemCount - 1
                 val showDateSeparator = shouldShowDateSeparator && !isLastItem
 
-                // Note: With Paging3, grouping logic needs to be handled differently
-                // For now, treat each message as first in group until grouping is reimplemented
-                val isFirstInGroup = true
+                // 메시지 그룹핑 로직: 같은 사용자가 연속으로 보낸 메시지는 그룹화
+                val nextMessage =
+                    if (index < lazyPagingItems.itemCount - 1) lazyPagingItems[index + 1] else null
+                val isFirstInGroup = shouldStartNewGroup(it, nextMessage)
 
                 // 메시지 전송 상태는 MessageStatusRow에서 처리하므로
                 // formattedTimestamp는 항상 실제 시간을 표시
@@ -302,4 +304,31 @@ private fun formatDateForSeparator(instant: Instant): String {
             localDate.format(formatter)
         }
     }
+}
+
+/**
+ * 새로운 메시지 그룹을 시작해야 하는지 판단
+ * DESC 정렬에서 현재 메시지가 그룹의 첫 번째인지 확인
+ */
+private fun shouldStartNewGroup(
+    currentMessage: ChatMessageUiModel,
+    nextMessage: ChatMessageUiModel? // DESC에서 다음 메시지 (시간상 더 과거)
+): Boolean {
+    // 마지막 메시지(다음 메시지가 없음)는 항상 그룹의 첫 번째
+    if (nextMessage == null) return true
+
+    // 다른 사용자의 메시지면 새 그룹 시작
+    if (currentMessage.userId != nextMessage.userId) return true
+
+    // 시스템 메시지는 항상 새 그룹 시작
+    if (currentMessage.messageType != MessageType.TEXT) return true
+    if (nextMessage.messageType != MessageType.TEXT) return true
+
+    // 시간 간격이 5분 이상이면 새 그룹 시작
+    val timeDiffMinutes = java.time.Duration.between(
+        nextMessage.actualTimestamp,
+        currentMessage.actualTimestamp
+    ).toMinutes()
+
+    return timeDiffMinutes >= 5
 }

@@ -34,6 +34,8 @@ import com.example.domain_usecase.usecase.project.member.GetProjectMemberUseCase
 import com.example.domain_usecase.usecase.project.member.GetProjectMemberUseCaseImpl
 import com.example.domain_usecase.usecase.project.member.GetProjectMembersUseCase
 import com.example.domain_usecase.usecase.project.member.GetProjectMembersUseCaseImpl
+import com.example.domain_usecase.usecase.project.member.GetRoleMemberCountUseCase
+import com.example.domain_usecase.usecase.project.member.GetRoleMemberCountUseCaseImpl
 import com.example.domain_usecase.usecase.project.member.LeaveProjectUseCase
 import com.example.domain_usecase.usecase.project.member.LeaveProjectUseCaseImpl
 import com.example.domain_usecase.usecase.project.member.ObserveProjectMembersUseCase
@@ -107,6 +109,10 @@ class ProjectMemberUseCaseProvider @Inject constructor(
                 projectMemberRepository = this.memberRepository
             ),
             getProjectMembersUseCase = GetProjectMembersUseCaseImpl(
+                projectMemberRepository = this.memberRepository
+            ),
+
+            getRoleMemberCountUseCase = GetRoleMemberCountUseCaseImpl(
                 projectMemberRepository = this.memberRepository
             ),
             
@@ -236,6 +242,7 @@ data class ProjectMemberUseCases(
     val addProjectMemberUseCase: AddProjectMemberUseCase,
     val getProjectMemberUseCase: GetProjectMemberUseCase,
     val getProjectMembersUseCase: GetProjectMembersUseCase,
+    val getRoleMemberCountUseCase: GetRoleMemberCountUseCase,
     val removeProjectMemberUseCase: RemoveProjectMemberUseCase,
     
     // 멤버 고급 관리

@@ -10,8 +10,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.border
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AttachFile
@@ -36,18 +38,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
 import com.example.feature_chat.model.ChatParticipant
 import com.example.feature_chat.model.MentionSuggestion
 import com.example.feature_chat.model.ProjectMember
 import com.example.feature_chat.model.ProjectRole
+import com.example.feature_chat.ui.components.mention.MentionConstants
 import java.util.regex.Pattern
 
 /**
@@ -73,11 +83,11 @@ import java.util.regex.Pattern
 @Composable
 fun MessageInput(
     modifier: Modifier = Modifier,
-    text: String,
+    textFieldValue: TextFieldValue,
     isEditing: Boolean = false,
     isEnabled: Boolean = true,
     canSend: Boolean = false,
-    onTextChange: (String) -> Unit = {},
+    onValueChange: (TextFieldValue) -> Unit = {},
     onSendClick: () -> Unit = {},
     onAttachmentClick: () -> Unit = {},
     onCancelEdit: () -> Unit = {},
@@ -90,6 +100,8 @@ fun MessageInput(
     mentionSuggestions: List<MentionSuggestion> = emptyList(),
     isMentionSuggestionVisible: Boolean = false,
     maxMentionItems: Int = 7,
+    // 키보드 멘션 네비게이션
+    onMentionKeyboardNavigation: ((String) -> Unit)? = null, // "up", "down", "enter"
 ) {
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -193,12 +205,31 @@ fun MessageInput(
                 }
 
                 // 텍스트 입력창 (멘션 하이라이팅 지원)
-                OutlinedTextField(
-                    value = text,
-                    onValueChange = onTextChange,
+                var internalTextFieldValue by remember { mutableStateOf(textFieldValue) }
+
+                // 외부 상태와 동기화
+                LaunchedEffect(textFieldValue) {
+                    if (internalTextFieldValue != textFieldValue) {
+                        internalTextFieldValue = textFieldValue
+                    }
+                }
+
+                BasicTextField(
+                    value = internalTextFieldValue,
+                    onValueChange = { newValue ->
+                        internalTextFieldValue = newValue
+                        onValueChange(newValue)
+                    },
                     modifier = Modifier
                         .weight(1f)
                         .padding(horizontal = 8.dp)
+                        .border(
+                            width = 1.dp,
+                            color = if (isFocused) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.outline,
+                            shape = MaterialTheme.shapes.small
+                        )
+                        .padding(12.dp)
                         .focusRequester(focusRequester)
                         .onFocusChanged { focusState ->
                             isFocused = focusState.isFocused
@@ -206,15 +237,35 @@ fun MessageInput(
                             if (!focusState.isFocused) {
                                 isKeyboardVisible = false
                             }
+                        }
+                        .onPreviewKeyEvent { keyEvent ->
+                            // 멘션 제안이 보이는 상태에서 키보드 네비게이션 처리
+                            if (isMentionSuggestionVisible && keyEvent.type == KeyEventType.KeyDown) {
+                                when (keyEvent.key) {
+                                    Key.DirectionUp -> {
+                                        onMentionKeyboardNavigation?.invoke("up")
+                                        true // 이벤트 소비
+                                    }
+
+                                    Key.DirectionDown -> {
+                                        onMentionKeyboardNavigation?.invoke("down")
+                                        true // 이벤트 소비
+                                    }
+
+                                    Key.Enter -> {
+                                        onMentionKeyboardNavigation?.invoke("enter")
+                                        true // 이벤트 소비
+                                    }
+
+                                    else -> false // 다른 키는 기본 처리
+                                }
+                            } else {
+                                false // 멘션 모드가 아니면 기본 처리
+                            }
                         },
-                    placeholder = {
-                        Text(
-                            text = if (!isEnabled) "연결 중입니다..."
-                            else if (isEditing) "메시지 수정..."
-                            else "메시지 입력..."
-                        )
-                    },
-                    maxLines = 5,
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurface
+                    ),
                     keyboardOptions = KeyboardOptions(
                         imeAction = ImeAction.Send
                     ),
@@ -227,12 +278,25 @@ fun MessageInput(
                             keyboardController?.hide()
                         }
                     ),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                    )
-                    // TODO: 향후 BasicTextField로 교체하여 완전한 멘션 하이라이팅 지원
-                    // 현재는 OutlinedTextField 사용으로 하이라이팅이 제한적임
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    decorationBox = { innerTextField ->
+                        if (internalTextFieldValue.text.isEmpty()) {
+                            Text(
+                                text = if (!isEnabled) "연결 중입니다..."
+                                else if (isEditing) "메시지 수정..."
+                                else "메시지 입력...",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        // Display highlighted text for mentions
+                        Text(
+                            text = createHighlightedText(internalTextFieldValue.text),
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        )
+                    }
                 )
 
                 // 전송 버튼
@@ -287,7 +351,7 @@ private fun createHighlightedText(
     )
 ): AnnotatedString {
     return buildAnnotatedString {
-        val mentionPattern = Pattern.compile("@([a-zA-Z0-9_가-힣]+)")
+        val mentionPattern = Pattern.compile(MentionConstants.MENTION_REGEX_PATTERN)
         val matcher = mentionPattern.matcher(text)
         var lastIndex = 0
 

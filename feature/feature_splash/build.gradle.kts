@@ -24,4 +24,5 @@ dependencies {
     implementation(libs.androidx.compose.navigation)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.compose.activity)
+    implementation(libs.firebase.messaging)
 }

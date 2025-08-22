@@ -62,7 +62,7 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
                 Log.d(TAG, "Updating FCM token on server...")
 
                 val userUseCases = userUseCaseProvider.createForUser()
-                when (val result = userUseCases.updateFcmTokenUseCase(token)) {
+                when (val result = userUseCases.updateFcmTokenUseCase()) {
                     is CustomResult.Success -> {
                         Log.d(TAG, "FCM token successfully updated on server")
 
@@ -117,6 +117,12 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         val mentionId = data["mentionId"] ?: ""
         val roleName = data["roleName"]
 
+        // Log important mention payload fields for diagnostics
+        Log.i(
+            TAG,
+            "FCM_RECEIVED type=mention messageId=${messageId} channelId=${channelId} projectId=${projectId} sender=${senderName} mentionType=${mentionType}"
+        )
+
         // Create notification title and body
         val title = notification.title ?: when (mentionType) {
             "USER" -> "${senderName}님이 회원님을 멘션했습니다"
@@ -149,6 +155,8 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             channelId = MENTION_CHANNEL_ID,
             channelName = "멘션 알림"
         )
+
+        Log.i(TAG, "FCM_HANDLED mention notificationId=${messageId.hashCode()} title='${title}'")
     }
 
     /**

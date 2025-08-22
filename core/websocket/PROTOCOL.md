@@ -31,6 +31,19 @@ Envelope: message
       { "kind": "image", "url": "https://...", "mime": "image/jpeg", "filename": "...", "width": 1280, "height": 960, "size": 234567 }
       ]
       }
+  - Mentions (optional):
+      - Field: `mentions` (array)
+      - Supported shapes (clients should choose one consistent encoding):
+          - User IDs: `["uid123", "uid456"]`
+          - User objects: `[{ "userId": "uid123" }, { "userId": "uid456" }]`
+          - Typed mentions (forward-compatible, server will pass through and may resolve on server):
+              - `{"type":"userId","userId":"uid123"}`
+              - `{"type":"everyone"}`
+              - `{"type":"role","roleId":"designers"}`
+      - Notes:
+          - Server broadcasts the payload as-is so receivers can render mentions.
+          - For push notifications, the server currently resolves only explicit userId mentions.
+            Future iterations may resolve `everyone`/`role` to concrete user lists.
 - replyToMessageId: string | null (optional)
 - meta: object (optional) { projectId?: string, channelType?: string, clientSentAt?: number }
 
@@ -236,5 +249,4 @@ Developer Notes
   contains only content/attachments.
 - Do not pass Envelope through use cases or repositories. Build the Envelope right before sending
   over the socket; parse it immediately on receive and then map to domain.
-
 

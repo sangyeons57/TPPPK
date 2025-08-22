@@ -118,7 +118,7 @@ class FcmTokenManager @Inject constructor(
         scope.launch {
             try {
                 val userUseCases = userUseCaseProvider.createForUser()
-                val result = userUseCases.updateFcmTokenUseCase(token)
+                val result = userUseCases.updateFcmTokenUseCase()
                 
                 when (result) {
                     is CustomResult.Success -> {

@@ -194,9 +194,9 @@ fun HomeContent(
                         UnifiedProjectStructureList(
                             structureUiState = uiState.projectStructure,
                             onCategoryClick = onCategoryClick,
-                            onCategoryLongPress = onCategoryLongPress,
+                            onCategoryLongPress = if (uiState.canStructureEdit) onCategoryLongPress else { _: CategoryUiModel -> },
                             onChannelClick = onChannelClick,
-                            onChannelLongPress = onChannelLongPress,
+                            onChannelLongPress = if (uiState.canStructureEdit) onChannelLongPress else { _: ChannelUiModel, _: String? -> },
                             modifier = Modifier.fillMaxSize()
                         )
                     } else {

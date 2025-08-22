@@ -9,7 +9,7 @@ import com.example.domain.model.base.Category
 import com.example.domain.model.data.project.RolePermission
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.UserId
-import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
+import com.example.domain_usecase.provider.project.ProjectAuthorizationUseCaseProvider
 import com.example.domain_usecase.provider.user.UserUseCaseProvider
 import com.example.domain_usecase.usecase.project.authorization.GetUserPermissionsForProjectUseCaseImpl
 import com.example.feature_home.model.CategoryUiModel
@@ -41,7 +41,7 @@ class HomeViewModel @Inject constructor(
     private val homeServiceProvider: HomeServiceProvider,
     private val userUseCaseProvider: UserUseCaseProvider,
     private val navigationManger: NavigationManger,
-    private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider,
+    private val projectAuthorizationUseCaseProvider: ProjectAuthorizationUseCaseProvider,
     private val getUserPermissionsForProjectUseCase: GetUserPermissionsForProjectUseCaseImpl,
 ) : ViewModel() {
 
@@ -116,7 +116,8 @@ class HomeViewModel @Inject constructor(
             selectedTopSection = TopSection.DMS,
             projectName = "",
             projectDescription = null,
-            projectStructure = ProjectStructureUiState()
+            projectStructure = ProjectStructureUiState(),
+            canStructureEdit = false
         )}
     }
 
@@ -312,6 +313,18 @@ class HomeViewModel @Inject constructor(
         
         loadProjectDetails(projectId)
         loadProjectStructure(projectId)
+        computeStructureEditPermission(projectId)
+    }
+
+    private fun computeStructureEditPermission(projectId: DocumentId) {
+        viewModelScope.launch {
+            val auth = projectAuthorizationUseCaseProvider.createForProject(projectId)
+            when (val allowed =
+                auth.ownerOrPermissionUseCase(projectId, RolePermission.STRUCTURE_EDIT)) {
+                is CustomResult.Success -> _uiState.update { it.copy(canStructureEdit = allowed.data) }
+                else -> _uiState.update { it.copy(canStructureEdit = false) }
+            }
+        }
     }
 
     /**
@@ -508,44 +521,27 @@ class HomeViewModel @Inject constructor(
         val projectId = _uiState.value.selectedProjectId ?: return
         val currentServices = services ?: return
 
-        // 권한 게이트: OWNER 우선, 아니면 CHANNEL_READ 필요
+        // 권한 게이트: OWNER 우선, 아니면 CHANNEL_READ 필요 (표준 메시지)
         viewModelScope.launch {
-            // 1) OWNER helper로 우선 확인
-            val memberUseCases = projectMemberUseCaseProvider.createForProject(projectId)
-            when (val ownerRes = memberUseCases.isCurrentUserOwnerUseCase(projectId)) {
-                is CustomResult.Success -> {
-                    if (ownerRes.data) {
-                        currentServices.navigationService.handleChannelClick(projectId, channel)
-                        return@launch
-                    }
-                }
-
-                else -> { /* ignore and fallback */
-                }
-            }
-
-            // 2) CHANNEL_READ 권한 확인
-            val userId = currentUserId
-            if (userId.isBlank()) {
-                _eventFlow.emit(HomeEvent.ShowSnackbar("로그인이 필요합니다."))
-                return@launch
-            }
-
-            when (val perm = getUserPermissionsForProjectUseCase.hasPermission(
+            val auth = projectAuthorizationUseCaseProvider.createForProject(projectId)
+            when (val allowed = auth.ownerOrPermissionUseCase(
                 projectId = projectId,
-                userId = DocumentId.from(userId),
                 permission = RolePermission.CHANNEL_READ
             )) {
                 is CustomResult.Success -> {
-                    if (perm.data) {
+                    if (allowed.data) {
                         currentServices.navigationService.handleChannelClick(projectId, channel)
                     } else {
-                        _eventFlow.emit(HomeEvent.ShowSnackbar("채널에 접근할 수 없습니다. 채널 읽기 권한이 필요합니다."))
+                        val msg = auth.permissionDeniedMessageUseCase(RolePermission.CHANNEL_READ)
+                        _eventFlow.emit(HomeEvent.ShowSnackbar(msg))
                     }
                 }
 
-                else -> {
+                is CustomResult.Failure -> {
                     _eventFlow.emit(HomeEvent.ShowSnackbar("채널 접근 권한 확인 중 오류가 발생했습니다."))
+                }
+
+                else -> { /* ignore transient states */
                 }
             }
         }
@@ -565,21 +561,45 @@ class HomeViewModel @Inject constructor(
      */
     fun onCategoryLongPress(category: CategoryUiModel) {
         Log.d("HomeViewModel", "Category long pressed: ${category.name}")
-        
+        val projectId = _uiState.value.selectedProjectId ?: return
         val currentServices = services ?: return
         val currentDialogState = dialogState ?: return
-        
-        val items = currentServices.dialogManagementService.createCategoryLongPressActionSheet(
-            category = category,
-            onEditClick = { cat -> onCategoryEditClick(cat) },
-            onReorderClick = { onReorderClick() }
-        )
-        dialogState = currentServices.dialogManagementService.showBottomSheet(currentDialogState, items)
-        
-        _uiState.update { it.copy(
-            showBottomSheet = true,
-            showBottomSheetItems = items
-        )}
+
+        // STRUCTURE_EDIT 권한 게이트 (OWNER 우선)
+        viewModelScope.launch {
+            val auth = projectAuthorizationUseCaseProvider.createForProject(projectId)
+            when (val allowed =
+                auth.ownerOrPermissionUseCase(projectId, RolePermission.STRUCTURE_EDIT)) {
+                is CustomResult.Success -> {
+                    if (!allowed.data) {
+                        val msg = auth.permissionDeniedMessageUseCase(RolePermission.STRUCTURE_EDIT)
+                        _eventFlow.emit(HomeEvent.ShowSnackbar(msg))
+                        return@launch
+                    }
+                    val items =
+                        currentServices.dialogManagementService.createCategoryLongPressActionSheet(
+                            category = category,
+                            onEditClick = { cat -> onCategoryEditClick(cat) },
+                            onReorderClick = { onReorderClick() }
+                        )
+                    dialogState = currentServices.dialogManagementService.showBottomSheet(
+                        currentDialogState,
+                        items
+                    )
+
+                    _uiState.update {
+                        it.copy(
+                            showBottomSheet = true,
+                            showBottomSheetItems = items
+                        )
+                    }
+                }
+
+                else -> {
+                    _eventFlow.emit(HomeEvent.ShowSnackbar("권한 확인 중 오류가 발생했습니다."))
+                }
+            }
+        }
     }
 
     /**
@@ -587,28 +607,52 @@ class HomeViewModel @Inject constructor(
      */
     fun onChannelLongPress(channel: ChannelUiModel, categoryId: String? = null) {
         Log.d("HomeViewModel", "Channel long pressed: ${channel.name}, categoryId: $categoryId")
-        
+        val projectId = _uiState.value.selectedProjectId ?: return
         val currentServices = services ?: return
         val currentDialogState = dialogState ?: return
-        
-        val items = currentServices.dialogManagementService.createChannelLongPressActionSheet(
-            channel = channel,
-            categoryId = categoryId,
-            onEditClick = { ch, catId -> onChannelEditClick(ch, catId) },
-            onReorderClick = { 
-                if (categoryId != null && categoryId != Category.NO_CATEGORY_ID) {
-                    onChannelReorderClick(DocumentId(categoryId))
-                } else {
-                    onReorderClick() // 직속 채널의 경우 전체 구조 순서 변경
+
+        // STRUCTURE_EDIT 권한 게이트 (OWNER 우선)
+        viewModelScope.launch {
+            val auth = projectAuthorizationUseCaseProvider.createForProject(projectId)
+            when (val allowed =
+                auth.ownerOrPermissionUseCase(projectId, RolePermission.STRUCTURE_EDIT)) {
+                is CustomResult.Success -> {
+                    if (!allowed.data) {
+                        val msg = auth.permissionDeniedMessageUseCase(RolePermission.STRUCTURE_EDIT)
+                        _eventFlow.emit(HomeEvent.ShowSnackbar(msg))
+                        return@launch
+                    }
+                    val items =
+                        currentServices.dialogManagementService.createChannelLongPressActionSheet(
+                            channel = channel,
+                            categoryId = categoryId,
+                            onEditClick = { ch, catId -> onChannelEditClick(ch, catId) },
+                            onReorderClick = {
+                                if (categoryId != null && categoryId != Category.NO_CATEGORY_ID) {
+                                    onChannelReorderClick(DocumentId(categoryId))
+                                } else {
+                                    onReorderClick() // 직속 채널의 경우 전체 구조 순서 변경
+                                }
+                            }
+                        )
+                    dialogState = currentServices.dialogManagementService.showBottomSheet(
+                        currentDialogState,
+                        items
+                    )
+
+                    _uiState.update {
+                        it.copy(
+                            showBottomSheet = true,
+                            showBottomSheetItems = items
+                        )
+                    }
+                }
+
+                else -> {
+                    _eventFlow.emit(HomeEvent.ShowSnackbar("권한 확인 중 오류가 발생했습니다."))
                 }
             }
-        )
-        dialogState = currentServices.dialogManagementService.showBottomSheet(currentDialogState, items)
-        
-        _uiState.update { it.copy(
-            showBottomSheet = true,
-            showBottomSheetItems = items
-        )}
+        }
     }
 
     /**

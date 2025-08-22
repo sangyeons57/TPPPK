@@ -13,6 +13,8 @@ import com.example.domain.vo.task.TaskType
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain_usecase.provider.auth.AuthSessionUseCases
 import com.example.domain_usecase.provider.task.TaskUseCaseProvider
+import com.example.domain_usecase.provider.project.ProjectAuthorizationUseCaseProvider
+import com.example.domain.model.data.project.RolePermission
 import com.example.domain_usecase.provider.task.TaskUseCases
 import com.example.domain_usecase.provider.user.UserUseCaseProvider
 import com.example.domain_usecase.provider.user.UserUseCases
@@ -42,6 +44,7 @@ class TaskListViewModel @Inject constructor(
     private val userUseCaseProvider: UserUseCaseProvider,
     private val navigationManger: NavigationManger,
     private val syncManagerFactory: SyncManagerFactory,
+    private val projectAuthorizationUseCaseProvider: ProjectAuthorizationUseCaseProvider,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     
@@ -68,6 +71,24 @@ class TaskListViewModel @Inject constructor(
     
     init {
         val composed = ChannelId.compose(projectId, channelId)
+
+        // Cache write permission once for this project/channel (read gate is done in Home)
+        viewModelScope.launch {
+            try {
+                val auth =
+                    projectAuthorizationUseCaseProvider.createForProject(DocumentId(projectId))
+                val canWrite = when (val res = auth.ownerOrPermissionUseCase.invoke(
+                    DocumentId(projectId),
+                    RolePermission.CHANNEL_WRITE
+                )) {
+                    is CustomResult.Success -> res.data
+                    else -> false
+                }
+                _uiState.value = _uiState.value.copy(canWrite = canWrite)
+            } catch (_: Exception) {
+                _uiState.value = _uiState.value.copy(canWrite = false)
+            }
+        }
 
         // Kick off incremental sync (push outbox + pull remote) for tasks in this channel
         viewModelScope.launch {
@@ -303,6 +324,7 @@ data class TaskListUiState(
     val channelId: String = "",
     val tasks: List<TaskUiModel> = emptyList(),
     val isLoading: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val canWrite: Boolean = true
 )
 

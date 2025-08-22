@@ -87,13 +87,26 @@ fun ChatMessageText(
                                         fontWeight = FontWeight.SemiBold
                                     )
 
-                                    "role" -> SpanStyle(
-                                        color = MaterialTheme.colorScheme.tertiary,
-                                        background = MaterialTheme.colorScheme.tertiaryContainer.copy(
-                                            alpha = 0.7f
-                                        ),
-                                        fontWeight = FontWeight.SemiBold
-                                    )
+                                    "role" -> {
+                                        // Special styling for @everyone vs regular roles
+                                        if (mention.id == "everyone") {
+                                            SpanStyle(
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                background = MaterialTheme.colorScheme.surfaceVariant.copy(
+                                                    alpha = 0.7f
+                                                ),
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                        } else {
+                                            SpanStyle(
+                                                color = MaterialTheme.colorScheme.tertiary,
+                                                background = MaterialTheme.colorScheme.tertiaryContainer.copy(
+                                                    alpha = 0.7f
+                                                ),
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                        }
+                                    }
 
                                     else -> SpanStyle(
                                         color = MaterialTheme.colorScheme.primary,
@@ -113,7 +126,7 @@ fun ChatMessageText(
                             }
                         )
                     ) {
-                        append(mention.displayName)
+                        append("@${mention.displayName}")
                     }
                 }
 
@@ -152,7 +165,7 @@ fun ChatMessageText(
                 }
             }
 
-            currentIndex += annotation.data.toString().length
+            currentIndex = annotation.end
         }
 
         // 마지막 annotation 이후의 텍스트 추가

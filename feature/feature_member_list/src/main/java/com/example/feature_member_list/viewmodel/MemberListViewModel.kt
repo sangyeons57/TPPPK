@@ -14,7 +14,9 @@ import com.example.domain.vo.DocumentId
 import com.example.domain.vo.Name
 import com.example.domain.vo.UserId
 import com.example.domain.vo.user.UserName
+import com.example.domain.model.data.project.RolePermission
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
+import com.example.domain_usecase.provider.project.ProjectAuthorizationUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectRoleUseCaseProvider
 import com.example.domain_usecase.provider.user.UserUseCaseProvider
@@ -43,7 +45,9 @@ data class MemberListUiState(
     val searchQuery: String = "",
     // val selectedMember: Member? = null, // Type will be MemberUiModel if used - Removed for now as per plan
     val projectId: DocumentId = DocumentId.EMPTY,
-    val currentUserId: UserId? = null // 현재 로그인한 사용자 ID 추가 👈
+    val currentUserId: UserId? = null, // 현재 로그인한 사용자 ID 추가 👈
+    val canInvite: Boolean = false, // MEMBER_INVITE 권한 캐시
+    val canManage: Boolean = false // MEMBER_MANAGE 권한 캐시
 )
 
 /**
@@ -76,6 +80,7 @@ sealed class MemberListEvent {
 @HiltViewModel
 class MemberListViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
+    private val projectAuthorizationUseCaseProvider: ProjectAuthorizationUseCaseProvider,
     private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider,
     private val userUseCaseProvider: UserUseCaseProvider,
     private val projectRoleUseCaseProvider: ProjectRoleUseCaseProvider,
@@ -117,6 +122,38 @@ class MemberListViewModel @Inject constructor(
     init {
         loadCurrentUser()
         observeMembers()
+        computeInvitePermission()
+        computeManagePermission()
+    }
+
+    private fun computeInvitePermission() {
+        viewModelScope.launch {
+            val auth = projectAuthorizationUseCaseProvider.createForProject(projectId)
+            when (val allowed =
+                auth.ownerOrPermissionUseCase(projectId, RolePermission.MEMBER_INVITE)) {
+                is CustomResult.Success -> _uiState.update { it.copy(canInvite = allowed.data) }
+                else -> _uiState.update { it.copy(canInvite = false) }
+            }
+        }
+    }
+
+    private fun computeManagePermission() {
+        viewModelScope.launch {
+            val auth = projectAuthorizationUseCaseProvider.createForProject(projectId)
+            when (val allowed =
+                auth.ownerOrPermissionUseCase(projectId, RolePermission.MEMBER_MANAGE)) {
+                is CustomResult.Success -> _uiState.update { it.copy(canManage = allowed.data) }
+                else -> _uiState.update { it.copy(canManage = false) }
+            }
+        }
+    }
+
+    fun notifyNoManagePermission() {
+        viewModelScope.launch {
+            val auth = projectAuthorizationUseCaseProvider.createForProject(projectId)
+            val msg = auth.permissionDeniedMessageUseCase(RolePermission.MEMBER_MANAGE)
+            _eventFlow.emit(MemberListEvent.ShowSnackbar(msg))
+        }
     }
 
     fun navigateBack() {
@@ -269,9 +306,12 @@ class MemberListViewModel @Inject constructor(
      * 멤버 추가 다이얼로그를 표시하는 이벤트를 발생시킵니다.
      */
     fun onAddMemberClick() {
-        viewModelScope.launch {
-            _eventFlow.emit(MemberListEvent.ShowAddMemberDialog)
+        val state = _uiState.value
+        if (!state.canInvite) {
+            viewModelScope.launch { _eventFlow.emit(MemberListEvent.ShowSnackbar("멤버 초대 권한이 없습니다.")) }
+            return
         }
+        viewModelScope.launch { _eventFlow.emit(MemberListEvent.ShowAddMemberDialog) }
     }
 
     /**

@@ -133,7 +133,13 @@ public class FirestoreMessageService {
             messageData.put(FirestoreConstants.FIELD_UPDATED_AT, createdAt);
             messageData.put(FirestoreConstants.FIELD_IS_DELETED, false);
             messageData.put(FirestoreConstants.FIELD_REPLY_TO_MESSAGE_ID, replyTo);
-            messageData.put(FirestoreConstants.FIELD_MENTIONS, new java.util.ArrayList<>()); // 빈 배열로 초기화
+            // mentions: use message-level mentions as-is when present, otherwise empty array
+            java.util.List<java.util.Map<String, Object>> mentionsList = toMentionMaps(message);
+            if (mentionsList != null) {
+                messageData.put(FirestoreConstants.FIELD_MENTIONS, mentionsList);
+            } else {
+                messageData.put(FirestoreConstants.FIELD_MENTIONS, new java.util.ArrayList<>());
+            }
             
             logger.info("💾 Saving message to Firestore: {}, messageId={}, senderId={}", 
                        logInfo, messageId, senderId);
@@ -251,6 +257,12 @@ public class FirestoreMessageService {
                     
                     // updatedAt는 항상 현재 시간
                     upsertData.put(FirestoreConstants.FIELD_UPDATED_AT, message.getTimestampAsInstant());
+
+                    // If mentions provided in edit, upsert them; otherwise preserve existing
+                    java.util.List<java.util.Map<String, Object>> editMentions = toMentionMaps(message);
+                    if (editMentions != null) {
+                        upsertData.put(FirestoreConstants.FIELD_MENTIONS, editMentions);
+                    }
                     
                     logger.info("✏️ Upserting message in Firestore: {}, messageId={}", 
                                logInfo, message.getId());
@@ -381,6 +393,28 @@ public class FirestoreMessageService {
         } catch (Exception e) {
             logger.warn("⚠️ Map을 JSON으로 변환 실패, 빈 객체 반환: {}", e.getMessage());
             return "{}";
+        }
+    }
+
+    /**
+     * Convert ChatMessage.mentions to a Firestore-storable list of maps, or null if absent.
+     */
+    private java.util.List<java.util.Map<String, Object>> toMentionMaps(ChatMessage message) {
+        try {
+            java.util.List<com.example.websocket.model.MentionItem> mentions = message.getMentions();
+            if (mentions == null || mentions.isEmpty()) return null;
+            java.util.List<java.util.Map<String, Object>> list = new java.util.ArrayList<>(mentions.size());
+            for (com.example.websocket.model.MentionItem m : mentions) {
+                java.util.Map<String, Object> one = new java.util.HashMap<>();
+                if (m.getType() != null) one.put("type", m.getType());
+                if (m.getId() != null) one.put("id", m.getId());
+                if (m.getDisplayName() != null) one.put("displayName", m.getDisplayName());
+                list.add(one);
+            }
+            return list;
+        } catch (Exception e) {
+            logger.warn("⚠️ Failed to convert mentions for Firestore: {}", e.getMessage());
+            return null;
         }
     }
 }

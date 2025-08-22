@@ -8,17 +8,19 @@ import com.example.domain.vo.DocumentId
 import com.example.domain.vo.user.UserFcmToken
 import com.example.domain_repository.base.AuthRepository
 import com.example.domain_repository.base.UserRepository
+import com.google.firebase.messaging.FirebaseMessaging
 import javax.inject.Inject
+import kotlin.coroutines.resume
 
 /**
  * FCM 토큰 업데이트 유스케이스 인터페이스
  */
 interface UpdateFcmTokenUseCase {
     /**
-     * Updates the current user's FCM token for push notifications
-     * @param token The new FCM token (null to remove token)
+     * Updates the current user's FCM token for push notifications.
+     * Retrieves the current device token internally from FirebaseMessaging.
      */
-    suspend operator fun invoke(token: String?): CustomResult<Unit, Exception>
+    suspend operator fun invoke(): CustomResult<Unit, Exception>
 }
 
 /**
@@ -36,10 +38,19 @@ class UpdateFcmTokenUseCaseImpl @Inject constructor(
      * @param token 새로운 FCM 토큰 (null이면 토큰 제거)
      * @return CustomResult<Unit, Exception> 업데이트 처리 결과
      */
-    override suspend fun invoke(token: String?): CustomResult<Unit, Exception> {
+    override suspend fun invoke(): CustomResult<Unit, Exception> {
         val session = authRepository.getCurrentUserSession().getOrDefault(null)
             ?: return CustomResult.Failure(Exception("User not logged in"))
-            
+
+        val token = kotlinx.coroutines.suspendCancellableCoroutine<String?> { cont ->
+            FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                cont.resume(if (task.isSuccessful) task.result else null)
+            }
+        }
+        if (token == null) {
+            return CustomResult.Failure(Exception("Unable to fetch FCM token"))
+        }
+
         val userRes = userRepository.findById(DocumentId.from(session.userId))
         if (userRes is CustomResult.Failure) {
             return CustomResult.Failure(userRes.error)
@@ -48,9 +59,7 @@ class UpdateFcmTokenUseCaseImpl @Inject constructor(
         }
 
         val user = userRes.data as User
-        val fcmToken = token?.let { UserFcmToken(it) }
-        
-        user.updateFcmToken(fcmToken)
+        user.updateFcmToken(UserFcmToken(token))
         
         return when (val saveRes = userRepository.save(user)) {
             is CustomResult.Success -> {

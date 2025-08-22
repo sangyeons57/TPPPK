@@ -323,7 +323,8 @@ fun ProjectSettingContent(
             SettingSectionTitle(title = "일반")
             SettingMenuItem(
                 text = "프로젝트 이름 변경",
-                onClick = onRenameProjectClick
+                onClick = onRenameProjectClick,
+                enabled = uiState.canEditProjectSettings
             )
             SettingMenuItem(
                 text = "멤버 관리",
@@ -382,26 +383,28 @@ fun SettingMenuItem(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    isDestructive: Boolean = false // 삭제 등 위험 작업 여부
+    isDestructive: Boolean = false, // 삭제 등 위험 작업 여부
+    enabled: Boolean = true
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 16.dp), // 클릭 영역 확보
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = text,
-            color = if (isDestructive) MaterialTheme.colorScheme.error else LocalContentColor.current,
+            color = if (!enabled) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+            else if (isDestructive) MaterialTheme.colorScheme.error else LocalContentColor.current,
             style = MaterialTheme.typography.bodyLarge
         )
         if (!isDestructive) { // 일반 메뉴에만 화살표 표시
             Icon(
                 Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.outline
+                tint = if (!enabled) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f) else MaterialTheme.colorScheme.outline
             )
         }
     }
@@ -426,7 +429,7 @@ fun ProjectProfileSection(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onProjectImageClick)
+                .clickable(enabled = uiState.canEditProjectSettings, onClick = onProjectImageClick)
                 .padding(vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
@@ -489,7 +492,7 @@ fun ProjectProfileSection(
             ) {
                 TextButton(
                     onClick = onSaveProjectImageClick,
-                    enabled = !uiState.isLoading
+                    enabled = !uiState.isLoading && uiState.canEditProjectSettings
                 ) {
                     if (uiState.isLoading) {
                         CircularProgressIndicator(
@@ -507,7 +510,7 @@ fun ProjectProfileSection(
         Spacer(modifier = Modifier.height(12.dp))
         Button(
             onClick = onSetDefaultProjectProfileClick,
-            enabled = !uiState.isRemovingImage && !uiState.isLoading,
+            enabled = !uiState.isRemovingImage && !uiState.isLoading && uiState.canEditProjectSettings,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),

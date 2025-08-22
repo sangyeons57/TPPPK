@@ -201,8 +201,14 @@ class MessageService @Inject constructor(
         val imageUrls = extractImageUrlsFromPayload(message.payload.value)
         val hasImages = imageUrls.isNotEmpty()
 
-        // 메시지 수정 여부 확인 (타임스탬프 기반만)
-        val isModified = message.createdAt != message.updatedAt
+        // 메시지 수정 여부 확인 (payload의 _meta에서 pendingOp:edit 확인)
+        val isModified = try {
+            val messagePayload = MessagePayload(message.payload.value)
+            messagePayload.getMetaPendingOp() == "edit"
+        } catch (e: Exception) {
+            // payload 파싱 실패 시 타임스탬프로 fallback
+            kotlin.math.abs(message.createdAt.epochSecond - message.updatedAt.epochSecond) > 1
+        }
 
         return ChatMessageUiModel(
             messageId = message.id.value,
@@ -412,7 +418,8 @@ class MessageService @Inject constructor(
         replyToMessageId: DocumentId? = null,
         isSystemMessage: Boolean = false,
         systemType: String? = null,
-        additionalMetadata: Map<String, String> = emptyMap()
+        additionalMetadata: Map<String, String> = emptyMap(),
+        mentions: List<com.example.domain.vo.message.MentionInfo> = emptyList()
     ): CustomResult<DocumentId, Exception> {
         Log.d(TAG, "메시지 전송 시도: text='$textContent', images=${imageUris.size}개")
         
@@ -429,7 +436,8 @@ class MessageService @Inject constructor(
                     senderId = senderId,
                     textContent = textContent,
                     imageUris = imageUris,
-                    replyToMessageId = replyToMessageId
+                    replyToMessageId = replyToMessageId,
+                    mentions = mentions
                 )
             }
 
@@ -487,7 +495,7 @@ class MessageService @Inject constructor(
                 messageType = actualMessageType,
                 payload = messagePayload,
                 replyToMessageId = replyToMessageId,
-                mentions = emptyList(),
+                mentions = mentions,
                 channelId = ChannelId(roomId)
             )
 
@@ -517,7 +525,8 @@ class MessageService @Inject constructor(
         senderId: UserId,
         textContent: String,
         imageUris: List<Uri>,
-        replyToMessageId: DocumentId?
+        replyToMessageId: DocumentId?,
+        mentions: List<com.example.domain.vo.message.MentionInfo> = emptyList()
     ): CustomResult<DocumentId, Exception> {
         return try {
             Log.d(TAG, "🖼️ 이미지 메시지 전송 시작: messageId=${messageId.value}, images=${imageUris.size}개")
@@ -558,7 +567,7 @@ class MessageService @Inject constructor(
                 messageType = MessageType.TEXT,
                 payload = placeholderPayload,
                 replyToMessageId = replyToMessageId,
-                mentions = emptyList(),
+                mentions = mentions,
                 channelId = ChannelId(roomId)
             )
 
@@ -611,7 +620,7 @@ class MessageService @Inject constructor(
                 messageType = MessageType.TEXT,
                 payload = finalPayload,
                 replyToMessageId = replyToMessageId,
-                mentions = emptyList(),
+                mentions = mentions,
                 channelId = ChannelId(roomId)
             )
 
@@ -819,7 +828,8 @@ class MessageService @Inject constructor(
         senderId: UserId,
         messageType: MessageType,
         payload: MessagePayload,
-        replyToMessageId: DocumentId?
+        replyToMessageId: DocumentId?,
+        mentions: List<com.example.domain.vo.message.MentionInfo> = emptyList()
     ): CustomResult<DocumentId, Exception> {
         return try {
             val domainMessage = Message.create(
@@ -828,7 +838,7 @@ class MessageService @Inject constructor(
                 messageType = messageType,
                 payload = payload,
                 replyToMessageId = replyToMessageId,
-                mentions = emptyList(),
+                mentions = mentions,
                 channelId = ChannelId(roomId)
             )
 

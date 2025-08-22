@@ -94,16 +94,38 @@ export const joinProject = onCall(
             }
           }
 
-          // Create member at /projects/{projectId}/members/{userId}
+          // Resolve default roles from /projects/{projectId}/roles where isDefault == true
+          let defaultRoleIds: string[] = [];
+          try {
+            const rolesSnap = await projectRef
+              .collection(COLLECTIONS.ROLES)
+              .where("isDefault", "==", true)
+              .get();
+            defaultRoleIds = rolesSnap.docs
+              .map((d) => d.id)
+              // Filter out system roles like OWNER by id convention
+              .filter((id) => id !== "OWNER");
+            logger.info("Resolved default roles for join", {
+              projectId,
+              userId,
+              defaultRoleIds,
+              count: defaultRoleIds.length,
+            });
+          } catch (e) {
+            logger.warn("Failed to resolve default roles; proceeding with none", { error: e, projectId, userId });
+            defaultRoleIds = [];
+          }
+
+          // Create member at /projects/{projectId}/members/{userId} with default roles
           const role = "member";
           const memberRef = projectRef.collection(COLLECTIONS.MEMBERS).doc(userId);
           await memberRef.set({
-            roleIds: [],
+            roleIds: defaultRoleIds,
             status: 'active', // Set default status for new members
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
           });
-          logger.info("Created project member", { projectId, userId });
+          logger.info("Created project member", { projectId, userId, defaultRoleIds });
 
           // Create project wrapper under /users/{uid}/projects_wrapper/{projectId} (best-effort)
           try {

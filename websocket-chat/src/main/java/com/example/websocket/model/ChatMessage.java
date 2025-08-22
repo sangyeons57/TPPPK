@@ -3,11 +3,15 @@ package com.example.websocket.model;
 import com.example.websocket.constants.WebSocketEventConstants;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ChatMessage {
 
     // ================================
@@ -158,6 +162,10 @@ public class ChatMessage {
     @JsonProperty(WebSocketEventConstants.FIELD_TIMESTAMP)
     private Double timestamp; // Changed to Double to match client
 
+    // Message-level mentions (not part of payload). Optional.
+    @JsonProperty(WebSocketEventConstants.FIELD_MENTIONS_ID)
+    private List<MentionItem> mentions;
+
     public ChatMessage() {}
 
     public ChatMessage(String senderId, Map<String, Object> payload, Instant timestamp) {
@@ -210,6 +218,9 @@ public class ChatMessage {
 
     public Double getTimestamp() { return timestamp; }
     public void setTimestamp(Double timestamp) { this.timestamp = timestamp; }
+
+    public List<MentionItem> getMentions() { return mentions; }
+    public void setMentions(List<MentionItem> mentions) { this.mentions = mentions; }
     
     // Convenience method to get timestamp as Instant
     public Instant getTimestampAsInstant() {
@@ -246,6 +257,7 @@ public class ChatMessage {
                 ", timestamp=" + timestamp +
                 ", messageId='" + id + '\'' +
                 ", replyToMessageId='" + replyToMessageId + '\'' +
+                ", mentions=" + (mentions != null ? mentions.size() : 0) +
                 '}';
     }
 }

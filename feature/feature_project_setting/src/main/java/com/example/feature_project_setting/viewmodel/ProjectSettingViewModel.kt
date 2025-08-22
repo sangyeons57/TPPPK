@@ -23,11 +23,13 @@ import com.example.domain.vo.DocumentId
 import com.example.domain.vo.UserId
 import com.example.domain.vo.project.ProjectName
 import com.example.domain.model.ui.data.MemberUiModel
+import com.example.domain.model.data.project.RolePermission
 import com.example.domain_usecase.provider.project.CoreProjectUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectAssetsUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectChannelUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectStructureUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
+import com.example.domain_usecase.provider.project.ProjectAuthorizationUseCaseProvider
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.feature_model.CategoryUiModel
 import com.example.feature_model.ChannelUiModel
@@ -60,7 +62,8 @@ data class ProjectSettingUiState(
     val showLeaveProjectDialog: Boolean = false, // 프로젝트 나가기 확인 다이얼로그
     val showTransferOwnershipDialog: Boolean = false, // 소유권 전달 다이얼로그
     val projectMembers: List<MemberUiModel> = emptyList(), // 소유권 전달 대상 멤버들
-    val isLoadingMembers: Boolean = false // 멤버 목록 로딩 상태
+    val isLoadingMembers: Boolean = false, // 멤버 목록 로딩 상태
+    val canEditProjectSettings: Boolean = false // PROJECT_SETTINGS 권한 캐시
 )
 
 // --- 이벤트 ---
@@ -80,6 +83,7 @@ class ProjectSettingViewModel @Inject constructor(
     private val projectChannelUseCaseProvider: ProjectChannelUseCaseProvider,
     private val projectAssetsUseCaseProvider: ProjectAssetsUseCaseProvider,
     private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider,
+    private val projectAuthorizationUseCaseProvider: ProjectAuthorizationUseCaseProvider,
     private val authSessionUseCaseProvider: AuthSessionUseCaseProvider,
     private val projectImageUpdateEventManager: ProjectImageUpdateEventManager
 ) : ViewModel() {
@@ -111,6 +115,18 @@ class ProjectSettingViewModel @Inject constructor(
     init {
         loadProjectStructure()
         checkUserOwnership()
+        computeSettingsPermission()
+    }
+
+    private fun computeSettingsPermission() {
+        viewModelScope.launch {
+            val auth = projectAuthorizationUseCaseProvider.createForProject(projectId)
+            when (val allowed =
+                auth.ownerOrPermissionUseCase(projectId, RolePermission.PROJECT_SETTINGS)) {
+                is CustomResult.Success -> _uiState.update { it.copy(canEditProjectSettings = allowed.data) }
+                else -> _uiState.update { it.copy(canEditProjectSettings = false) }
+            }
+        }
     }
 
     private fun loadProjectStructure() {
@@ -339,6 +355,14 @@ class ProjectSettingViewModel @Inject constructor(
 
     // --- 프로젝트 이름 변경 ---
     fun requestRenameProject() {
+        if (!_uiState.value.canEditProjectSettings) {
+            viewModelScope.launch {
+                val auth = projectAuthorizationUseCaseProvider.createForProject(projectId)
+                val msg = auth.permissionDeniedMessageUseCase(RolePermission.PROJECT_SETTINGS)
+                _eventFlow.emit(ProjectSettingEvent.ShowSnackbar(msg))
+            }
+            return
+        }
         viewModelScope.launch {
             when (val result =
                 coreProjectUseCases.getProjectDetailsStreamUseCase(projectId).first()) {
@@ -643,9 +667,15 @@ class ProjectSettingViewModel @Inject constructor(
 
     // --- 프로젝트 이미지 관련 ---
     fun onProjectImageClicked() {
-        viewModelScope.launch {
-            _eventFlow.emit(ProjectSettingEvent.RequestImagePick)
+        if (!_uiState.value.canEditProjectSettings) {
+            viewModelScope.launch {
+                val auth = projectAuthorizationUseCaseProvider.createForProject(projectId)
+                val msg = auth.permissionDeniedMessageUseCase(RolePermission.PROJECT_SETTINGS)
+                _eventFlow.emit(ProjectSettingEvent.ShowSnackbar(msg))
+            }
+            return
         }
+        viewModelScope.launch { _eventFlow.emit(ProjectSettingEvent.RequestImagePick) }
     }
 
     fun handleImageSelection(uri: Uri?) {
@@ -696,6 +726,14 @@ class ProjectSettingViewModel @Inject constructor(
     )
 
     fun onSaveProjectImageClicked() {
+        if (!_uiState.value.canEditProjectSettings) {
+            viewModelScope.launch {
+                val auth = projectAuthorizationUseCaseProvider.createForProject(projectId)
+                val msg = auth.permissionDeniedMessageUseCase(RolePermission.PROJECT_SETTINGS)
+                _eventFlow.emit(ProjectSettingEvent.ShowSnackbar(msg))
+            }
+            return
+        }
         viewModelScope.launch {
             val currentState = _uiState.value
             val selectedImageUri = currentState.selectedImageUri
@@ -788,6 +826,14 @@ class ProjectSettingViewModel @Inject constructor(
 
     // --- 프로젝트 이미지 제거 관련 ---
     fun onRemoveProjectImageClicked() {
+        if (!_uiState.value.canEditProjectSettings) {
+            viewModelScope.launch {
+                val auth = projectAuthorizationUseCaseProvider.createForProject(projectId)
+                val msg = auth.permissionDeniedMessageUseCase(RolePermission.PROJECT_SETTINGS)
+                _eventFlow.emit(ProjectSettingEvent.ShowSnackbar(msg))
+            }
+            return
+        }
         _uiState.update { it.copy(showRemoveImageDialog = true) }
     }
 
@@ -796,6 +842,14 @@ class ProjectSettingViewModel @Inject constructor(
     }
 
     fun confirmRemoveProjectImage() {
+        if (!_uiState.value.canEditProjectSettings) {
+            viewModelScope.launch {
+                val auth = projectAuthorizationUseCaseProvider.createForProject(projectId)
+                val msg = auth.permissionDeniedMessageUseCase(RolePermission.PROJECT_SETTINGS)
+                _eventFlow.emit(ProjectSettingEvent.ShowSnackbar(msg))
+            }
+            return
+        }
         viewModelScope.launch {
             _uiState.update {
                 it.copy(
@@ -854,6 +908,14 @@ class ProjectSettingViewModel @Inject constructor(
      * 기본 프로젝트 프로필 사용 버튼 클릭 이벤트 처리 (프로젝트 이미지 제거)
      */
     fun onSetDefaultProjectProfileClicked() {
+        if (!_uiState.value.canEditProjectSettings) {
+            viewModelScope.launch {
+                val auth = projectAuthorizationUseCaseProvider.createForProject(projectId)
+                val msg = auth.permissionDeniedMessageUseCase(RolePermission.PROJECT_SETTINGS)
+                _eventFlow.emit(ProjectSettingEvent.ShowSnackbar(msg))
+            }
+            return
+        }
         viewModelScope.launch {
             _uiState.update {
                 it.copy(

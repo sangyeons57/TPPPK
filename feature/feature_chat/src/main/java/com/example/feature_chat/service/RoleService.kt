@@ -3,6 +3,7 @@ package com.example.feature_chat.service
 import android.util.Log
 import com.example.core_common.result.CustomResult
 import com.example.domain.vo.DocumentId
+import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectRoleUseCaseProvider
 import com.example.feature_chat.model.ProjectRole
 import kotlinx.coroutines.flow.first
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.first
  */
 class RoleService(
     private val projectRoleUseCaseProvider: ProjectRoleUseCaseProvider,
+    private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider,
     private val projectId: String
 ) {
     
@@ -27,72 +29,99 @@ class RoleService(
         return try {
             val roleUseCases = projectRoleUseCaseProvider.createForProject(DocumentId(projectId))
 
-            // Get first emission from the Flow
-            val result = roleUseCases.getProjectRolesUseCase(DocumentId(projectId)).first()
+            // Loading이 아닌 상태(Success 또는 Failure)까지 기다림
+            Log.d(tag, "loadRoles: Starting to observe roles flow...")
+            val result = roleUseCases.getProjectRolesUseCase(DocumentId(projectId))
+                .first { result ->
+                    Log.d(tag, "loadRoles: Received flow emission: ${result::class.simpleName}")
+                    when (result) {
+                        is CustomResult.Success -> {
+                            Log.d(tag, "loadRoles: Success state received, proceeding...")
+                            true
+                        }
+
+                        is CustomResult.Failure -> {
+                            Log.d(tag, "loadRoles: Failure state received, proceeding...")
+                            true
+                        }
+
+                        else -> {
+                            Log.d(tag, "loadRoles: Loading state, waiting...")
+                            false
+                        }
+                    }
+                }
 
             when (result) {
                 is CustomResult.Success -> {
                     val domainRoles = result.data
-                    Log.d(tag, "loadRoles: Successfully loaded ${domainRoles.size} roles")
+                    Log.d(
+                        tag,
+                        "loadRoles: Successfully loaded ${domainRoles.size} roles from UseCase"
+                    )
 
-                    // Convert domain roles to UI models
-                    val projectRoles = domainRoles.map { role ->
-                        ProjectRole(
-                            roleId = role.id.value,
-                            roleName = role.name.value,
-                            memberCount = 0, // We'll calculate this from members
-                            color = role.color
+                    // 로드된 도메인 역할들 로그 출력
+                    domainRoles.forEach { role ->
+                        Log.d(tag, "  - Domain Role: ${role.name.value} (id: ${role.id.value})")
+                    }
+
+                    // Convert domain roles to UI models and filter out everyone
+                    val projectRoles = domainRoles
+                        .filter { role ->
+                            val isEveryone = role.id.value == "everyone"
+                            if (isEveryone) {
+                                Log.d(
+                                    tag,
+                                    "loadRoles: Filtering out 'everyone' role from domain data"
+                                )
+                            }
+                            !isEveryone // everyone 역할 제외 (ViewModel에서 특수 멘션으로 처리)
+                        }
+                        .map { role ->
+                            Log.d(tag, "loadRoles: Converting role ${role.name.value} to UI model")
+                            ProjectRole(
+                                roleId = role.id.value,
+                                roleName = role.name.value,
+                                memberCount = 0, // 초기값, updateRoleMemberCounts에서 업데이트됨
+                                color = "#8B5CF6" // 일반 역할은 보라색
+                            )
+                        }
+
+                    val roles = projectRoles
+
+                    Log.d(tag, "loadRoles: Final filtered roles list (${roles.size} roles):")
+                    roles.forEach { role ->
+                        Log.d(
+                            tag,
+                            "  - UI Role: ${role.roleName} (id: ${role.roleId}, color: ${role.color})"
                         )
                     }
 
-                    // Add special @everyone role
-                    val roles = projectRoles + ProjectRole(
-                        roleId = "everyone",
-                        roleName = "everyone",
-                        memberCount = 0, // Will be calculated based on total members
-                        color = "#6B7280" // Gray color for @everyone
+                    Log.d(
+                        tag,
+                        "loadRoles: Converted ${roles.size} roles to UI models (everyone filtered out)"
                     )
-
-                    Log.d(tag, "loadRoles: Converted ${roles.size} roles to UI models")
                     roles
                 }
 
                 is CustomResult.Failure -> {
                     Log.e(tag, "loadRoles: Failed to load project roles", result.error)
-                    // Return at least the @everyone role
-                    listOf(
-                        ProjectRole(
-                            roleId = "everyone",
-                            roleName = "everyone",
-                            memberCount = 0,
-                            color = "#6B7280"
-                        )
-                    )
+                    Log.e(tag, "loadRoles: Returning empty roles list instead of fallback everyone")
+                    // 실패 시 빈 리스트 반환 (everyone은 ViewModel에서 특수 멘션으로 처리)
+                    emptyList()
                 }
 
                 else -> {
-                    Log.d(tag, "loadRoles: Loading or other state")
-                    listOf(
-                        ProjectRole(
-                            roleId = "everyone",
-                            roleName = "everyone",
-                            memberCount = 0,
-                            color = "#6B7280"
-                        )
-                    )
+                    Log.d(tag, "loadRoles: Loading or other state, returning empty list")
+                    // 로딩 중이거나 기타 상태일 때도 빈 리스트 반환
+                    emptyList()
                 }
             }
         } catch (e: Exception) {
             Log.e(tag, "loadRoles: Exception while loading roles", e)
-            // Return at least the @everyone role
-            listOf(
-                ProjectRole(
-                    roleId = "everyone",
-                    roleName = "everyone",
-                    memberCount = 0,
-                    color = "#6B7280"
-                )
-            )
+            Log.e(tag, "loadRoles: Exception occurred, returning empty list")
+            // 예외 발생 시 빈 리스트 반환
+            emptyList()
         }
     }
     
@@ -100,22 +129,54 @@ class RoleService(
      * 역할 멤버 수를 업데이트합니다.
      */
     suspend fun updateRoleMemberCounts(
-        roles: List<ProjectRole>,
-        totalMemberCount: Int
+        roles: List<ProjectRole>
     ): List<ProjectRole> {
         Log.d(tag, "updateRoleMemberCounts: Updating member counts for ${roles.size} roles")
-        
-        return roles.map { role ->
-            val memberCount = when (role.roleId) {
-                "everyone" -> totalMemberCount
-                else -> {
-                    // TODO: Calculate actual member count for this role
-                    // This would require querying members by role
-                    role.memberCount
+
+        return try {
+            val memberUseCases =
+                projectMemberUseCaseProvider.createForProject(DocumentId(projectId))
+
+            roles.map { role ->
+                Log.d(tag, "updateRoleMemberCounts: Calculating count for role '${role.roleName}'")
+
+                val memberCountResult =
+                    memberUseCases.getRoleMemberCountUseCase(DocumentId(role.roleId))
+
+                val memberCount = when (memberCountResult) {
+                    is CustomResult.Success -> {
+                        val count = memberCountResult.data
+                        Log.d(
+                            tag,
+                            "updateRoleMemberCounts: Role '${role.roleName}' has $count members"
+                        )
+                        count
+                    }
+
+                    is CustomResult.Failure -> {
+                        Log.e(
+                            tag,
+                            "updateRoleMemberCounts: Failed to get member count for role '${role.roleName}'",
+                            memberCountResult.error
+                        )
+                        0
+                    }
+
+                    else -> {
+                        Log.w(
+                            tag,
+                            "updateRoleMemberCounts: Unexpected result for role '${role.roleName}'"
+                        )
+                        0
+                    }
                 }
+
+                role.copy(memberCount = memberCount)
             }
-            
-            role.copy(memberCount = memberCount)
+        } catch (e: Exception) {
+            Log.e(tag, "updateRoleMemberCounts: Exception while updating member counts", e)
+            // 예외 발생 시 원본 roles 반환
+            roles
         }
     }
     
@@ -131,7 +192,8 @@ class RoleService(
                 return ProjectRole(
                     roleId = "everyone",
                     roleName = "everyone",
-                    memberCount = 0 // Will be updated by caller
+                    memberCount = 0, // Will be updated by caller
+                    color = "#6B7280" // @everyone은 회색 계열 색상
                 )
             }
             

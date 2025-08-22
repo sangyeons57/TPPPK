@@ -108,7 +108,10 @@ public final class WebSocketEventConstants {
     
     /** 메시지 ID 필드 (@JsonProperty) */
     public static final String FIELD_MESSAGE_ID = "id";
-    
+
+    /** 메시지 맨션 필드 (@JsonProperty) */
+    public static final String FIELD_MENTIONS_ID = "mentions";
+
     /** 답장 대상 메시지 ID 필드 (@JsonProperty) */
     public static final String FIELD_REPLY_TO_MESSAGE_ID = "replyToMessageId";
     

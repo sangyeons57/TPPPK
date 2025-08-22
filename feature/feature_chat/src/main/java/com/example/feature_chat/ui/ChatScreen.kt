@@ -267,11 +267,11 @@ fun ChatScreen(
                     )
 
                     MessageInput(
-                        text = uiState.pendingMessageText,
+                        textFieldValue = uiState.pendingMessageTextFieldValue,
                         isEditing = uiState.isEditing,
                         isEnabled = isMessageInputEnabled && viewModel.canPerformWriteOperations(),
-                        canSend = isMessageInputEnabled && (uiState.pendingMessageText.isNotBlank() || uiState.selectedAttachmentUris.isNotEmpty()),
-                        onTextChange = viewModel::onMessageInputChange,
+                        canSend = isMessageInputEnabled && (uiState.pendingMessageTextFieldValue.text.isNotBlank() || uiState.selectedAttachmentUris.isNotEmpty()),
+                        onValueChange = viewModel::onMessageInputChange,
                         onSendClick = viewModel::onSendClick,
                         onAttachmentClick = { imagePickerLauncher.launch("image/*") },
                         onCancelEdit = viewModel::cancelEdit,
@@ -286,7 +286,14 @@ fun ChatScreen(
                         projectMembers = uiState.projectMembers,
                         projectRoles = uiState.projectRoles,
                         mentionSuggestions = uiState.mentionSuggestions,
-                        isMentionSuggestionVisible = uiState.isMentionSuggestionVisible
+                        isMentionSuggestionVisible = uiState.isMentionSuggestionVisible,
+                        onMentionKeyboardNavigation = { action ->
+                            when (action) {
+                                "up" -> viewModel.selectPreviousMention()
+                                "down" -> viewModel.selectNextMention()
+                                "enter" -> viewModel.selectCurrentMention()
+                            }
+                        }
                     )
                 }
             } else {
@@ -399,7 +406,9 @@ fun ChatScreen(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth(),
-                    maxVisibleItems = 7
+                    maxVisibleItems = 7,
+                    selectedIndex = uiState.selectedMentionIndex,
+                    query = uiState.mentionQueryText
                 )
             }
         }
@@ -452,11 +461,11 @@ private fun ChatContentPreview(uiState: ChatUiState){
         },
         bottomBar = {
             MessageInput(
-                text = uiState.pendingMessageText,
+                textFieldValue = uiState.pendingMessageTextFieldValue,
                 isEditing = uiState.isEditing,
                 isEnabled = true,
-                canSend = (uiState.pendingMessageText.isNotBlank() || uiState.selectedAttachmentUris.isNotEmpty()),
-                onTextChange = {},
+                canSend = (uiState.pendingMessageTextFieldValue.text.isNotBlank() || uiState.selectedAttachmentUris.isNotEmpty()),
+                onValueChange = {},
                 onSendClick = {},
                 onAttachmentClick = {},
                 onCancelEdit = {},

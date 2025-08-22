@@ -23,7 +23,9 @@ sealed class WebSocketDomainEvent {
         val replyToMessageId: String? = null,
         val roomId: String? = null,
         val originalPayload: String? = null,  // WebSocket에서 받은 원본 payload (attachment 정보 보존용)
-        val messageTypeString: String? = null // WebSocket NestedMessage.messageType (있으면 신뢰)
+        val messageTypeString: String? = null, // WebSocket NestedMessage.messageType (있으면 신뢰)
+        // Mentions are message-level (not payload). Optional and default to empty for compatibility.
+        val mentions: List<com.example.domain.vo.message.MentionInfo> = emptyList()
     ) : WebSocketDomainEvent()
 
     /**

@@ -1,12 +1,18 @@
 package com.example.websocket.core
 
+import com.example.domain.model.base.Message
+import com.example.domain.vo.message.MessagePayload
 import com.example.websocket.constant.WebSocketFieldConstants
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -111,7 +117,25 @@ data class WebSocketMessage(
                             payload = obj[WebSocketFieldConstants.FIELD_PAYLOAD]?.jsonObject,
                             senderId = obj[WebSocketFieldConstants.FIELD_SENDER_ID]?.jsonPrimitive?.contentOrNull,
                             replyToMessageId = obj[WebSocketFieldConstants.FIELD_REPLY_TO_MESSAGE_ID]?.jsonPrimitive?.contentOrNull,
-                            timestamp = obj[WebSocketFieldConstants.FIELD_TIMESTAMP]?.jsonPrimitive?.contentOrNull?.toDoubleOrNull()
+                            timestamp = obj[WebSocketFieldConstants.FIELD_TIMESTAMP]?.jsonPrimitive?.contentOrNull?.toDoubleOrNull(),
+                            mentions = try {
+                                val arr = obj[WebSocketFieldConstants.FIELD_MENTIONS]
+                                arr?.jsonArray?.mapNotNull { el ->
+                                    runCatching {
+                                        val o = el.jsonObject
+                                        WsMention(
+                                            type = o[WebSocketFieldConstants.FIELD_MENTIONS_FIELD_TYPE]?.jsonPrimitive?.content
+                                                ?: return@mapNotNull null,
+                                            id = o[WebSocketFieldConstants.FIELD_MENTIONS_FIELD_TYPE]?.jsonPrimitive?.content
+                                                ?: return@mapNotNull null,
+                                            displayName = o[WebSocketFieldConstants.FIELD_MENTIONS_FIELD_TYPE]?.jsonPrimitive?.content
+                                                ?: ""
+                                        )
+                                    }.getOrNull()
+                                }
+                            } catch (_: Exception) {
+                                null
+                            }
                         )
                     } catch (_: Exception) {
                         null
@@ -149,13 +173,39 @@ data class WebSocketMessage(
 
                             else -> null
                         }
+                        // Mentions in Map form (optional)
+                        val mentionsList: List<WsMention>? = try {
+                            val raw = (m[WebSocketFieldConstants.FIELD_MENTIONS])
+                            when (raw) {
+                                is List<*> -> raw.mapNotNull { e ->
+                                    (e as? Map<*, *>)?.let { mm ->
+                                        val t =
+                                            mm[WebSocketFieldConstants.FIELD_MENTIONS_FIELD_TYPE]?.toString()
+                                                ?: return@mapNotNull null
+                                        val id =
+                                            mm[WebSocketFieldConstants.FIELD_MENTIONS_FIELD_ID]?.toString()
+                                                ?: return@mapNotNull null
+                                        val dn =
+                                            mm[WebSocketFieldConstants.FIELD_MENTIONS_FIELD_DISPLAY_NAME]?.toString()
+                                                ?: ""
+                                        WsMention(t, id, dn)
+                                    }
+                                }
+
+                                else -> null
+                            }
+                        } catch (_: Exception) {
+                            null
+                        }
+
                         NestedMessage(
                             id = id,
                             messageType = type,
                             payload = payloadJson,
                             senderId = sender,
                             replyToMessageId = reply,
-                            timestamp = ts
+                            timestamp = ts,
+                            mentions = mentionsList
                         )
                     }
 
@@ -196,6 +246,18 @@ data class WebSocketMessage(
                             )
                         }
                         nested.timestamp?.let { put(WebSocketFieldConstants.FIELD_TIMESTAMP, it) }
+                        nested.mentions?.let { list ->
+                            put(
+                                WebSocketFieldConstants.FIELD_MENTIONS,
+                                list.map { m ->
+                                    mapOf(
+                                        WebSocketFieldConstants.FIELD_MENTIONS_FIELD_TYPE to m.type,
+                                        WebSocketFieldConstants.FIELD_MENTIONS_FIELD_ID to m.id,
+                                        WebSocketFieldConstants.FIELD_MENTIONS_FIELD_DISPLAY_NAME to m.displayName
+                                    )
+                                }
+                            )
+                        }
                     }
                     put(WebSocketFieldConstants.FIELD_MESSAGE, nestedMap)
                 }
@@ -251,7 +313,7 @@ data class WebSocketMessage(
         fun createChatMessage(
             roomId: String,
             senderId: String,
-            messagePayload: com.example.domain.vo.message.MessagePayload,
+            messagePayload: MessagePayload,
             messageId: String,
             replyToMessageId: String? = null,
             timestamp: Double? = null
@@ -304,7 +366,7 @@ data class WebSocketMessage(
         fun createChatMessageWithType(
             roomId: String,
             senderId: String,
-            messagePayload: com.example.domain.vo.message.MessagePayload,
+            messagePayload: MessagePayload,
             messageId: String,
             messageTypeString: String?,
             replyToMessageId: String? = null,
@@ -364,7 +426,7 @@ data class WebSocketMessage(
          * 깔끔한 구조: message 내부에만 데이터 포함, 외부 중복 필드 완전 제거
          */
         fun createFromDomainMessage(
-            message: com.example.domain.model.base.Message,
+            message: Message,
             roomId: String
         ): WebSocketMessage {
             val payload = try {
@@ -372,10 +434,24 @@ data class WebSocketMessage(
             } catch (e: Exception) {
                 buildJsonObject {
                     put(
-                        com.example.domain.vo.message.MessagePayload.KEY_CONTENT,
+                        MessagePayload.KEY_CONTENT,
                         JsonPrimitive(message.payload.value)
                     )
                 }
+            }
+
+            // Map domain mentions -> transport mentions
+            val wsMentions: List<WsMention>? = try {
+                val list = message.mentions
+                if (list.isEmpty()) null else list.map {
+                    WsMention(
+                        type = it.type.name,
+                        id = it.id,
+                        displayName = it.displayName
+                    )
+                }
+            } catch (_: Exception) {
+                null
             }
 
             return WebSocketMessage(
@@ -389,7 +465,8 @@ data class WebSocketMessage(
                     payload = payload,
                     senderId = message.senderId.value,
                     replyToMessageId = message.replyToMessageId?.value,
-                    timestamp = message.createdAt?.epochSecond?.toDouble()
+                    timestamp = message.createdAt.epochSecond.toDouble(),
+                    mentions = wsMentions
                 )
                 // 라우팅용 projectId는 roomId 패턴으로 구분 (dm_* vs project_*)
                 // 필요시 서버에서 roomId로 라우팅 처리
@@ -669,5 +746,19 @@ data class NestedMessage(
     val payload: JsonObject? = null,
     val senderId: String? = null,
     val replyToMessageId: String? = null,
-    val timestamp: Double? = null
+    val timestamp: Double? = null,
+    // Mentions are message-level (not payload). Optional for backward compatibility.
+    @SerialName(WebSocketFieldConstants.FIELD_MENTIONS)
+    val mentions: List<WsMention>? = null
+)
+
+/**
+ * Lightweight, serializable mention DTO for WebSocket transport.
+ * Mirrors domain MentionInfo but kept in transport layer to avoid serialization issues.
+ */
+@Serializable
+data class WsMention(
+    val type: String,       // "USER" | "ROLE" | "EVERYONE"
+    val id: String,         // userId | roleId | "*"
+    val displayName: String // display text
 )

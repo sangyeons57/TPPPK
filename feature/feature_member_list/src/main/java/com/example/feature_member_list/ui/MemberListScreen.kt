@@ -113,8 +113,10 @@ fun MemberListScreen(
                     )
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.onAddMemberClick() }) {
-                        Icon(Icons.Filled.PersonAdd, contentDescription = "멤버 초대")
+                    if (uiState.canInvite) {
+                        IconButton(onClick = { viewModel.onAddMemberClick() }) {
+                            Icon(Icons.Filled.PersonAdd, contentDescription = "멤버 초대")
+                        }
                     }
                 }
             )
@@ -126,8 +128,12 @@ fun MemberListScreen(
             onSearchQueryChanged = viewModel::onSearchQueryChanged,
             onMemberClick = viewModel::onMemberClick,
             onMemberMoreClick = { member ->
-                selectedMember = member
-                showBottomSheet = true
+                if (uiState.canManage) {
+                    selectedMember = member
+                    showBottomSheet = true
+                } else {
+                    viewModel.notifyNoManagePermission()
+                }
             }
         )
     }

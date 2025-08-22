@@ -87,6 +87,11 @@ fun TaskListScreen(
     var fabExpanded by remember { mutableStateOf(false) }
     var isEditMode by remember { mutableStateOf(false) }
 
+    // 권한이 없으면 편집 모드 강제 해제
+    LaunchedEffect(uiState.canWrite) {
+        if (!uiState.canWrite) isEditMode = false
+    }
+
     // Global editing state management
     var currentEditingTaskId by remember { mutableStateOf<String?>(null) }
     var previousEditingTaskId by remember { mutableStateOf<String?>(null) }
@@ -133,14 +138,16 @@ fun TaskListScreen(
                     )
                 },
                 actions = {
-                    IconButton(
-                        onClick = { isEditMode = !isEditMode }
-                    ) {
-                        Icon(
-                            imageVector = if (isEditMode) Icons.Default.Visibility else Icons.Default.Edit,
-                            contentDescription = if (isEditMode) "보기 모드" else "편집 모드",
-                            tint = if (isEditMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    if (uiState.canWrite) {
+                        IconButton(
+                            onClick = { isEditMode = !isEditMode }
+                        ) {
+                            Icon(
+                                imageVector = if (isEditMode) Icons.Default.Visibility else Icons.Default.Edit,
+                                contentDescription = if (isEditMode) "보기 모드" else "편집 모드",
+                                tint = if (isEditMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

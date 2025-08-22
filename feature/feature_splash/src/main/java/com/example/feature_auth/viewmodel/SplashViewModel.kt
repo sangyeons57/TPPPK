@@ -80,20 +80,53 @@ class SplashViewModel @Inject constructor(
                 val result = authUseCases.checkAuthenticationStatusUseCase()
                 Log.d("SplashViewModel", "Auth check result: $result")
 
-                result.onSuccess { isAuthenticatedAndVerified ->
-                    if (isAuthenticatedAndVerified) {
-                        Log.d("SplashViewModel", "User is authenticated and email verified - navigating to Home (clearing back stack)")
-                        // Clear SplashScreen from the back stack to prevent returning to it via the back button
-                        navigationManger.navigateToClearingBackStack(MainContainerRoute)
-                    } else {
-                        Log.d("SplashViewModel", "User is not authenticated or email not verified - navigating to Login (clearing back stack)")
-                        navigationManger.navigateToClearingBackStack(LoginRoute)
+                when (result) {
+                    is com.example.core_common.result.CustomResult.Success -> {
+                        val isAuthenticatedAndVerified = result.data
+                        if (isAuthenticatedAndVerified) {
+                            // 인증 + 이메일 검증 완료된 경우, 로그인과 동일하게 FCM 토큰을 업데이트 (UseCase 내부 조회)
+                            try {
+                                val userUseCases = usesrUseCaseProvider.createForUser()
+                                when (val updateRes = userUseCases.updateFcmTokenUseCase()) {
+                                    is com.example.core_common.result.CustomResult.Success -> Unit
+                                    is com.example.core_common.result.CustomResult.Failure -> Log.e(
+                                        "SplashViewModel",
+                                        "FCM token update failed on splash",
+                                        updateRes.error
+                                    )
+
+                                    else -> Unit
+                                }
+                            } catch (e: Exception) {
+                                Log.e("SplashViewModel", "Failed to update FCM token on splash", e)
+                            }
+                            Log.d(
+                                "SplashViewModel",
+                                "User is authenticated and email verified - navigating to Home (clearing back stack)"
+                            )
+                            navigationManger.navigateToClearingBackStack(MainContainerRoute)
+                        } else {
+                            Log.d(
+                                "SplashViewModel",
+                                "User is not authenticated or email not verified - navigating to Login (clearing back stack)"
+                            )
+                            navigationManger.navigateToClearingBackStack(LoginRoute)
+                        }
                     }
-                }.onFailure { exception ->
-                    Log.e("SplashViewModel", "Auth check failed: ${exception.message}", exception)
-                    
-                    // Categorize errors for better handling
-                    _uiState.update { it.copy(isLoading = false) }
+
+                    is com.example.core_common.result.CustomResult.Failure -> {
+                        val exception = result.error
+                        Log.e(
+                            "SplashViewModel",
+                            "Auth check failed: ${exception.message}",
+                            exception
+                        )
+                        _uiState.update { it.copy(isLoading = false) }
+                    }
+
+                    else -> {
+                        _uiState.update { it.copy(isLoading = false) }
+                    }
                 }
 
             } catch (e: Exception) {

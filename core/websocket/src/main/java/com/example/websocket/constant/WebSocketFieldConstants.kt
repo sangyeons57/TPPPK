@@ -28,7 +28,8 @@ object WebSocketFieldConstants {
     
     /** 타임스탬프 필드 */
     const val FIELD_TIMESTAMP = "timestamp"
-    
+
+
     /** 메시지 ID 필드 */
     const val FIELD_MESSAGE_ID = "messageId"
     
@@ -40,7 +41,14 @@ object WebSocketFieldConstants {
 
     /** 중첩 메시지 필드 (도메인 Message 래핑) */
     const val FIELD_MESSAGE = "message"
-    
+
+    /** 멘션 리스트 필드 (NestedMessage 관할) */
+    const val FIELD_MENTIONS = "mentions"
+
+    const val FIELD_MENTIONS_FIELD_TYPE = "type"
+    const val FIELD_MENTIONS_FIELD_ID = "id"
+    const val FIELD_MENTIONS_FIELD_DISPLAY_NAME = "displayName"
+
     /** 프로젝트 ID 필드 */
     const val FIELD_PROJECT_ID = "projectId"
     

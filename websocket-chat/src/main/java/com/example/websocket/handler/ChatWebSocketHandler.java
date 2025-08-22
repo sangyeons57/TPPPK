@@ -35,6 +35,7 @@ public class ChatWebSocketHandler {
     // Mention notification dependencies (shared from ServiceProvider)
     private MentionNotificationService mentionNotificationService;
     private java.util.concurrent.ExecutorService notifyExecutor;
+    private com.example.websocket.service.ProjectMemberService projectMemberService;
     
     private String userId;
     private String currentRoomId;
@@ -53,6 +54,7 @@ public class ChatWebSocketHandler {
         this.objectMapper.configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         this.objectMapper.configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, false);
         this.firestoreService = new FirestoreMessageService();
+        this.projectMemberService = new com.example.websocket.service.ProjectMemberService();
     }
 
     // Constructor for dependency injection
@@ -64,6 +66,7 @@ public class ChatWebSocketHandler {
         com.example.websocket.service.ServiceProvider provider = com.example.websocket.service.ServiceProvider.getInstance();
         this.mentionNotificationService = provider.getMentionNotificationService();
         this.notifyExecutor = provider.getNotifyExecutor();
+        this.projectMemberService = new com.example.websocket.service.ProjectMemberService();
     }
 
     @OnOpen
@@ -314,6 +317,13 @@ public class ChatWebSocketHandler {
             message.setSenderId(userId);
             message.setTimestampFromInstant(Instant.now());
 
+            // Mentions placement validation: mentions must be message-level only
+            if (hasPayloadMentions(message)) {
+                logger.error("❌ Invalid mentions location in payload for message {}", message.getId());
+                sendErrorMessage("Invalid mentions location: use message.mentions (not payload.mentions)");
+                return;
+            }
+
             // 평탄(Flat) 스키마를 기본으로 사용: 중첩(message.*)은 수신 시 읽기 전용으로만 지원
 
             // Ensure message has a non-empty id for persistence/broadcast
@@ -332,22 +342,29 @@ public class ChatWebSocketHandler {
                 .thenAccept(success -> {
                     if (success) {
                         logger.info("✅ Message saved to Firestore: {}", message.getId());
-                        // After persistence, trigger mention notifications asynchronously
+                        // Phase 1: Only store and broadcast mentions; skip FCM notifications.
+                        // Guarded by env var for future enabling.
                         try {
-                            List<String> mentionedUserIds = extractMentionedUserIds(message);
-                            if (mentionNotificationService != null && mentionedUserIds != null && !mentionedUserIds.isEmpty()) {
-                                String channelType = currentRoomId.startsWith("project_") ? "project" : "dm";
-                                String channelId = currentRoomId;
-                                String notificationMessageId = message.getId();
-                                String senderId = userId;
-                                String senderName = userId;
-                                String fullText = safeGetTextFromPayload(message);
-                                notifyExecutor.submit(() -> mentionNotificationService.notifyMentions(
-                                        channelType, channelId, messageId, senderId, senderName, fullText, mentionedUserIds
-                                ));
+                            // Enable by default; can be disabled by setting env to "false"
+                            boolean enabled = Boolean.parseBoolean(System.getenv().getOrDefault("MENTION_FCM_ENABLED", "true"));
+                            if (enabled) {
+                                List<String> mentionedUserIds = extractMentionedUserIds(message);
+                                if (mentionNotificationService != null && mentionedUserIds != null && !mentionedUserIds.isEmpty()) {
+                                    String channelType = (currentRoomId != null && currentRoomId.contains(":")) ? "project" : "dm";
+                                    String channelId = currentRoomId;
+                                    String notificationMessageId = message.getId();
+                                    String senderId = userId;
+                                    String senderName = userId;
+                                    String fullText = safeGetTextFromPayload(message);
+                                    notifyExecutor.submit(() -> mentionNotificationService.notifyMentions(
+                                            channelType, channelId, messageId, senderId, senderName, fullText, mentionedUserIds
+                                    ));
+                                }
+                            } else {
+                                logger.info("🔕 Mention FCM disabled (MENTION_FCM_ENABLED=false). Stored/broadcast only.");
                             }
                         } catch (Exception ex) {
-                            logger.warn("⚠️ Failed to schedule mention notifications: {}", ex.getMessage());
+                            logger.warn("⚠️ Mention FCM scheduling block error: {}", ex.getMessage());
                         }
                     } else {
                         logger.warn("⚠️ Failed to save message to Firestore: {}", message.getId());
@@ -373,31 +390,119 @@ public class ChatWebSocketHandler {
         }
     }
 
-    // Extract mentioned user IDs from the incoming message payload.
-    // Supports formats:
-    // - payload["mentions"] = List<String>
-    // - payload["mentions"] = List<Map> with key "userId"
-    private List<String> extractMentionedUserIds(ChatMessage message) {
+    // Extract message-level mentions only. No payload fallback allowed.
+    private java.util.List<com.example.websocket.model.MentionItem> extractMentions(ChatMessage message) {
         try {
-            Map<String, Object> payload = message != null ? message.getPayload() : null;
-            if (payload == null) return java.util.Collections.emptyList();
-            Object raw = payload.get(ChatMessage.PayloadKeys.MENTIONS);
-            if (!(raw instanceof java.util.List)) return java.util.Collections.emptyList();
-            java.util.List<?> arr = (java.util.List<?>) raw;
-            java.util.Set<String> ids = new java.util.HashSet<>();
-            for (Object el : arr) {
-                if (el instanceof String s) {
-                    if (s != null && !s.trim().isEmpty()) ids.add(s);
-                } else if (el instanceof java.util.Map<?, ?> m) {
-                    Object uid = m.get("userId");
-                    if (uid instanceof String s && !s.trim().isEmpty()) ids.add(s);
+            if (message == null) return java.util.Collections.emptyList();
+            java.util.List<com.example.websocket.model.MentionItem> msgMentions = message.getMentions();
+            if (msgMentions == null || msgMentions.isEmpty()) return java.util.Collections.emptyList();
+            return normalizeMentions(msgMentions);
+        } catch (Exception e) {
+            logger.warn("⚠️ Failed to extract mentions: {}", e.getMessage());
+            return java.util.Collections.emptyList();
+        }
+    }
+
+    private java.util.List<com.example.websocket.model.MentionItem> normalizeMentions(java.util.List<com.example.websocket.model.MentionItem> items) {
+        java.util.List<com.example.websocket.model.MentionItem> out = new java.util.ArrayList<>(items.size());
+        for (com.example.websocket.model.MentionItem it : items) {
+            if (it == null) continue;
+            String type = it.getType() != null ? it.getType().trim() : "USER";
+            type = type.equalsIgnoreCase("userId") ? "USER" : type; // client alias
+            if (type.equalsIgnoreCase("role")) type = "ROLE";
+            if (type.equalsIgnoreCase("everyone") || type.equalsIgnoreCase("all")) type = "EVERYONE";
+            if (type.equalsIgnoreCase("user")) type = "USER";
+
+            String id = it.getId();
+            String dn = it.getDisplayName();
+            out.add(new com.example.websocket.model.MentionItem(type.toUpperCase(), id, dn));
+        }
+        return out;
+    }
+
+    // Build userId list for all mention types: USER, ROLE, EVERYONE
+    private List<String> extractMentionedUserIds(ChatMessage message) {
+        java.util.List<com.example.websocket.model.MentionItem> items = extractMentions(message);
+        java.util.Set<String> ids = new java.util.HashSet<>();
+        boolean isProjectRoom = currentRoomId != null && currentRoomId.contains(":");
+        String projectId = isProjectRoom ? currentRoomId.split(":", 2)[0] : null;
+
+        for (com.example.websocket.model.MentionItem it : items) {
+            if (it == null) continue;
+            String type = it.getType() != null ? it.getType().toUpperCase() : "USER";
+            switch (type) {
+                case "USER": {
+                    String id = it.getId();
+                    if (id != null && !id.trim().isEmpty()) ids.add(id.trim());
+                    break;
+                }
+                case "ROLE": {
+                    if (!isProjectRoom || projectId == null) break; // roles only in project context
+                    String roleId = it.getId();
+                    if (roleId == null || roleId.trim().isEmpty()) break;
+                    try {
+                        java.util.List<String> roleMembers = projectMemberService.getProjectMemberIdsByRole(projectId, roleId.trim());
+                        if (roleMembers != null) ids.addAll(roleMembers);
+                    } catch (Exception e) {
+                        logger.warn("⚠️ Failed to resolve role members for project {} role {}: {}", projectId, roleId, e.getMessage());
+                    }
+                    break;
+                }
+                case "EVERYONE": {
+                    if (isProjectRoom && projectId != null) {
+                        try {
+                            java.util.List<String> members = projectMemberService.getProjectMemberIds(projectId);
+                            if (members != null) ids.addAll(members);
+                        } catch (Exception e) {
+                            logger.warn("⚠️ Failed to resolve project members for project {}: {}", projectId, e.getMessage());
+                        }
+                    } else {
+                        // DM: include the other participant only
+                        String other = parseOtherUserFromDmRoomId(currentRoomId, userId);
+                        if (other != null) ids.add(other);
+                    }
+                    break;
+                }
+                default: {
+                    // ignore unknown types
                 }
             }
-            // remove self if present
-            ids.remove(userId);
-            return new java.util.ArrayList<>(ids);
+        }
+
+        // remove self if present
+        ids.remove(userId);
+        return new java.util.ArrayList<>(ids);
+    }
+
+    private String parseOtherUserFromDmRoomId(String roomId, String selfId) {
+        try {
+            if (roomId == null) return null;
+            if (roomId.startsWith("dm_")) {
+                // format: dm_uid1_uid2
+                String[] parts = roomId.split("_", 3);
+                if (parts.length >= 3) {
+                    String u1 = parts[1];
+                    String u2 = parts[2];
+                    if (selfId != null && selfId.equals(u1)) return u2;
+                    if (selfId != null && selfId.equals(u2)) return u1;
+                    // if self not matched, return the first different
+                    return !u1.equals(selfId) ? u1 : u2;
+                }
+            }
         } catch (Exception e) {
-            return java.util.Collections.emptyList();
+            // ignore
+        }
+        return null;
+    }
+
+    // Validate illegal mentions in payload
+    private boolean hasPayloadMentions(ChatMessage message) {
+        try {
+            Map<String, Object> payload = message != null ? message.getPayload() : null;
+            if (payload == null) return false;
+            return payload.containsKey(ChatMessage.PayloadKeys.MENTIONS) && payload.get(ChatMessage.PayloadKeys.MENTIONS) != null;
+        } catch (Exception e) {
+            return false;
         }
     }
 

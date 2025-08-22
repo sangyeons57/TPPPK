@@ -13,6 +13,7 @@ import com.example.domain.vo.IsLoading
 import com.example.domain.vo.user.UserEmail
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain_usecase.provider.auth.AuthValidationUseCaseProvider
+import com.example.domain_usecase.provider.user.UserUseCaseProvider
 import com.example.domain_usecase.usecase.auth.session.WithdrawnAccountException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -61,7 +62,8 @@ sealed class LoginEvent {
 class LoginViewModel @Inject constructor(
     private val authSessionUseCaseProvider: AuthSessionUseCaseProvider,
     private val authValidationUseCaseProvider: AuthValidationUseCaseProvider,
-    private val navigationManger: NavigationManger
+    private val navigationManger: NavigationManger,
+    private val userUseCaseProvider: UserUseCaseProvider,
 ) : ViewModel() {
 
     // Provider를 통해 생성된 UseCase 그룹
@@ -162,6 +164,22 @@ class LoginViewModel @Inject constructor(
 
             when (result) {
                 is CustomResult.Success -> {
+                    // 로그인 성공 시 현재 기기의 FCM 토큰을 서버에 업데이트 (UseCase 내부에서 토큰 조회)
+                    try {
+                        val userUseCases = userUseCaseProvider.createForUser()
+                        when (val updateRes = userUseCases.updateFcmTokenUseCase()) {
+                            is CustomResult.Success -> Unit
+                            is CustomResult.Failure -> Log.e(
+                                "LoginViewModel",
+                                "FCM token update failed after login",
+                                updateRes.error
+                            )
+
+                            else -> Unit
+                        }
+                    } catch (e: Exception) {
+                        Log.e("LoginViewModel", "Failed to update FCM token after login", e)
+                    }
                     // 로그인 성공 -> 메인 화면으로 이동 (백스택 클리어)
                     navigationManger.navigateToClearingBackStack(MainContainerRoute)
                 }

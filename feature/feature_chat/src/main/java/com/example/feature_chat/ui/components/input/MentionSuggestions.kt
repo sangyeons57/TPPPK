@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -23,7 +23,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.example.core_ui.components.user.SimpleUserProfileImage
@@ -42,7 +46,9 @@ fun MentionSuggestionsPopup(
     suggestions: List<MentionSuggestion>,
     onSuggestionClick: (MentionSuggestion) -> Unit,
     modifier: Modifier = Modifier,
-    maxVisibleItems: Int = 7
+    maxVisibleItems: Int = 7,
+    selectedIndex: Int = -1,
+    query: String = "" // 검색 쿼리 하이라이팅용
 ) {
     Surface(
         modifier = modifier
@@ -58,10 +64,12 @@ fun MentionSuggestionsPopup(
                 .heightIn(max = (itemHeight * maxVisibleItems).dp)
                 .padding(vertical = 8.dp)
         ) {
-            items(suggestions) { suggestion ->
+            itemsIndexed(suggestions) { index, suggestion ->
                 MentionSuggestionItem(
                     suggestion = suggestion,
-                    onClick = { onSuggestionClick(suggestion) }
+                    onClick = { onSuggestionClick(suggestion) },
+                    isSelected = index == selectedIndex,
+                    query = query
                 )
             }
         }
@@ -79,12 +87,21 @@ fun MentionSuggestionsPopup(
 fun MentionSuggestionItem(
     suggestion: MentionSuggestion,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isSelected: Boolean = false,
+    query: String = ""
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
             .clickable { onClick() }
+            .background(
+                if (isSelected) {
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                } else {
+                    MaterialTheme.colorScheme.surface
+                }
+            )
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -137,10 +154,10 @@ fun MentionSuggestionItem(
             }
         }
 
-        // Name and subtitle with special styling for @everyone
+        // Name and subtitle with special styling for @everyone and query highlighting
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = suggestion.displayName,
+                text = highlightQuery(suggestion.displayName, query),
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = if (suggestion.type == MentionType.EVERYONE) FontWeight.Bold else FontWeight.Normal
                 ),
@@ -152,7 +169,7 @@ fun MentionSuggestionItem(
             )
             if (suggestion.subtitle != null) {
                 Text(
-                    text = suggestion.subtitle,
+                    text = highlightQuery(suggestion.subtitle, query),
                     style = MaterialTheme.typography.bodySmall,
                     color = if (suggestion.type == MentionType.EVERYONE) {
                         MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f)
@@ -179,5 +196,48 @@ fun MentionSuggestionItem(
                 MaterialTheme.colorScheme.outline
             }
         )
+    }
+}
+
+/**
+ * 검색 쿼리를 하이라이팅한 AnnotatedString을 생성합니다
+ */
+@Composable
+private fun highlightQuery(text: String, query: String): AnnotatedString {
+    if (query.isBlank()) {
+        return AnnotatedString(text)
+    }
+
+    return buildAnnotatedString {
+        val lowerText = text.lowercase()
+        val lowerQuery = query.lowercase()
+        var lastIndex = 0
+
+        while (true) {
+            val index = lowerText.indexOf(lowerQuery, lastIndex)
+            if (index == -1) break
+
+            // 쿼리 이전 텍스트 추가
+            if (index > lastIndex) {
+                append(text.substring(lastIndex, index))
+            }
+
+            // 쿼리 텍스트를 하이라이팅하여 추가
+            withStyle(
+                style = SpanStyle(
+                    background = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                    fontWeight = FontWeight.Bold
+                )
+            ) {
+                append(text.substring(index, index + query.length))
+            }
+
+            lastIndex = index + query.length
+        }
+
+        // 마지막 쿼리 이후 텍스트 추가
+        if (lastIndex < text.length) {
+            append(text.substring(lastIndex))
+        }
     }
 }

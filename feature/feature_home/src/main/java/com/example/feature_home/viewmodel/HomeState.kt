@@ -41,4 +41,5 @@ data class HomeUiState(
     val targetDMChannelForSheet: DmUiModel? = null,
     val targetCategoryForSheet: CategoryUiModel? = null,
     val targetChannelForSheet: ChannelUiModel? = null,
+    val canStructureEdit: Boolean = false,
 )

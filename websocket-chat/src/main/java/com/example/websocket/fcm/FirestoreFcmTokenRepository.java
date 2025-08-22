@@ -1,11 +1,9 @@
 package com.example.websocket.fcm;
 
 import com.google.api.core.ApiFuture;
-import com.google.cloud.firestore.CollectionReference;
 import com.google.cloud.firestore.DocumentReference;
+import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.QueryDocumentSnapshot;
-import com.google.cloud.firestore.WriteBatch;
 import com.google.cloud.firestore.WriteResult;
 import com.google.firebase.cloud.FirestoreClient;
 
@@ -27,11 +25,13 @@ public final class FirestoreFcmTokenRepository implements FcmTokenRepository {
 
     @Override
     public List<String> getTokensForUser(String userId) throws ExecutionException, InterruptedException {
-        CollectionReference col = db.collection("users").document(userId).collection("fcm_tokens");
-        List<QueryDocumentSnapshot> docs = col.get().get().getDocuments();
-        List<String> tokens = new ArrayList<>(docs.size());
-        for (QueryDocumentSnapshot d : docs) {
-            tokens.add(d.getId()); // document id is the token
+        // New schema: single field at /users/{uid} with key "fcmToken"
+        DocumentReference userDoc = db.collection("users").document(userId);
+        DocumentSnapshot snap = userDoc.get().get();
+        List<String> tokens = new ArrayList<>(1);
+        if (snap.exists()) {
+            String token = snap.getString("fcmToken");
+            if (token != null && !token.isBlank()) tokens.add(token);
         }
         return tokens;
     }
@@ -39,13 +39,13 @@ public final class FirestoreFcmTokenRepository implements FcmTokenRepository {
     @Override
     public void removeInvalidTokens(String userId, List<String> invalidTokens) throws ExecutionException, InterruptedException {
         if (invalidTokens == null || invalidTokens.isEmpty()) return;
-        WriteBatch batch = db.batch();
-        for (String token : invalidTokens) {
-            DocumentReference ref = db.collection("users").document(userId).collection("fcm_tokens").document(token);
-            batch.delete(ref);
+        DocumentReference userDoc = db.collection("users").document(userId);
+        DocumentSnapshot snap = userDoc.get().get();
+        if (!snap.exists()) return;
+        String current = snap.getString("fcmToken");
+        if (current != null && invalidTokens.contains(current)) {
+            ApiFuture<WriteResult> future = userDoc.update("fcmToken", null);
+            future.get();
         }
-        ApiFuture<List<WriteResult>> future = batch.commit();
-        future.get();
     }
 }
-

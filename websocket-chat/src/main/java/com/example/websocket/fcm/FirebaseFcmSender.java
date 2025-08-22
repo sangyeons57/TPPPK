@@ -9,6 +9,8 @@ import com.google.firebase.messaging.MulticastMessage;
 import com.google.firebase.messaging.Notification;
 import com.google.firebase.messaging.SendResponse;
 import com.google.auth.oauth2.GoogleCredentials;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
@@ -24,6 +26,7 @@ import java.util.Map;
  */
 public final class FirebaseFcmSender implements FcmSender {
 
+    private static final Logger logger = LoggerFactory.getLogger(FirebaseFcmSender.class);
     private volatile boolean initialized = false;
 
     private void ensureInitialized() {
@@ -36,7 +39,9 @@ public final class FirebaseFcmSender implements FcmSender {
                             .setCredentials(GoogleCredentials.getApplicationDefault())
                             .build();
                     FirebaseApp.initializeApp(options);
+                    logger.info("🔥 Initialized FirebaseApp with ADC for Admin SDK");
                 } catch (IOException e) {
+                    logger.error("❌ Failed to initialize FirebaseApp with ADC: {}", e.getMessage());
                     throw new IllegalStateException("Failed to initialize FirebaseApp with ADC", e);
                 }
             }
@@ -49,6 +54,7 @@ public final class FirebaseFcmSender implements FcmSender {
         ensureInitialized();
 
         if (tokens == null || tokens.isEmpty()) {
+            logger.debug("🔕 No tokens to send (data.type={}, data.channelId={})", data.get("type"), data.get("channelId"));
             return SendResult.builder().build();
         }
 
@@ -60,6 +66,9 @@ public final class FirebaseFcmSender implements FcmSender {
                     .build();
         }
 
+        String type = data != null ? data.get("type") : null;
+        String channelId = data != null ? data.get("channelId") : null;
+
         if (tokens.size() == 1) {
             String token = tokens.get(0);
             Message.Builder builder = Message.builder()
@@ -69,10 +78,13 @@ public final class FirebaseFcmSender implements FcmSender {
 
             try {
                 String messageId = FirebaseMessaging.getInstance().send(builder.build());
+                logger.info("📤 FCM sent (single): type={}, channelId={}, msgId={}, tokenSuffix={}...",
+                        type, channelId, messageId, safeSuffix(token));
                 return SendResult.builder().addSuccess(messageId).build();
             } catch (Exception e) {
-                // Classify invalid-token-like errors heuristically by message text
                 String maybeInvalid = looksLikeInvalidToken(e) ? token : null;
+                logger.warn("⚠️ FCM send failed (single): type={}, channelId={}, error={}, tokenSuffix={}...",
+                        type, channelId, e.getMessage(), safeSuffix(token));
                 return SendResult.builder().addFailure(maybeInvalid).build();
             }
         }
@@ -86,19 +98,25 @@ public final class FirebaseFcmSender implements FcmSender {
             BatchResponse resp = FirebaseMessaging.getInstance().sendMulticast(mmb.build());
             SendResult.Builder result = SendResult.builder();
             List<SendResponse> responses = resp.getResponses();
+            int success = 0, failure = 0;
             for (int i = 0; i < responses.size(); i++) {
                 SendResponse r = responses.get(i);
                 if (r.isSuccessful()) {
                     result.addSuccess(r.getMessageId());
+                    success++;
                 } else {
                     String t = tokens.get(i);
                     String maybeInvalid = r.getException() != null && looksLikeInvalidToken(r.getException()) ? t : null;
                     result.addFailure(maybeInvalid);
+                    failure++;
                 }
             }
+            logger.info("📤 FCM sent (multicast): type={}, channelId={}, success={}, failure={} (targets={})",
+                    type, channelId, success, failure, tokens.size());
             return result.build();
         } catch (Exception e) {
-            // On total failure, mark all as failed without invalid token classification
+            logger.error("💥 FCM sendMulticast failed: type={}, channelId={}, error={}, targets={}",
+                    type, channelId, e.getMessage(), tokens.size());
             SendResult.Builder result = SendResult.builder();
             for (int i = 0; i < tokens.size(); i++) result.addFailure(null);
             return result.build();
@@ -113,5 +131,10 @@ public final class FirebaseFcmSender implements FcmSender {
                 || msg.contains("invalid-argument")
                 || msg.contains("Invalid registration token")
                 || msg.contains("Requested entity was not found");
+    }
+
+    private String safeSuffix(String token) {
+        if (token == null || token.length() < 6) return "***";
+        return token.substring(Math.max(0, token.length() - 6));
     }
 }

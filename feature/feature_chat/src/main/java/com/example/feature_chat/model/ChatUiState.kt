@@ -1,6 +1,7 @@
 package com.example.feature_chat.model
 
 import android.net.Uri
+import androidx.compose.ui.text.input.TextFieldValue
 import com.example.domain.vo.MentionType
 import com.example.domain.vo.message.MentionInfo
 import com.example.websocket.core.WebSocketConnectionState
@@ -28,7 +29,7 @@ data class ChatUiState(
     // Note: pagination state is now handled by Paging3
     val error: String? = null,
     // Added for ChatViewModel refactor
-    val pendingMessageText: String = "",
+    val pendingMessageTextFieldValue: TextFieldValue = TextFieldValue(""),
     val selectedAttachmentUris: List<Uri> = emptyList(),
     val isLoadingGallery: Boolean = false,
     
@@ -72,7 +73,10 @@ data class ChatUiState(
 
     // DM blocking state
     val isProjectChannel: Boolean = false, // true if projectId is not null
-    val isDMBlocked: Boolean = false // true if DM channel is blocked
+    val isDMBlocked: Boolean = false, // true if DM channel is blocked
+    // Project channel cached permissions
+    val canWrite: Boolean = true,
+    val canInvite: Boolean = true
 )
 
 /**

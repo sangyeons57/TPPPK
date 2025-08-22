@@ -1,5 +1,8 @@
 package com.example.websocket.fcm;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +13,8 @@ import java.util.Set;
  * call this directly from your SendMessage flow without new message DTOs.
  */
 public final class MentionNotificationService {
+
+    private static final Logger logger = LoggerFactory.getLogger(MentionNotificationService.class);
 
     private final FcmSender sender;
     private final FcmTokenRepository tokenRepository;
@@ -39,10 +44,16 @@ public final class MentionNotificationService {
         Set<String> uniqueTargets = new HashSet<>(mentionedUserIds);
         uniqueTargets.remove(senderId); // do not notify self
 
+        logger.info("🔔 Mention notify: channelType={}, channelId={}, messageId={}, targets={} (sender={})",
+                channelType, channelId, messageId, uniqueTargets.size(), senderId);
+
         for (String targetUserId : uniqueTargets) {
             try {
                 List<String> tokens = tokenRepository.getTokensForUser(targetUserId);
-                if (tokens == null || tokens.isEmpty()) continue;
+                if (tokens == null || tokens.isEmpty()) {
+                    logger.debug("🔕 No tokens for user {} — skipping mention", targetUserId);
+                    continue;
+                }
 
                 String snippet = fullText == null ? "" : fullText.trim();
                 Map<String, String> data = dataFactory.buildData(
@@ -53,13 +64,16 @@ public final class MentionNotificationService {
                 String body = dataFactory.buildBody(data.get("snippet"));
 
                 SendResult result = sender.sendToTokens(tokens, data, title, body);
+                logger.info("📊 Mention FCM result: userId={}, success={}, failure={}, invalidTokens={}",
+                        targetUserId, result.successCount, result.failureCount, result.invalidTokens.size());
+
                 if (!result.invalidTokens.isEmpty()) {
                     tokenRepository.removeInvalidTokens(targetUserId, result.invalidTokens);
+                    logger.info("🧹 Removed {} invalid tokens for user {}", result.invalidTokens.size(), targetUserId);
                 }
             } catch (Exception e) {
-                // Swallow and continue to other targets; production code should log this
+                logger.warn("⚠️ Mention notify failed for user {}: {}", targetUserId, e.getMessage());
             }
         }
     }
 }
-

@@ -83,6 +83,7 @@ class ChatServiceProvider @Inject constructor(
         
         val roleService = RoleService(
             projectRoleUseCaseProvider = projectRoleUseCaseProvider,
+            projectMemberUseCaseProvider = projectMemberUseCaseProvider,
             projectId = projectId
         )
         

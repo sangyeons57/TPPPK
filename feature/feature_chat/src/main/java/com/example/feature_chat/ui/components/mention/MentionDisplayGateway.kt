@@ -5,6 +5,17 @@ import com.example.feature_chat.model.ProjectMember
 import com.example.feature_chat.model.ProjectRole
 
 /**
+ * 멘션 관련 상수
+ */
+object MentionConstants {
+    /**
+     * 멘션 감지를 위한 정규식 패턴
+     * 영문자, 숫자, 언더스코어, 점, 한글을 포함한 사용자명/역할명 지원
+     */
+    const val MENTION_REGEX_PATTERN = """@([a-zA-Z0-9_.가-힣]+)"""
+}
+
+/**
  * Data class to represent a parsed mention in the text
  */
 data class ParsedMention(
@@ -24,102 +35,7 @@ data class ProcessedText(
 )
 
 /**
- * Mention Display Gateway System
- * Handles conversion between internal [type:id] format and user-visible @name format
- */
-object MentionDisplayGateway {
-
-    /**
-     * Converts internal [type:id] format to user-visible @name format for display
-     */
-    fun convertToDisplayFormat(
-        internalText: String,
-        participants: List<ChatParticipant> = emptyList(),
-        projectMembers: List<ProjectMember> = emptyList(),
-        projectRoles: List<ProjectRole> = emptyList()
-    ): String {
-        val mentionRegex = """\[(user|role):([^\]]+)\]""".toRegex()
-
-        return mentionRegex.replace(internalText) { matchResult ->
-            val type = matchResult.groupValues[1]
-            val id = matchResult.groupValues[2]
-
-            when (type) {
-                "user" -> {
-                    // Try to find actual name in participants/members
-                    val userName =
-                        participants.find { participant -> participant.userId == id }?.displayName
-                            ?: projectMembers.find { member -> member.userId == id }?.displayName
-                            ?: id // fallback to id if name not found
-                    "@$userName"
-                }
-
-                "role" -> {
-                    // Try to find actual role name
-                    val roleName = projectRoles.find { role -> role.roleId == id }?.roleName
-                        ?: id // fallback to id if role name not found
-                    "@$roleName"
-                }
-
-                else -> "@$id"
-            }
-        }
-    }
-
-    /**
-     * Converts user-visible @name format back to internal [type:id] format for storage
-     */
-    fun convertToInternalFormat(
-        displayText: String,
-        participants: List<ChatParticipant> = emptyList(),
-        projectMembers: List<ProjectMember> = emptyList(),
-        projectRoles: List<ProjectRole> = emptyList()
-    ): String {
-        // This would be used when user types @name and we need to convert it back
-        // For now, we handle this through the suggestion system
-        return displayText
-    }
-
-    /**
-     * Extracts mentions from internal format and returns display names
-     */
-    fun extractMentionDisplayNames(
-        internalText: String,
-        participants: List<ChatParticipant> = emptyList(),
-        projectMembers: List<ProjectMember> = emptyList(),
-        projectRoles: List<ProjectRole> = emptyList()
-    ): Map<String, String> {
-        val mentionRegex = """\[(user|role):([^\]]+)\]""".toRegex()
-        val mentionMap = mutableMapOf<String, String>()
-
-        mentionRegex.findAll(internalText).forEach { matchResult ->
-            val type = matchResult.groupValues[1]
-            val id = matchResult.groupValues[2]
-            val key = "[$type:$id]"
-
-            val displayName = when (type) {
-                "user" -> {
-                    participants.find { participant -> participant.userId == id }?.displayName
-                        ?: projectMembers.find { member -> member.userId == id }?.displayName
-                        ?: id
-                }
-
-                "role" -> {
-                    projectRoles.find { role -> role.roleId == id }?.roleName ?: id
-                }
-
-                else -> id
-            }
-
-            mentionMap[key] = displayName
-        }
-
-        return mentionMap
-    }
-}
-
-/**
- * Parses mention format [type:id] and converts to @displayName for display
+ * Parses mention format @displayName and identifies mention types for styling
  * Returns processed text with mention position information for styling
  */
 fun parseMentionsForDisplay(
@@ -128,55 +44,44 @@ fun parseMentionsForDisplay(
     projectMembers: List<ProjectMember> = emptyList(),
     projectRoles: List<ProjectRole> = emptyList()
 ): ProcessedText {
-    val mentionRegex = """\[(user|role):([^\]]+)\]""".toRegex()
+    val mentionRegex = MentionConstants.MENTION_REGEX_PATTERN.toRegex()
     val mentions = mutableListOf<ParsedMention>()
-    var processedText = originalText
-    var offset = 0
 
     mentionRegex.findAll(originalText).forEach { matchResult ->
-        val fullMatch = matchResult.value
-        val mentionType = matchResult.groupValues[1]
-        val mentionId = matchResult.groupValues[2]
+        val fullMatch = matchResult.value // @displayName
+        val displayName = matchResult.groupValues[1] // displayName (without @)
 
-        // Use MentionDisplayGateway to get proper display name
-        val displayName = when (mentionType) {
-            "user" -> {
-                val userName =
-                    participants.find { participant -> participant.userId == mentionId }?.displayName
-                        ?: projectMembers.find { member -> member.userId == mentionId }?.displayName
-                        ?: mentionId
-                "@$userName"
+        // Determine mention type and ID by checking against available data
+        val (mentionType, mentionId) = when {
+            // Check if it's a role mention
+            projectRoles.any { it.roleName == displayName } -> {
+                val role = projectRoles.find { it.roleName == displayName }!!
+                "role" to role.roleId
+            }
+            // Check if it's a user mention (participants for DM, projectMembers for projects)
+            participants.any { it.displayName == displayName } -> {
+                val participant = participants.find { it.displayName == displayName }!!
+                "user" to participant.userId
             }
 
-            "role" -> {
-                val roleName = projectRoles.find { role -> role.roleId == mentionId }?.roleName
-                    ?: mentionId
-                "@$roleName"
+            projectMembers.any { it.displayName == displayName } -> {
+                val member = projectMembers.find { it.displayName == displayName }!!
+                "user" to member.userId
             }
-
-            else -> "@$mentionId"
+            // Default to user type if not found
+            else -> "user" to displayName
         }
-
-        // Calculate positions in the processed text
-        val mentionStart = matchResult.range.first - offset
-        val mentionEnd = mentionStart + displayName.length
-
-        // Replace the [type:id] format with @displayName
-        processedText = processedText.replaceFirst(fullMatch, displayName)
 
         mentions.add(
             ParsedMention(
                 type = mentionType,
                 id = mentionId,
                 displayName = displayName,
-                start = mentionStart,
-                end = mentionEnd
+                start = matchResult.range.first,
+                end = matchResult.range.last + 1
             )
         )
-
-        // Update offset for next replacements
-        offset += fullMatch.length - displayName.length
     }
 
-    return ProcessedText(processedText, mentions)
+    return ProcessedText(originalText, mentions)
 }

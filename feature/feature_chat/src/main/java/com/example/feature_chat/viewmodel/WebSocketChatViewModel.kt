@@ -2,6 +2,8 @@ package com.example.feature_chat.viewmodel
 
 import android.net.Uri
 import android.util.Log
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -19,12 +21,16 @@ import com.example.domain.vo.message.MentionInfo
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain_usecase.provider.dm.DMUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
+import com.example.domain_usecase.provider.project.ProjectAuthorizationUseCaseProvider
 import com.example.domain_usecase.usecase.sync.SyncUseCase
 import com.example.feature_chat.model.ChatEvent
 import com.example.feature_chat.model.ChatMessageUiModel
 import com.example.feature_chat.model.ChatUiState
 import com.example.feature_chat.model.MentionSuggestion
 import com.example.feature_chat.service.ChatServiceProvider
+import com.example.feature_chat.ui.components.mention.MentionConstants
+import com.example.feature_chat.util.moveCursorTo
+import com.example.feature_chat.util.replaceTextAndMoveCursor
 import com.example.websocket.core.WebSocketConnectionState
 import com.example.websocket.event.WebSocketDomainEvent
 import com.example.websocket.usecase.WebSocketUseCaseProvider
@@ -64,7 +70,8 @@ class WebSocketChatViewModel @Inject constructor(
     private val chatServiceProvider: ChatServiceProvider,
     private val syncUseCase: SyncUseCase,
     private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider,
-    private val dmUseCaseProvider: DMUseCaseProvider
+    private val dmUseCaseProvider: DMUseCaseProvider,
+    private val projectAuthorizationUseCaseProvider: ProjectAuthorizationUseCaseProvider
 ) : ViewModel() {
 
     // 멘션 제안 최대 표시 개수 (기본 7, 필요 시 변경 가능)
@@ -97,6 +104,13 @@ class WebSocketChatViewModel @Inject constructor(
         } else {
             Log.d(TAG, "Creating services for DM channel: $channelId")
             chatServiceProvider.createForDMChannel(channelId.value)
+        }
+    }
+
+    // Authorization use cases for project channels
+    private val authUseCases by lazy {
+        projectId?.let { pid ->
+            projectAuthorizationUseCaseProvider.createForProject(DocumentId(pid))
         }
     }
     
@@ -212,6 +226,54 @@ class WebSocketChatViewModel @Inject constructor(
             }
             .launchIn(viewModelScope)
 
+        // 권한(쓰기/초대) 선가드: DM 제외, 프로젝트 채널에서 OWNER→권한 확인 후 캐시
+        if (projectId != null) {
+            viewModelScope.launch {
+                val canWrite = when (val res = authUseCases?.ownerOrPermissionUseCase?.invoke(
+                    DocumentId(projectId),
+                    com.example.domain.model.data.project.RolePermission.CHANNEL_WRITE
+                )) {
+                    is com.example.core_common.result.CustomResult.Success -> res.data
+                    else -> false
+                }
+                val canInvite = when (val res = authUseCases?.ownerOrPermissionUseCase?.invoke(
+                    DocumentId(projectId),
+                    com.example.domain.model.data.project.RolePermission.MEMBER_INVITE
+                )) {
+                    is com.example.core_common.result.CustomResult.Success -> res.data
+                    else -> false
+                }
+                _uiState.update { it.copy(canWrite = canWrite, canInvite = canInvite) }
+            }
+        } else {
+            _uiState.update { it.copy(canWrite = !it.isDMBlocked, canInvite = true) }
+        }
+
+    }
+
+    /**
+     * UI 게이트 유틸: OWNER 선검사 결과가 캐시된 상태(canWrite/canInvite)를 사용.
+     */
+    private suspend fun checkAllowed(
+        required: com.example.domain.model.data.project.RolePermission,
+        onDenied: (() -> Unit)? = null
+    ): Boolean {
+        // DM 채널은 프로젝트 권한 미적용
+        if (projectId == null) return true
+
+        val allowed = when (required) {
+            com.example.domain.model.data.project.RolePermission.CHANNEL_WRITE -> uiState.value.canWrite
+            com.example.domain.model.data.project.RolePermission.MEMBER_INVITE -> uiState.value.canInvite
+            else -> true
+        }
+
+        if (!allowed) {
+            val msg = authUseCases?.permissionDeniedMessageUseCase?.invoke(required)
+                ?: "권한이 없습니다: ${required.name}"
+            _eventFlow.emit(ChatEvent.ShowSnackbar(msg))
+            onDenied?.invoke()
+        }
+        return allowed
     }
 
     /**
@@ -279,6 +341,9 @@ class WebSocketChatViewModel @Inject constructor(
                 val senderId = AuthUtil.getCurrentUserId()
                 val currentProjectId = projectId ?: return@launch
 
+                // 권한 게이트: 캐시된 권한 사용
+                if (!checkAllowed(com.example.domain.model.data.project.RolePermission.MEMBER_INVITE)) return@launch
+
                 val inviteContent = "${inviterName}님이 '${projectName}' 프로젝트로 초대했습니다."
                 val metadata = mapOf(
                     "projectId" to currentProjectId,
@@ -323,6 +388,7 @@ class WebSocketChatViewModel @Inject constructor(
     fun editMessage(messageId: String, newContent: String) {
         viewModelScope.launch {
             try {
+                if (!checkAllowed(com.example.domain.model.data.project.RolePermission.CHANNEL_WRITE)) return@launch
                 val result = services.messageService.editMessage(
                     messageId = DocumentId(messageId),
                     newContent = newContent
@@ -354,6 +420,7 @@ class WebSocketChatViewModel @Inject constructor(
     fun deleteMessage(messageId: String) {
         viewModelScope.launch {
             try {
+                if (!checkAllowed(com.example.domain.model.data.project.RolePermission.CHANNEL_WRITE)) return@launch
                 val result = services.messageService.deleteMessage(DocumentId(messageId))
                 
                 when (result) {
@@ -537,12 +604,18 @@ class WebSocketChatViewModel @Inject constructor(
             // 프로젝트 채널: 프로젝트 멤버와 역할 모두 포함
             val currentState = uiState.value
 
+            Log.d(TAG, "🔍 getMentionSuggestions - query: '$query'")
+            Log.d(TAG, "🔍 현재 프로젝트ID: $projectId")
+            Log.d(TAG, "🔍 프로젝트 멤버 수: ${currentState.projectMembers.size}")
+            Log.d(TAG, "🔍 프로젝트 역할 수: ${currentState.projectRoles.size}")
+
             // 프로젝트 멤버 검색
             currentState.projectMembers
                 .filter { member ->
                     query.isEmpty() || member.displayName.contains(query, ignoreCase = true)
                 }
                 .forEach { member ->
+                    Log.d(TAG, "🔍 멤버 추가: ${member.displayName} (ID: ${member.userId})")
                     suggestions.add(
                         MentionSuggestion(
                             type = MentionType.USER,
@@ -555,21 +628,33 @@ class WebSocketChatViewModel @Inject constructor(
                 }
 
             // 프로젝트 역할 검색
-            currentState.projectRoles
+            Log.d(TAG, "🔍 역할 필터링 시작 - 전체 역할 목록:")
+            currentState.projectRoles.forEach { role ->
+                Log.d(TAG, "🔍 역할: ${role.roleName} (ID: ${role.roleId}, 멤버수: ${role.memberCount})")
+            }
+
+            val filteredRoles = currentState.projectRoles
                 .filter { role ->
-                    query.isEmpty() || role.roleName.contains(query, ignoreCase = true)
+                    val matches =
+                        query.isEmpty() || role.roleName.contains(query, ignoreCase = true)
+                    Log.d(TAG, "🔍 역할 '${role.roleName}' 쿼리 매치: $matches (query: '$query')")
+                    matches
                 }
-                .forEach { role ->
-                    suggestions.add(
-                        MentionSuggestion(
-                            type = MentionType.ROLE,
-                            id = role.roleId,
-                            displayName = role.roleName,
-                            profileUrl = null,
-                            subtitle = "${role.memberCount}명의 멤버"
-                        )
+
+            Log.d(TAG, "🔍 필터링된 역할 수: ${filteredRoles.size}")
+
+            filteredRoles.forEach { role ->
+                Log.d(TAG, "🔍 역할 추가: ${role.roleName} (ID: ${role.roleId})")
+                suggestions.add(
+                    MentionSuggestion(
+                        type = MentionType.ROLE,
+                        id = role.roleId,
+                        displayName = role.roleName,
+                        profileUrl = null,
+                        subtitle = "${role.memberCount}명의 멤버"
                     )
-                }
+                )
+            }
         } else {
             // DM 채널: 채팅 참여자만 포함
             val currentState = uiState.value
@@ -600,12 +685,8 @@ class WebSocketChatViewModel @Inject constructor(
         val ordered =
             (prefix.sortedBy { it.displayName.lowercase() } + containsOnly.sortedBy { it.displayName.lowercase() })
 
-        // @everyone 고정 1칸 예약 (프로젝트 채널에서만, 쿼리 비어있거나 'everyone' 포함 시)
-        val reserved = if (projectId != null && (query.isEmpty() || "everyone".contains(
-                query,
-                ignoreCase = true
-            ))
-        ) listOf(
+        // @everyone 특수 멘션 추가 (프로젝트 채널에서만)
+        val reserved = if (projectId != null) listOf(
             MentionSuggestion(
                 type = MentionType.EVERYONE,
                 id = "everyone",
@@ -615,7 +696,21 @@ class WebSocketChatViewModel @Inject constructor(
         ) else emptyList()
 
         val remainingSlots = (mentionSuggestionLimit - reserved.size).coerceAtLeast(0)
-        return (reserved + ordered.take(remainingSlots))
+        val finalSuggestions = (reserved + ordered.take(remainingSlots))
+
+        Log.d(TAG, "🔍 최종 멘션 제안 결과:")
+        Log.d(TAG, "🔍 전체 suggestions 수: ${suggestions.size}")
+        Log.d(TAG, "🔍 ordered 수: ${ordered.size}")
+        Log.d(TAG, "🔍 reserved 수: ${reserved.size}")
+        Log.d(TAG, "🔍 final 수: ${finalSuggestions.size}")
+        finalSuggestions.forEach { suggestion ->
+            Log.d(
+                TAG,
+                "🔍 최종 제안: ${suggestion.type} - ${suggestion.displayName} (ID: ${suggestion.id})"
+            )
+        }
+
+        return finalSuggestions
     }
 
     /**
@@ -709,28 +804,231 @@ class WebSocketChatViewModel @Inject constructor(
      * 쓰기 권한 확인
      */
     fun canPerformWriteOperations(): Boolean {
-        return true // TODO: 실제 권한 확인 로직 구현
+        return if (projectId == null) {
+            !uiState.value.isDMBlocked
+        } else {
+            uiState.value.canWrite
+        }
+    }
+
+    /**
+     * 멘션 텍스트가 수정되었는지 확인하고 해당 멘션을 무효화
+     */
+    private fun checkMentionTextModification(
+        previousText: String,
+        newText: String,
+        cursorPosition: Int
+    ): Boolean {
+        val currentMentions = uiState.value.pendingMessageMentions
+        if (currentMentions.isEmpty()) return false
+
+        // 현재 텍스트에서 멘션 패턴 찾기 (점 포함)
+        val mentionPattern = MentionConstants.MENTION_REGEX_PATTERN.toRegex()
+        val currentMentionTexts = mentionPattern.findAll(newText).map {
+            it.value to (it.range.first..it.range.last)
+        }.toList()
+
+        // 각 등록된 멘션이 현재 텍스트에서 유효한지 확인
+        val invalidMentions = mutableListOf<MentionInfo>()
+
+        currentMentions.forEach { mention ->
+            val mentionText = "@${mention.displayName}"
+            val matchingTextMention = currentMentionTexts.find { it.first == mentionText }
+
+            if (matchingTextMention == null) {
+                // 멘션 텍스트가 완전히 사라졌거나 변경됨
+                invalidMentions.add(mention)
+                Log.d(TAG, "🗑️ 멘션 텍스트 완전 변경/삭제 감지: $mentionText")
+            } else {
+                // 멘션 텍스트는 존재하지만 커서가 멘션 내부에 있고 텍스트가 변경된 경우
+                val mentionRange = matchingTextMention.second
+                val wasCursorInMention = cursorPosition in mentionRange
+                val textChanged = previousText != newText
+
+                if (wasCursorInMention && textChanged) {
+                    // 멘션 내부에서 텍스트 변경이 발생한 경우 (예: @jo|hn -> @joXhn)
+                    invalidMentions.add(mention)
+                    Log.d(TAG, "🗑️ 멘션 내부 수정 감지: $mentionText (커서 위치: $cursorPosition)")
+                }
+            }
+        }
+
+        // 무효화된 멘션들 제거
+        if (invalidMentions.isNotEmpty()) {
+            val remainingMentions = currentMentions.filter { mention ->
+                !invalidMentions.contains(mention)
+            }
+
+            _uiState.update { state ->
+                state.copy(pendingMessageMentions = remainingMentions)
+            }
+
+            // 멘션 매핑에서도 제거
+            invalidMentions.forEach { mention ->
+                val mentionKey = "@${mention.displayName}"
+                currentMentionMappings.remove(mentionKey)
+            }
+
+            Log.d(
+                TAG,
+                "✅ 멘션 텍스트 수정으로 ${invalidMentions.size}개 멘션 제거, ${remainingMentions.size}개 남음"
+            )
+            return true
+        }
+
+        return false
+    }
+
+    /**
+     * 멘션 경계 보호: @username 바로 뒤에 문자가 추가되었는지 감지하고 해당 멘션 무효화
+     */
+    private fun detectMentionBoundaryViolation(
+        previousText: String,
+        newText: String,
+        cursorPosition: Int
+    ): Boolean {
+        // 텍스트가 늘어난 경우만 확인 (문자 추가)
+        if (newText.length <= previousText.length) return false
+
+        val currentMentions = uiState.value.pendingMessageMentions
+        if (currentMentions.isEmpty()) return false
+
+        // 이전 텍스트에서 멘션 위치 찾기 (점 포함)
+        val mentionPattern = MentionConstants.MENTION_REGEX_PATTERN.toRegex()
+        val previousMentions = mentionPattern.findAll(previousText).toList()
+
+        val violatedMentions = mutableListOf<MentionInfo>()
+
+        previousMentions.forEach { previousMatch ->
+            val mentionText = previousMatch.value
+            val mentionEnd = previousMatch.range.last + 1
+
+            // 해당 멘션이 등록된 멘션인지 확인
+            val registeredMention = currentMentions.find { "@${it.displayName}" == mentionText }
+
+            if (registeredMention != null) {
+                // 멘션 바로 뒤에 문자가 추가되었는지 확인
+                val wasAtMentionEnd = cursorPosition == mentionEnd + 1 // +1은 추가된 문자
+                val charAddedAfterMention = newText.length > previousText.length &&
+                        mentionEnd < newText.length &&
+                        newText[mentionEnd] != ' ' // 공백이 아닌 문자가 추가됨
+
+                if (wasAtMentionEnd && charAddedAfterMention) {
+                    violatedMentions.add(registeredMention)
+                    Log.d(TAG, "🗑️ 멘션 경계 침해 감지: $mentionText 뒤에 '${newText[mentionEnd]}' 추가됨")
+                }
+            }
+        }
+
+        // 경계 침해된 멘션들 제거
+        if (violatedMentions.isNotEmpty()) {
+            val remainingMentions = currentMentions.filter { mention ->
+                !violatedMentions.contains(mention)
+            }
+
+            _uiState.update { state ->
+                state.copy(pendingMessageMentions = remainingMentions)
+            }
+
+            // 멘션 매핑에서도 제거
+            violatedMentions.forEach { mention ->
+                val mentionKey = "@${mention.displayName}"
+                currentMentionMappings.remove(mentionKey)
+            }
+
+            Log.d(TAG, "✅ 멘션 경계 침해로 ${violatedMentions.size}개 멘션 제거, ${remainingMentions.size}개 남음")
+            return true
+        }
+
+        return false
+    }
+
+    /**
+     * 백스페이스로 멘션이 제거되었는지 확인하고 처리 (강화된 버전)
+     */
+    private fun checkAndHandleMentionRemoval(previousText: String, newText: String): Boolean {
+        // 텍스트가 단축된 경우만 확인 (백스페이스 등)
+        if (newText.length >= previousText.length) return false
+
+        val currentMentions = uiState.value.pendingMessageMentions
+        if (currentMentions.isEmpty()) return false
+
+        // @username 패턴으로 기존 텍스트에서 멘션 위치 찾기 (점 포함)
+        val mentionPattern = MentionConstants.MENTION_REGEX_PATTERN.toRegex()
+        val previousMentions = mentionPattern.findAll(previousText).map { it.value }.toSet()
+        val newMentions = mentionPattern.findAll(newText).map { it.value }.toSet()
+
+        // 사라진 멘션 텍스트들 찾기
+        val removedMentionTexts = previousMentions - newMentions
+
+        if (removedMentionTexts.isNotEmpty()) {
+            Log.d(TAG, "🗑️ 백스페이스로 멘션 제거 감지: $removedMentionTexts")
+
+            // 사라진 멘션 텍스트에 해당하는 등록된 멘션들 찾기
+            val removedMentions = currentMentions.filter { mention ->
+                val mentionText = "@${mention.displayName}"
+                removedMentionTexts.contains(mentionText)
+            }
+
+            if (removedMentions.isNotEmpty()) {
+                // 남은 멘션들만 유지
+                val remainingMentions = currentMentions - removedMentions.toSet()
+
+                // 상태 업데이트
+                _uiState.update { state ->
+                    state.copy(pendingMessageMentions = remainingMentions)
+                }
+
+                // 멘션 매핑에서도 제거
+                removedMentions.forEach { mention ->
+                    val mentionKey = "@${mention.displayName}"
+                    currentMentionMappings.remove(mentionKey)
+                }
+
+                Log.d(TAG, "✅ 백스페이스로 ${removedMentions.size}개 멘션 제거, ${remainingMentions.size}개 남음")
+                return true
+            }
+        }
+
+        return false
     }
 
     /**
      * 메시지 입력 변경 처리
      */
-    fun onMessageInputChange(text: String) {
+    fun onMessageInputChange(newTextFieldValue: TextFieldValue) {
         viewModelScope.launch {
             try {
-                // 멘션 감지 로직
-                val mentionDetectionResult = detectMentionInput(text)
+                val currentState = uiState.value
+                val previousText = currentState.pendingMessageTextFieldValue.text
+                val newText = newTextFieldValue.text
+                val cursorPosition = newTextFieldValue.selection.end
+
+                // 1. 멘션 텍스트 수정 감지 (우선순위 1)
+                val wasMentionTextModified =
+                    checkMentionTextModification(previousText, newText, cursorPosition)
+
+                // 2. 멘션 경계 침해 감지 (우선순위 2)
+                val wasMentionBoundaryViolated =
+                    detectMentionBoundaryViolation(previousText, newText, cursorPosition)
+
+                // 3. 백스페이스로 멘션 제거 감지 (우선순위 3)
+                val wasBackspaceOverMention = checkAndHandleMentionRemoval(previousText, newText)
+
+                // 4. 멘션 감지 로직 (실제 커서 위치 사용)
+                val mentionDetectionResult = detectMentionInput(newText, cursorPosition)
 
                 Log.d(
                     "WebSocketChatViewModel",
-                    "멘션 감지 결과: ${mentionDetectionResult.shouldShowSuggestions}"
+                    "멘션 처리 결과 - 텍스트수정:$wasMentionTextModified, 경계침해:$wasMentionBoundaryViolated, 백스페이스:$wasBackspaceOverMention, 새감지:${mentionDetectionResult.shouldShowSuggestions}, 커서:$cursorPosition"
                 )
-                _uiState.update { currentState ->
-                    currentState.copy(
-                        pendingMessageText = text,
+                _uiState.update { state ->
+                    state.copy(
+                        pendingMessageTextFieldValue = newTextFieldValue,
                         isMentionSuggestionVisible = mentionDetectionResult.shouldShowSuggestions,
                         mentionQueryText = mentionDetectionResult.query,
                         mentionQueryStartPosition = mentionDetectionResult.startPosition,
+                        selectedMentionIndex = if (mentionDetectionResult.shouldShowSuggestions) 0 else -1, // 새 검색 시 첫 번째 항목 선택
                         mentionSuggestions = if (mentionDetectionResult.shouldShowSuggestions) {
                             getMentionSuggestions(mentionDetectionResult.query)
                         } else {
@@ -747,9 +1045,7 @@ class WebSocketChatViewModel @Inject constructor(
     /**
      * 텍스트에서 멘션 입력 감지
      */
-    private fun detectMentionInput(text: String): MentionDetectionResult {
-        // 현재 커서 위치를 텍스트 끝으로 가정 (실제로는 커서 위치를 받아야 함)
-        val cursorPosition = text.length
+    private fun detectMentionInput(text: String, cursorPosition: Int): MentionDetectionResult {
 
         // 커서 이전 텍스트에서 마지막 @ 문자 찾기
         val lastAtIndex = text.lastIndexOf('@', cursorPosition - 1)
@@ -794,7 +1090,7 @@ class WebSocketChatViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val messageId = uiState.value.editingMessageId
-                val newContent = uiState.value.pendingMessageText
+                val newContent = uiState.value.pendingMessageTextFieldValue.text
 
                 if (messageId != null && newContent.isNotBlank()) {
                     editMessage(messageId, newContent)
@@ -802,7 +1098,7 @@ class WebSocketChatViewModel @Inject constructor(
                         it.copy(
                             isEditing = false,
                             editingMessageId = null,
-                            pendingMessageText = ""
+                            pendingMessageTextFieldValue = TextFieldValue("")
                         )
                     }
                 }
@@ -827,7 +1123,7 @@ class WebSocketChatViewModel @Inject constructor(
     fun onSendMessageClick() {
         viewModelScope.launch {
             try {
-                val content = uiState.value.pendingMessageText.trim()
+                val content = uiState.value.pendingMessageTextFieldValue.text.trim()
                 val attachments = uiState.value.selectedAttachmentUris
 
                 // 전송 가능 조건: 텍스트 있거나 첨부가 있거나
@@ -835,11 +1131,15 @@ class WebSocketChatViewModel @Inject constructor(
 
                 val senderId = AuthUtil.getCurrentUserId()
 
+                // 프로젝트 채널이면 쓰기 권한 검사 (캐시)
+                if (!checkAllowed(com.example.domain.model.data.project.RolePermission.CHANNEL_WRITE)) return@launch
+
                 val result = services.messageService.sendMessage(
                     senderId = UserId(senderId),
                     textContent = content,
                     imageUris = attachments,
-                    replyToMessageId = null
+                    replyToMessageId = null,
+                    mentions = uiState.value.pendingMessageMentions
                 )
 
                 when (result) {
@@ -849,7 +1149,7 @@ class WebSocketChatViewModel @Inject constructor(
                         // 전송 성공 시 입력/첨부/멘션 초기화
                         _uiState.update {
                             it.copy(
-                                pendingMessageText = "",
+                                pendingMessageTextFieldValue = TextFieldValue(""),
                                 selectedAttachmentUris = emptyList(),
                                 isAttachmentAreaVisible = false,
                                 pendingMessageMentions = emptyList(),
@@ -930,7 +1230,7 @@ class WebSocketChatViewModel @Inject constructor(
                     it.copy(
                         isEditing = false,
                         editingMessageId = null,
-                        pendingMessageText = ""
+                        pendingMessageTextFieldValue = TextFieldValue("")
                     )
                 }
             } catch (e: Exception) {
@@ -948,7 +1248,8 @@ class WebSocketChatViewModel @Inject constructor(
                 Log.d(TAG, "👤 멘션 제안 클릭: ${suggestion.displayName}")
 
                 val currentState = uiState.value
-                val currentText = currentState.pendingMessageText
+                val currentTextFieldValue = currentState.pendingMessageTextFieldValue
+                val currentText = currentTextFieldValue.text
                 val queryStartPosition = currentState.mentionQueryStartPosition
 
                 if (queryStartPosition >= 0 && queryStartPosition < currentText.length) {
@@ -957,9 +1258,20 @@ class WebSocketChatViewModel @Inject constructor(
                     val afterMention =
                         currentText.substring(queryStartPosition + 1 + currentState.mentionQueryText.length)
 
-                    // 간단한 멘션 표시: @displayName 형태로 삽입
+                    // 간단한 멘션 표시: @displayName 형태로 삽입 (강제로 뒤에 공백 추가)
                     val mentionText = "@${suggestion.displayName}"
-                    val newText = "$beforeMention$mentionText$afterMention"
+                    val spaceAfterMention = " " // 무조건 공백 한 칸 추가
+                    val newText = "$beforeMention$mentionText$spaceAfterMention$afterMention"
+
+                    // 커서를 멘션 뒤 공백 다음으로 위치 계산
+                    val newCursorPosition =
+                        beforeMention.length + mentionText.length + spaceAfterMention.length
+
+                    // TextFieldValue로 새로운 상태 생성
+                    val newTextFieldValue = TextFieldValue(
+                        text = newText,
+                        selection = TextRange(newCursorPosition.coerceIn(0, newText.length))
+                    )
 
                     // 현재 메시지의 멘션 리스트에 추가
                     val mentionInfo = MentionInfo.create(
@@ -972,10 +1284,11 @@ class WebSocketChatViewModel @Inject constructor(
                     // 상태 업데이트
                     _uiState.update { state ->
                         state.copy(
-                            pendingMessageText = newText,
+                            pendingMessageTextFieldValue = newTextFieldValue,
                             isMentionSuggestionVisible = false,
                             mentionQueryText = "",
                             mentionQueryStartPosition = -1,
+                            selectedMentionIndex = -1,
                             mentionSuggestions = emptyList()
                         )
                     }
@@ -990,6 +1303,66 @@ class WebSocketChatViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e(TAG, "❌ 멘션 제안 클릭 처리 실패", e)
             }
+        }
+    }
+
+    /**
+     * 키보드 화살표 키로 이전 멘션 제안 선택
+     */
+    fun selectPreviousMention() {
+        val currentState = uiState.value
+        if (!currentState.isMentionSuggestionVisible || currentState.mentionSuggestions.isEmpty()) {
+            return
+        }
+
+        val newIndex = if (currentState.selectedMentionIndex <= 0) {
+            currentState.mentionSuggestions.size - 1  // 처음에서 위로 가면 마지막으로
+        } else {
+            currentState.selectedMentionIndex - 1
+        }
+
+        _uiState.update { state ->
+            state.copy(selectedMentionIndex = newIndex)
+        }
+        Log.d(TAG, "🔝 이전 멘션 선택: $newIndex")
+    }
+
+    /**
+     * 키보드 화살표 키로 다음 멘션 제안 선택
+     */
+    fun selectNextMention() {
+        val currentState = uiState.value
+        if (!currentState.isMentionSuggestionVisible || currentState.mentionSuggestions.isEmpty()) {
+            return
+        }
+
+        val newIndex =
+            if (currentState.selectedMentionIndex >= currentState.mentionSuggestions.size - 1) {
+                0  // 마지막에서 아래로 가면 처음으로
+            } else {
+                currentState.selectedMentionIndex + 1
+            }
+
+        _uiState.update { state ->
+            state.copy(selectedMentionIndex = newIndex)
+        }
+        Log.d(TAG, "🔽 다음 멘션 선택: $newIndex")
+    }
+
+    /**
+     * 키보드 Enter 키로 현재 선택된 멘션 제안 적용
+     */
+    fun selectCurrentMention() {
+        val currentState = uiState.value
+        if (!currentState.isMentionSuggestionVisible || currentState.mentionSuggestions.isEmpty()) {
+            return
+        }
+
+        val selectedIndex = currentState.selectedMentionIndex
+        if (selectedIndex >= 0 && selectedIndex < currentState.mentionSuggestions.size) {
+            val selectedSuggestion = currentState.mentionSuggestions[selectedIndex]
+            Log.d(TAG, "⌨️ 키보드로 멘션 선택: ${selectedSuggestion.displayName}")
+            onMentionSuggestionClick(selectedSuggestion)
         }
     }
 
@@ -1120,7 +1493,7 @@ class WebSocketChatViewModel @Inject constructor(
                     it.copy(
                         isEditing = true,
                         editingMessageId = message.messageId,
-                        pendingMessageText = message.message
+                        pendingMessageTextFieldValue = TextFieldValue(message.message)
                     )
                 }
             } catch (e: Exception) {
@@ -1354,7 +1727,14 @@ class WebSocketChatViewModel @Inject constructor(
             val projectMembers = memberService?.loadMembers() ?: emptyList()
 
             // 실제 프로젝트 역할 로드 (GetProjectRolesUseCase 활용, +@everyone 추가)
-            val projectRoles = roleService?.loadRoles() ?: emptyList()
+            val loadedRoles = roleService?.loadRoles() ?: emptyList()
+
+            // 역할별 멤버 수 계산 및 업데이트
+            val projectRoles = if (loadedRoles.isNotEmpty()) {
+                roleService?.updateRoleMemberCounts(loadedRoles) ?: loadedRoles
+            } else {
+                loadedRoles
+            }
 
             _uiState.update { state ->
                 state.copy(

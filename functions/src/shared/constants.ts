@@ -61,6 +61,7 @@ export const COLLECTIONS = {
   FRIENDS: "friends",
   PROJECTS: "projects",
   MEMBERS: "members",
+  ROLES: "roles",
   INVITES: "invites",
   PROJECT_INVITATIONS: "project_invitations",
   MESSAGES: "messages",

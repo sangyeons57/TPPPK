@@ -57,7 +57,24 @@ class WebSocketDomainMapper @Inject constructor() {
                     replyToMessageId = message.message?.replyToMessageId,
                     roomId = roomId ?: message.roomId,
                     originalPayload = message.message?.payload?.toString(),  // payload 전체 보존
-                    messageTypeString = message.message?.messageType
+                    messageTypeString = message.message?.messageType,
+                    mentions = try {
+                        val m = message.message?.mentions
+                        if (m.isNullOrEmpty()) emptyList() else m.mapNotNull { ws ->
+                            try {
+                                val type = com.example.domain.vo.MentionType.valueOf(ws.type)
+                                com.example.domain.vo.message.MentionInfo.create(
+                                    type,
+                                    ws.id,
+                                    ws.displayName
+                                )
+                            } catch (_: Exception) {
+                                null
+                            }
+                        }
+                    } catch (_: Exception) {
+                        emptyList()
+                    }
                 )
             }
 
@@ -215,7 +232,7 @@ class WebSocketDomainMapper @Inject constructor() {
             createdAt = parseTimestamp(event.timestamp),
             updatedAt = parseTimestamp(event.timestamp),
             isDeleted = MessageIsDeleted.FALSE,
-            mentions = emptyList(), // TODO: WebSocket에서 mentions 파싱 지원 시 추가
+            mentions = event.mentions,
             channelId = ChannelId(event.roomId)
         )
     }
@@ -287,6 +304,20 @@ class WebSocketDomainMapper @Inject constructor() {
                 )
             }
         }
+        // Map domain mentions -> transport mentions
+        val wsMentions: List<com.example.websocket.core.WsMention>? = try {
+            val list = message.mentions
+            if (list.isEmpty()) null else list.map {
+                com.example.websocket.core.WsMention(
+                    type = it.type.name,
+                    id = it.id,
+                    displayName = it.displayName
+                )
+            }
+        } catch (_: Exception) {
+            null
+        }
+
         return WebSocketMessage(
             type = messageType,
             roomId = roomId,
@@ -296,7 +327,8 @@ class WebSocketDomainMapper @Inject constructor() {
                 payload = payload,
                 senderId = message.senderId.value,
                 replyToMessageId = message.replyToMessageId?.value,
-                timestamp = message.createdAt.epochSecond.toDouble()
+                timestamp = message.createdAt.epochSecond.toDouble(),
+                mentions = wsMentions
             )
         )
     }
