@@ -19,10 +19,10 @@ enum class MemberStatus {
     BLOCKED,
 
     /**
-     * 영구 차단된 멤버 - 프로젝트에 재참여할 수 없음
-     * 심각한 위반 행위로 인해 영구적으로 제한됩니다.
+     * 프로젝트에서 나간 멤버 - 소프트 딜리트 상태
+     * 필요 시 다시 프로젝트에 참여할 수 있습니다.
      */
-    BANNED;
+    LEAVE;
 
     companion object {
         /**
@@ -33,7 +33,8 @@ enum class MemberStatus {
             return when (value?.uppercase()) {
                 "ACTIVE" -> ACTIVE
                 "BLOCKED" -> BLOCKED
-                "BANNED" -> BANNED
+                "LEAVE" -> LEAVE
+                "BANNED" -> BLOCKED // 기존 BANNED 데이터는 BLOCKED로 마이그레이션
                 else -> ACTIVE // 기존 데이터 호환성을 위한 기본값
             }
         }

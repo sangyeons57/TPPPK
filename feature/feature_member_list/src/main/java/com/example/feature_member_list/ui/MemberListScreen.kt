@@ -79,6 +79,7 @@ fun MemberListScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var showDeleteConfirmationDialog by remember { mutableStateOf<MemberUiModel?>(null) }
+    var showBlockConfirmationDialog by remember { mutableStateOf<MemberUiModel?>(null) }
     var showAddMemberDialogState by remember { mutableStateOf(false) }
     
     // 🆕 Bottom Sheet 상태 관리
@@ -90,6 +91,9 @@ fun MemberListScreen(
             when (event) {
                 is MemberListEvent.ShowDeleteConfirm -> {
                     showDeleteConfirmationDialog = event.member
+                }
+                is MemberListEvent.ShowBlockConfirm -> {
+                    showBlockConfirmationDialog = event.member
                 }
                 is MemberListEvent.ShowSnackbar -> {
                     snackbarHostState.showSnackbar(event.message)
@@ -159,7 +163,7 @@ fun MemberListScreen(
                 selectedMember = null
             },
             onBlockMember = { member ->
-                viewModel.blockMember(member)
+                viewModel.requestBlockMember(member)
                 showBottomSheet = false
                 selectedMember = null
             }
@@ -183,6 +187,35 @@ fun MemberListScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirmationDialog = null }) { Text("취소") }
+            }
+        )
+    }
+
+    // 멤버 차단 확인 다이얼로그
+    showBlockConfirmationDialog?.let { memberUiModel ->
+        AlertDialog(
+            onDismissRequest = { showBlockConfirmationDialog = null },
+            title = { Text("멤버 차단") },
+            text = { Text("${memberUiModel.userName.value}님을 차단하시겠습니까?\n차단된 멤버는 프로젝트에 접근할 수 없습니다.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.confirmBlockMember(memberUiModel)
+                        showBlockConfirmationDialog = null
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("차단")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showBlockConfirmationDialog = null }
+                ) {
+                    Text("취소")
+                }
             }
         )
     }
@@ -211,7 +244,7 @@ fun MemberOptionsBottomSheet(
     onDismiss: () -> Unit,
     onEditMember: (MemberUiModel) -> Unit,
     onDeleteMember: (MemberUiModel) -> Unit,
-    onBlockMember: (MemberUiModel) -> Unit = {}, // 차단 액션
+    onBlockMember: (MemberUiModel) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // 🚨 자기 자신인지 확인
@@ -262,7 +295,7 @@ fun MemberOptionsBottomSheet(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // 편집 옵션
+            // 편집 옵션 (모든 사용자가 사용 가능, 대상에 따라 실제 권한은 ViewModel에서 검증)
             MemberOptionItem(
                 icon = Icons.Filled.Edit,
                 title = "멤버 편집",
@@ -270,21 +303,24 @@ fun MemberOptionsBottomSheet(
                 onClick = { onEditMember(member) }
             )
 
-            // Owner 전용 옵션들 (자기 자신이 아닌 경우에만)
-            if (isCurrentUserOwner && !isSelf) {
-                MemberOptionItem(
-                    icon = Icons.Filled.Block,
-                    title = "멤버 차단",
-                    subtitle = "영구적으로 프로젝트 접근 금지",
-                    onClick = { onBlockMember(member) },
-                    isDestructive = true
-                )
-                
+            // 관리 권한이 있는 사용자만 표시 (오너 또는 MEMBER_MANAGE 권한)
+            // 단, 대상이 오너인 경우는 오너만 관리 가능 (ViewModel에서 추가 검증)
+            if (!isSelf) {
+                // 멤버 내보내기
                 MemberOptionItem(
                     icon = Icons.Filled.Delete,
                     title = "멤버 내보내기",
                     subtitle = "프로젝트에서 제거",
                     onClick = { onDeleteMember(member) },
+                    isDestructive = true
+                )
+
+                // 멤버 차단
+                MemberOptionItem(
+                    icon = Icons.Filled.Block,
+                    title = "멤버 차단",
+                    subtitle = "임시적으로 접근 제한",
+                    onClick = { onBlockMember(member) },
                     isDestructive = true
                 )
             }

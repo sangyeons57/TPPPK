@@ -2,17 +2,23 @@ package com.example.feature_chat.ui.components.message
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.core_ui.components.attachment.ChatImage
@@ -27,7 +33,7 @@ fun ImageMessageComponent(
     onImageClick: (String, List<String>, Int) -> Unit = { _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
+    LocalContext.current
     val imageUrls = message.imageUrls
 
     android.util.Log.d(
@@ -203,150 +209,24 @@ private fun MultipleImagesView(
     isLoading: Boolean,
     modifier: Modifier = Modifier
 ) {
-    when (imageUrls.size) {
-        2 -> {
-            // 2개 이미지 - 나란히 배치
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                imageUrls.forEachIndexed { index, imageUrl ->
-                    MultipleImageItem(
-                        imageUrl = imageUrl,
-                        onClick = { onImageClick(imageUrl, imageUrls, index) },
-                        isLoading = isLoading,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-        }
-
-        3 -> {
-            // 3개 이미지 - 첫 번째는 크게, 나머지는 작게
-            Row(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                MultipleImageItem(
-                    imageUrl = imageUrls[0],
-                    onClick = { onImageClick(imageUrls[0], imageUrls, 0) },
-                    isLoading = isLoading,
-                    modifier = Modifier.weight(2f)
-                )
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    MultipleImageItem(
-                        imageUrl = imageUrls[1],
-                        onClick = { onImageClick(imageUrls[1], imageUrls, 1) },
-                        isLoading = isLoading,
-                        modifier = Modifier.weight(1f)
-                    )
-                    MultipleImageItem(
-                        imageUrl = imageUrls[2],
-                        onClick = { onImageClick(imageUrls[2], imageUrls, 2) },
-                        isLoading = isLoading,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-        }
-
-        4 -> {
-            // 4개 이미지 - 2x2 그리드
-            Column(
-                modifier = modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    MultipleImageItem(
-                        imageUrl = imageUrls[0],
-                        onClick = { onImageClick(imageUrls[0], imageUrls, 0) },
-                        isLoading = isLoading,
-                        modifier = Modifier.weight(1f)
-                    )
-                    MultipleImageItem(
-                        imageUrl = imageUrls[1],
-                        onClick = { onImageClick(imageUrls[1], imageUrls, 1) },
-                        isLoading = isLoading,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    MultipleImageItem(
-                        imageUrl = imageUrls[2],
-                        onClick = { onImageClick(imageUrls[2], imageUrls, 2) },
-                        isLoading = isLoading,
-                        modifier = Modifier.weight(1f)
-                    )
-                    MultipleImageItem(
-                        imageUrl = imageUrls[3],
-                        onClick = { onImageClick(imageUrls[3], imageUrls, 3) },
-                        isLoading = isLoading,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-        }
-
-        else -> {
-            // 5개 이상 이미지 - 가로 스크롤
-            LazyRow(
-                modifier = modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(horizontal = 4.dp)
-            ) {
-                items(imageUrls) { imageUrl ->
-                    val index = imageUrls.indexOf(imageUrl)
-                    MultipleImageItem(
-                        imageUrl = imageUrl,
-                        onClick = { onImageClick(imageUrl, imageUrls, index) },
-                        isLoading = isLoading,
-                        modifier = Modifier.width(120.dp)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun MultipleImageItem(
-    imageUrl: String,
-    onClick: () -> Unit,
-    isLoading: Boolean,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .aspectRatio(1f)
-            .clip(RoundedCornerShape(8.dp))
-            .clickable { onClick() }
+    // 모든 이미지를 세로로 순서대로 배치
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        ChatImage(
-            model = imageUrl,
-            contentDescription = "이미지",
-            modifier = Modifier.fillMaxSize()
-        )
+        imageUrls.forEachIndexed { index, imageUrl ->
+            android.util.Log.d(
+                "MultipleImagesView",
+                "🖼️ [UI표시] 이미지 ${index + 1}/${imageUrls.size}: $imageUrl"
+            )
 
-        if (isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.3f)),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(
-                    color = Color.White,
-                    modifier = Modifier.size(20.dp),
-                    strokeWidth = 2.dp
-                )
-            }
+            SingleImageView(
+                imageUrl = imageUrl,
+                onClick = { onImageClick(imageUrl, imageUrls, index) },
+                isLoading = isLoading,
+                modifier = Modifier.heightIn(max = 200.dp) // 각 이미지 최대 높이 200dp로 제한
+            )
         }
     }
 }
+

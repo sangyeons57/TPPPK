@@ -6,10 +6,10 @@ import com.example.domain_repository.base.AuthRepository
 import com.example.domain_repository.base.MemberRepository
 import com.example.domain_repository.base.PermissionRepository
 import com.example.domain_repository.base.ProjectRoleRepository
-import com.example.domain_usecase.usecase.project.authorization.GetUserPermissionsForProjectUseCase
-import com.example.domain_usecase.usecase.project.authorization.GetUserPermissionsForProjectUseCaseImpl
-import com.example.domain_usecase.usecase.project.authorization.GetUserRolesForProjectUseCase
-import com.example.domain_usecase.usecase.project.authorization.GetUserRolesForProjectUseCaseImpl
+import com.example.domain_usecase.usecase.project.member.GetUserPermissionsForProjectUseCase
+import com.example.domain_usecase.usecase.project.member.GetUserPermissionsForProjectUseCaseImpl
+import com.example.domain_usecase.usecase.project.member.GetUserRolesForProjectUseCase
+import com.example.domain_usecase.usecase.project.member.GetUserRolesForProjectUseCaseImpl
 import com.example.domain_usecase.usecase.project.role.CreateProjectRoleUseCase
 import com.example.domain_usecase.usecase.project.role.CreateProjectRoleUseCaseImpl
 import com.example.domain_usecase.usecase.project.role.CreateRoleUseCase
@@ -89,6 +89,7 @@ class ProjectRoleUseCaseProvider @Inject constructor(
                 projectRoleRepository = this.projectRoleRepository
             ),
             getUserRolesForProjectUseCase = GetUserRolesForProjectUseCaseImpl(
+                authRepository = this.authRepository,
                 memberRepository = this.memberRepository
             ),
             
@@ -100,8 +101,9 @@ class ProjectRoleUseCaseProvider @Inject constructor(
                 permissionRepository = this.permissionRepository
             ),
             getUserPermissionsForProjectUseCase = GetUserPermissionsForProjectUseCaseImpl(
+                authRepository = this.authRepository,
                 memberRepository = this.memberRepository,
-                projectRoleRepository = this.projectRoleRepository,
+                projectRoleRepository = this.projectRoleRepository
             )
         )
     }

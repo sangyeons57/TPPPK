@@ -17,7 +17,7 @@ import {
 interface BlockMemberRequest {
   projectId: string;
   targetUserId: string;
-  blockType: 'blocked' | 'banned'; // blocked = temporary, banned = permanent
+  blockType: 'blocked'; // blocked = temporary block
 }
 
 interface BlockMemberResponse {
@@ -58,8 +58,8 @@ export const blockMember = onCall(
           validateProjectId(projectId);
 
           // Validate blockType
-          if (!['blocked', 'banned'].includes(blockType)) {
-            throw new AppError("invalid-argument", "blockType must be 'blocked' or 'banned'");
+          if (blockType !== 'blocked') {
+            throw new AppError("invalid-argument", "blockType must be 'blocked'");
           }
 
           const firestore = admin.firestore();
@@ -72,14 +72,46 @@ export const blockMember = onCall(
 
           const projectData = projectSnap.data() as any;
 
-          // Verify caller is project owner
-          if (projectData.ownerId !== userId) {
-            throw new AppError("permission-denied", "Only project owner can block members");
+          // 🚨 오너 보호: 대상이 오너인 경우 차단 금지
+          if (targetUserId === projectData.ownerId) {
+            throw new AppError("permission-denied", "Cannot block the project owner");
           }
 
-          // Prevent owner from blocking themselves
-          if (targetUserId === projectData.ownerId) {
-            throw new AppError("invalid-argument", "Owner cannot block themselves");
+          // 권한 확인: 오너이거나 MEMBER_MANAGE 권한이 있어야 함
+          const isOwner = projectData.ownerId === userId;
+          
+          if (!isOwner) {
+            // 일반 멤버인 경우 MEMBER_MANAGE 권한 확인
+            const memberRef = projectRef.collection(COLLECTIONS.MEMBERS).doc(userId);
+            const memberSnap = await memberRef.get();
+            
+            if (!memberSnap.exists) {
+              throw new AppError("permission-denied", "User is not a member of this project");
+            }
+
+            const memberData = memberSnap.data() as any;
+            const roleIds = memberData.roleIds || [];
+            
+            // 멤버의 역할들을 확인하여 MEMBER_MANAGE 권한이 있는지 검사
+            let hasMemberManagePermission = false;
+            for (const roleId of roleIds) {
+              const roleRef = firestore.collection(COLLECTIONS.PROJECTS).doc(projectId)
+                .collection(COLLECTIONS.ROLES).doc(roleId);
+              const roleSnap = await roleRef.get();
+              
+              if (roleSnap.exists) {
+                const roleData = roleSnap.data() as any;
+                const permissions = roleData.permissions || {};
+                if (permissions.MEMBER_MANAGE === true) {
+                  hasMemberManagePermission = true;
+                  break;
+                }
+              }
+            }
+            
+            if (!hasMemberManagePermission) {
+              throw new AppError("permission-denied", "User does not have permission to manage members");
+            }
           }
 
           // Verify target user is a member
@@ -90,15 +122,16 @@ export const blockMember = onCall(
             throw new AppError("not-found", "Target user is not a member of this project");
           }
 
-          // Update member status instead of deleting
+          // Update member status to blocked (keep member record)
           await memberRef.update({
             status: blockType,
             blockedAt: admin.firestore.FieldValue.serverTimestamp(),
             blockedBy: userId,
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
           });
+          logger.info("Updated member status to blocked", { projectId, targetUserId, blockedBy: userId });
 
-          // Remove user wrapper to prevent access to the project
+          // Remove user wrapper to prevent access to the project (hard delete)
           const wrapperRef = firestore
             .collection(COLLECTIONS.USERS)
             .doc(targetUserId)
@@ -107,6 +140,18 @@ export const blockMember = onCall(
           await wrapperRef.delete();
           logger.info("Deleted project wrapper for blocked user", { projectId, userId: targetUserId });
 
+          // Optional: Add record to blocked_members collection for additional tracking
+          const blockedMemberRef = projectRef.collection(COLLECTIONS.BLOCKED_MEMBERS).doc(targetUserId);
+          await blockedMemberRef.set({
+            blockedBy: userId,
+            blockedAt: admin.firestore.FieldValue.serverTimestamp(),
+            blockType: blockType,
+            reason: "Manual block by admin",
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+          logger.info("Added blocked member record", { projectId, targetUserId, blockedBy: userId });
+
           logger.info("Member blocked successfully", { 
             projectId, 
             targetUserId, 
@@ -114,10 +159,9 @@ export const blockMember = onCall(
             blockedBy: userId
           });
 
-          const actionMessage = blockType === 'banned' ? 'banned' : 'blocked';
           return { 
             success: true, 
-            message: `Member ${actionMessage} successfully`
+            message: `Member blocked successfully`
           };
         }
       );

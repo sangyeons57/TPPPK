@@ -46,8 +46,28 @@ class TaskSyncPort @Inject constructor(
         val path = CollectionPath.tasks(ChannelId(channelId))
         taskRemoteDataSource.setCollection(path)
 
+        // Gemini-added temporary logging for PULL
+        Log.d(TAG, "Pulling from Firestore for channel $channelId with cursor: '$cursor'")
+        // End of Gemini-added logging
+
         val dtoBatch = taskRemoteDataSource.pullSince(cursor, limit)
         val items = dtoBatch.items.map { dto -> taskMapper.dtoToDomain(dto) }
+
+        // Gemini-added temporary logging for PULL data
+        Log.d(
+            TAG,
+            "Pulled ${items.size} items from Firestore. HasMore: ${dtoBatch.hasMore}, NewCursor: ${dtoBatch.nextCursor}"
+        )
+        items.take(5).forEach { task ->
+            Log.d(
+                TAG,
+                "  - Pulled Task: id=${task.id.value}, content='${task.content.value}', order=${task.order.value}, updatedAt=${task.updatedAt}"
+            )
+        }
+        if (items.size > 5) {
+            Log.d(TAG, "  - ... and ${items.size - 5} more items.")
+        }
+        // End of Gemini-added logging
 
         return RemoteBatch(
             items = items,

@@ -21,7 +21,6 @@ import com.example.domain.vo.message.MentionInfo
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain_usecase.provider.dm.DMUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
-import com.example.domain_usecase.provider.project.ProjectAuthorizationUseCaseProvider
 import com.example.domain_usecase.usecase.sync.SyncUseCase
 import com.example.feature_chat.model.ChatEvent
 import com.example.feature_chat.model.ChatMessageUiModel
@@ -29,8 +28,6 @@ import com.example.feature_chat.model.ChatUiState
 import com.example.feature_chat.model.MentionSuggestion
 import com.example.feature_chat.service.ChatServiceProvider
 import com.example.feature_chat.ui.components.mention.MentionConstants
-import com.example.feature_chat.util.moveCursorTo
-import com.example.feature_chat.util.replaceTextAndMoveCursor
 import com.example.websocket.core.WebSocketConnectionState
 import com.example.websocket.event.WebSocketDomainEvent
 import com.example.websocket.usecase.WebSocketUseCaseProvider
@@ -71,15 +68,8 @@ class WebSocketChatViewModel @Inject constructor(
     private val syncUseCase: SyncUseCase,
     private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider,
     private val dmUseCaseProvider: DMUseCaseProvider,
-    private val projectAuthorizationUseCaseProvider: ProjectAuthorizationUseCaseProvider
 ) : ViewModel() {
 
-    // 멘션 제안 최대 표시 개수 (기본 7, 필요 시 변경 가능)
-    private var mentionSuggestionLimit: Int = 7
-
-    fun setMentionSuggestionLimit(limit: Int) {
-        mentionSuggestionLimit = limit.coerceAtLeast(1)
-    }
 
 
     private val compositeChannelId: ChannelId =
@@ -108,9 +98,9 @@ class WebSocketChatViewModel @Inject constructor(
     }
 
     // Authorization use cases for project channels
-    private val authUseCases by lazy {
+    private val memberUseCases by lazy {
         projectId?.let { pid ->
-            projectAuthorizationUseCaseProvider.createForProject(DocumentId(pid))
+            projectMemberUseCaseProvider.createForProject(DocumentId(pid))
         }
     }
     
@@ -229,18 +219,18 @@ class WebSocketChatViewModel @Inject constructor(
         // 권한(쓰기/초대) 선가드: DM 제외, 프로젝트 채널에서 OWNER→권한 확인 후 캐시
         if (projectId != null) {
             viewModelScope.launch {
-                val canWrite = when (val res = authUseCases?.ownerOrPermissionUseCase?.invoke(
+                val canWrite = when (val res = memberUseCases?.ownerOrPermissionUseCase?.invoke(
                     DocumentId(projectId),
                     com.example.domain.model.data.project.RolePermission.CHANNEL_WRITE
                 )) {
-                    is com.example.core_common.result.CustomResult.Success -> res.data
+                    is CustomResult.Success -> res.data
                     else -> false
                 }
-                val canInvite = when (val res = authUseCases?.ownerOrPermissionUseCase?.invoke(
+                val canInvite = when (val res = memberUseCases?.ownerOrPermissionUseCase?.invoke(
                     DocumentId(projectId),
                     com.example.domain.model.data.project.RolePermission.MEMBER_INVITE
                 )) {
-                    is com.example.core_common.result.CustomResult.Success -> res.data
+                    is CustomResult.Success -> res.data
                     else -> false
                 }
                 _uiState.update { it.copy(canWrite = canWrite, canInvite = canInvite) }
@@ -268,7 +258,7 @@ class WebSocketChatViewModel @Inject constructor(
         }
 
         if (!allowed) {
-            val msg = authUseCases?.permissionDeniedMessageUseCase?.invoke(required)
+            val msg = memberUseCases?.permissionDeniedMessageUseCase?.invoke(required)
                 ?: "권한이 없습니다: ${required.name}"
             _eventFlow.emit(ChatEvent.ShowSnackbar(msg))
             onDenied?.invoke()
@@ -695,7 +685,7 @@ class WebSocketChatViewModel @Inject constructor(
             )
         ) else emptyList()
 
-        val remainingSlots = (mentionSuggestionLimit - reserved.size).coerceAtLeast(0)
+        val remainingSlots = (uiState.value.mentionSuggestionLimit - reserved.size).coerceAtLeast(0)
         val finalSuggestions = (reserved + ordered.take(remainingSlots))
 
         Log.d(TAG, "🔍 최종 멘션 제안 결과:")

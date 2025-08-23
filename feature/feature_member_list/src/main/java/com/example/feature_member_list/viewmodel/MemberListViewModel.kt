@@ -9,14 +9,13 @@ import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
 import com.example.domain.model.base.Role
+import com.example.domain.model.data.project.RolePermission
 import com.example.domain.model.ui.data.MemberUiModel
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.Name
 import com.example.domain.vo.UserId
 import com.example.domain.vo.user.UserName
-import com.example.domain.model.data.project.RolePermission
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
-import com.example.domain_usecase.provider.project.ProjectAuthorizationUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectRoleUseCaseProvider
 import com.example.domain_usecase.provider.user.UserUseCaseProvider
@@ -58,6 +57,11 @@ sealed class MemberListEvent {
      * 멤버 삭제 확인 다이얼로그 표시 이벤트
      */
     data class ShowDeleteConfirm(val member: MemberUiModel) : MemberListEvent()
+
+    /**
+     * 멤버 차단 확인 다이얼로그 표시 이벤트
+     */
+    data class ShowBlockConfirm(val member: MemberUiModel) : MemberListEvent()
     
     /**
      * 스낵바 메시지 표시 이벤트
@@ -80,7 +84,6 @@ sealed class MemberListEvent {
 @HiltViewModel
 class MemberListViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val projectAuthorizationUseCaseProvider: ProjectAuthorizationUseCaseProvider,
     private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider,
     private val userUseCaseProvider: UserUseCaseProvider,
     private val projectRoleUseCaseProvider: ProjectRoleUseCaseProvider,
@@ -128,9 +131,9 @@ class MemberListViewModel @Inject constructor(
 
     private fun computeInvitePermission() {
         viewModelScope.launch {
-            val auth = projectAuthorizationUseCaseProvider.createForProject(projectId)
+            val memberUseCases = projectMemberUseCaseProvider.createForProject(projectId)
             when (val allowed =
-                auth.ownerOrPermissionUseCase(projectId, RolePermission.MEMBER_INVITE)) {
+                memberUseCases.ownerOrPermissionUseCase(projectId, RolePermission.MEMBER_INVITE)) {
                 is CustomResult.Success -> _uiState.update { it.copy(canInvite = allowed.data) }
                 else -> _uiState.update { it.copy(canInvite = false) }
             }
@@ -139,9 +142,9 @@ class MemberListViewModel @Inject constructor(
 
     private fun computeManagePermission() {
         viewModelScope.launch {
-            val auth = projectAuthorizationUseCaseProvider.createForProject(projectId)
+            val memberUseCases = projectMemberUseCaseProvider.createForProject(projectId)
             when (val allowed =
-                auth.ownerOrPermissionUseCase(projectId, RolePermission.MEMBER_MANAGE)) {
+                memberUseCases.ownerOrPermissionUseCase(projectId, RolePermission.MEMBER_MANAGE)) {
                 is CustomResult.Success -> _uiState.update { it.copy(canManage = allowed.data) }
                 else -> _uiState.update { it.copy(canManage = false) }
             }
@@ -150,8 +153,8 @@ class MemberListViewModel @Inject constructor(
 
     fun notifyNoManagePermission() {
         viewModelScope.launch {
-            val auth = projectAuthorizationUseCaseProvider.createForProject(projectId)
-            val msg = auth.permissionDeniedMessageUseCase(RolePermission.MEMBER_MANAGE)
+            val memberUseCases = projectMemberUseCaseProvider.createForProject(projectId)
+            val msg = memberUseCases.permissionDeniedMessageUseCase(RolePermission.MEMBER_MANAGE)
             _eventFlow.emit(MemberListEvent.ShowSnackbar(msg))
         }
     }
@@ -342,6 +345,33 @@ class MemberListViewModel @Inject constructor(
                 return@launch
             }
 
+            // 🚨 오너 보호: 대상 멤버 관리 권한 확인
+            when (val canManageResult = projectMemberUseCases.canManageTargetMemberUseCase.invoke(
+                projectId,
+                member.userId
+            )) {
+                is CustomResult.Success -> {
+                    if (!canManageResult.data) {
+                        _eventFlow.emit(MemberListEvent.ShowSnackbar("해당 멤버를 관리할 권한이 없습니다"))
+                        return@launch
+                    }
+                }
+
+                is CustomResult.Failure -> {
+                    Log.e(
+                        "MemberListViewModel",
+                        "Failed to check manage permission: ${canManageResult.error}"
+                    )
+                    _eventFlow.emit(MemberListEvent.ShowSnackbar("권한 확인에 실패했습니다"))
+                    return@launch
+                }
+
+                else -> {
+                    _eventFlow.emit(MemberListEvent.ShowSnackbar("권한 확인 중 오류가 발생했습니다"))
+                    return@launch
+                }
+            }
+
             _uiState.update { it.copy(isLoading = true) }
             val result = projectMemberUseCases.removeMemberUseCase(projectId, member.userId)
             when (result){
@@ -436,35 +466,84 @@ class MemberListViewModel @Inject constructor(
     }
 
     /**
-     * 멤버를 차단하는 함수
+     * 멤버 차단을 요청합니다.
      */
-    fun blockMember(member: MemberUiModel) {
+    fun requestBlockMember(member: MemberUiModel) {
         viewModelScope.launch {
-            // 🚨 자기 자신 차단 방지 체크
-            val currentUserId = _uiState.value.currentUserId
-            if (currentUserId != null && currentUserId.value == member.userId.value) {
-                _eventFlow.emit(MemberListEvent.ShowSnackbar("자기 자신은 차단할 수 없습니다."))
-                return@launch
-            }
-
-            _uiState.update { it.copy(isLoading = true) }
-            val result =
-                projectMemberUseCases.blockMemberUseCase.blockMember(projectId, member.userId.value)
-            when (result) {
+            // 권한 확인 - 오너는 차단할 수 없음
+            when (val canManageResult = projectMemberUseCases.canManageTargetMemberUseCase.invoke(
+                projectId,
+                member.userId
+            )) {
                 is CustomResult.Success -> {
-                    _eventFlow.emit(MemberListEvent.ShowSnackbar("${member.userName.value}님을 영구 차단했습니다."))
+                    if (canManageResult.data) {
+                        _eventFlow.emit(MemberListEvent.ShowBlockConfirm(member))
+                    } else {
+                        _eventFlow.emit(MemberListEvent.ShowSnackbar("해당 멤버를 관리할 권한이 없습니다"))
+                    }
                 }
 
                 is CustomResult.Failure -> {
-                    _eventFlow.emit(MemberListEvent.ShowSnackbar("멤버 차단 실패: ${result.error}"))
+                    Log.e(
+                        "MemberListViewModel",
+                        "Failed to check manage permission: ${canManageResult.error}"
+                    )
+                    _eventFlow.emit(MemberListEvent.ShowSnackbar("권한 확인에 실패했습니다"))
                 }
 
                 else -> {
+                    _eventFlow.emit(MemberListEvent.ShowSnackbar("권한 확인 중 오류가 발생했습니다"))
+                }
+            }
+        }
+    }
+
+    /**
+     * 멤버 차단을 확정합니다.
+     */
+    fun confirmBlockMember(member: MemberUiModel) {
+        viewModelScope.launch {
+            Log.d("MemberListViewModel", "Confirming block for member: ${member.userId}")
+            
+            _uiState.update { it.copy(isLoading = true) }
+
+            when (val result = projectMemberUseCases.blockMemberUseCase.blockMember(
+                projectId,
+                member.userId.value
+            )) {
+                is CustomResult.Success -> {
+                    Log.d("MemberListViewModel", "Member blocked successfully: ${member.userId}")
+                    _eventFlow.emit(MemberListEvent.ShowSnackbar("${member.userName.value}님이 차단되었습니다"))
+                    // 목록은 observeActiveMembers에서 자동으로 업데이트됨 (차단된 멤버는 제외)
+                }
+                is CustomResult.Failure -> {
+                    Log.e("MemberListViewModel", "Failed to block member: ${result.error}")
+                    _eventFlow.emit(MemberListEvent.ShowSnackbar("멤버 차단 실패: ${result.error.message}"))
+                }
+                else -> {
+                    Log.w("MemberListViewModel", "Unexpected result type for block member")
                     _eventFlow.emit(MemberListEvent.ShowSnackbar("멤버 차단 실패: 알 수 없는 오류"))
                 }
             }
+
             _uiState.update { it.copy(isLoading = false) }
         }
     }
 
+    /**
+     * 현재 사용자가 특정 멤버를 관리할 수 있는지 확인합니다.
+     * (오너 보호 로직 포함)
+     */
+    suspend fun canManageTargetMember(targetMember: MemberUiModel): Boolean {
+        return when (val result = projectMemberUseCases.canManageTargetMemberUseCase.invoke(
+            projectId,
+            targetMember.userId
+        )) {
+            is CustomResult.Success -> result.data
+            else -> {
+                Log.w("MemberListViewModel", "Failed to check manage permission: $result")
+                false
+            }
+        }
+    }
 } 

@@ -75,11 +75,11 @@ interface ProjectRepository : DefaultRepository<Project> {
     suspend fun transferOwnership(projectId: DocumentId, newOwnerId: String): CustomResult<Unit, Exception>
 
     /**
-     * 프로젝트 멤버를 차단/금지합니다.
+     * 프로젝트 멤버를 차단합니다.
      *
      * @param projectId 프로젝트 ID
      * @param targetUserId 차단할 사용자 ID
-     * @param blockType 차단 유형 ("blocked" 또는 "banned")
+     * @param blockType 차단 유형 ("blocked")
      * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
      */
     suspend fun blockMember(
@@ -87,5 +87,31 @@ interface ProjectRepository : DefaultRepository<Project> {
         targetUserId: String,
         blockType: String
     ): CustomResult<Unit, Exception>
+
+    /**
+     * 프로젝트 멤버 차단을 해제합니다.
+     *
+     * @param projectId 프로젝트 ID
+     * @param targetUserId 차단 해제할 사용자 ID
+     * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun unblockMember(
+        projectId: DocumentId,
+        targetUserId: String
+    ): CustomResult<Unit, Exception>
+
+    /**
+     * 프로젝트 데이터를 내보냅니다.
+     *
+     * @param projectId 내보낼 프로젝트 ID
+     * @param includeMessages 메시지 포함 여부
+     * @param format 내보내기 형식 ("json" 또는 "csv")
+     * @return 성공 시 내보내기 결과 데이터, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun exportProject(
+        projectId: String,
+        includeMessages: Boolean = false,
+        format: String = "json"
+    ): CustomResult<Map<String, Any?>, Exception>
 
 }

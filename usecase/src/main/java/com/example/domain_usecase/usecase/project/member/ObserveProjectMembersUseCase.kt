@@ -4,11 +4,10 @@ import com.example.core_common.result.CustomResult
 import com.example.domain.model.base.Member
 import com.example.domain_repository.base.MemberRepository
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 /**
- * 특정 프로젝트의 멤버 목록 변경 사항을 실시간으로 관찰하는 유스케이스 인터페이스
+ * 특정 프로젝트의 ACTIVE 상태 멤버 목록 변경 사항을 실시간으로 관찰하는 유스케이스 인터페이스
  */
 interface ObserveProjectMembersUseCase {
     operator fun invoke(): Flow<CustomResult<List<Member>, Exception>>
@@ -23,11 +22,10 @@ class ObserveProjectMembersUseCaseImpl @Inject constructor(
 ) : ObserveProjectMembersUseCase {
 
     /**
-     * 유스케이스를 실행하여 특정 프로젝트의 멤버 목록 스트림을 반환합니다.
-     * @param projectId 프로젝트 ID
-     * @return Flow<List<ProjectMember>> 멤버 목록 스트림
+     * 유스케이스를 실행하여 특정 프로젝트의 ACTIVE 상태 멤버 목록 스트림을 반환합니다.
+     * @return Flow<List<Member>> ACTIVE 상태 멤버 목록 스트림
      */
     override fun invoke(): Flow<CustomResult<List<Member>, Exception>> {
-        return projectMemberRepository.observeAll()
+        return projectMemberRepository.observeActiveMembers()
     }
 } 

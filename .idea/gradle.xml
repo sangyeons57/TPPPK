@@ -51,6 +51,7 @@
             <option value="$PROJECT_DIR$/feature/feature_login" />
             <option value="$PROJECT_DIR$/feature/feature_main" />
             <option value="$PROJECT_DIR$/feature/feature_member_list" />
+            <option value="$PROJECT_DIR$/feature/feature_member_list_blocked" />
             <option value="$PROJECT_DIR$/feature/feature_model" />
             <option value="$PROJECT_DIR$/feature/feature_privacy_policy" />
             <option value="$PROJECT_DIR$/feature/feature_profile" />

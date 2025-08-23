@@ -1,9 +1,10 @@
-package com.example.domain_usecase.usecase.project.authorization
+package com.example.domain_usecase.usecase.project.member
 
 import com.example.domain.model.data.project.RolePermission
 
 /**
- * Maps RolePermission to standardized denial messages for UI snackbars.
+ * 권한 거부 메시지를 생성하는 UseCase
+ * RolePermission을 UI에서 표시할 표준화된 거부 메시지로 매핑합니다.
  */
 interface PermissionDeniedMessageUseCase {
     operator fun invoke(required: RolePermission): String
@@ -20,4 +21,3 @@ class PermissionDeniedMessageUseCaseImpl : PermissionDeniedMessageUseCase {
         RolePermission.CHANNEL_READ -> "채널 열람 권한이 없습니다 (CHANNEL_READ)"
     }
 }
-

@@ -7,7 +7,6 @@ import com.example.domain.AggregateRoot
 import com.example.domain.model.sync.OutBoxRecord
 import com.example.domain.model.sync.PushResult
 import com.example.domain.model.sync.RemoteBatch
-import com.example.domain.vo.CollectionPath
 import com.example.domain.vo.task.TaskStatus
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
@@ -41,20 +40,25 @@ class TaskRemoteDataSourceImpl @Inject constructor(
     override suspend fun push(events: List<OutBoxRecord>): PushResult {
         val success = mutableListOf<String>()
         val failed = mutableListOf<com.example.domain.model.sync.FailedEvent>()
+        val TAG = "TaskRemoteDataSource" // Gemini-added TAG
+
+        android.util.Log.d(TAG, "Starting push for ${events.size} events...")
 
         for (e in events) {
             try {
                 val payload = JSONObject(e.payload)
-                val id = payload.optString("id").takeIf { it.isNotEmpty() }
-                    ?: throw IllegalArgumentException("Missing id in payload")
+                val id = e.aggregateId
                 val channelIdRaw = payload.optString("channelId").takeIf { it.isNotEmpty() }
                     ?: throw IllegalArgumentException("Missing channelId in payload")
+
+                android.util.Log.d(TAG, "Processing event op=${e.op}, id=$id")
 
                 when (e.op) {
                     OutBoxRecord.Op.UPSERT -> {
                         val dto = TaskDTO(
                             id = id,
-                            channelId = com.example.domain.vo.ChannelId(channelIdRaw).last(),
+                            // Preserve full composite channelId (no truncation)
+                            channelId = channelIdRaw,
                             taskType = payload.optString("taskType", "checklist"),
                             status = TaskStatus.fromValue(
                                 payload.optString(
@@ -64,7 +68,9 @@ class TaskRemoteDataSourceImpl @Inject constructor(
                             ),
                             content = payload.optString("content", ""),
                             order = payload.optInt("order", 0),
-                            checkedBy = payload.optString("checkedBy").takeIf { it.isNotEmpty() },
+                            // Ensure JSON null becomes Kotlin null (avoid string "null")
+                            checkedBy = if (payload.isNull("checkedBy")) null
+                            else payload.optString("checkedBy").takeIf { it.isNotBlank() },
                             checkedAt = payload.optLong("checkedAt").takeIf { it > 0 }
                                 ?.let { Date(it) },
                             createdAt = payload.optLong("createdAt").takeIf { it > 0 }
@@ -72,25 +78,43 @@ class TaskRemoteDataSourceImpl @Inject constructor(
                             updatedAt = payload.optLong("updatedAt").takeIf { it > 0 }
                                 ?.let { Date(it) },
                         )
+                        android.util.Log.d(
+                            TAG,
+                            "Attempting to SET document: ${collection.path}/$id"
+                        )
                         collection.document(dto.id).set(dto).await()
+                        android.util.Log.i(TAG, "SUCCESS: SET document ${collection.path}/$id")
                         success.add(e.id)
                     }
 
                     OutBoxRecord.Op.DELETE -> {
+                        android.util.Log.d(
+                            TAG,
+                            "Attempting to DELETE document: ${collection.path}/$id"
+                        )
                         collection.document(id).delete().await()
+                        android.util.Log.i(TAG, "SUCCESS: DELETE document ${collection.path}/$id")
                         success.add(e.id)
                     }
                 }
             } catch (ex: Exception) {
+                // Gemini-added CRITICAL logging for failures
+                val reason = ex.message ?: "Unknown reason"
+                android.util.Log.e(
+                    TAG,
+                    "FAILURE: Failed to push event for id=${e.aggregateId}. Reason: $reason",
+                    ex
+                )
                 failed.add(
                     com.example.domain.model.sync.FailedEvent(
                         id = e.id,
-                        reason = ex.message ?: "Unknown",
+                        reason = reason,
                         retryAfterMillis = 5000
                     )
                 )
             }
         }
+        android.util.Log.d(TAG, "Push finished. Success: ${success.size}, Failed: ${failed.size}")
         return PushResult(successIds = success, failIds = failed)
     }
 

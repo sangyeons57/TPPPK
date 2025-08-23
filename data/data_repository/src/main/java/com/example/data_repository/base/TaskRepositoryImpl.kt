@@ -211,17 +211,34 @@ class TaskRepositoryImpl @Inject constructor(
     override suspend fun delete(id: DocumentId): CustomResult<Unit, Exception> {
         return try {
             android.util.Log.d("TaskRepository", "Starting delete for taskId=${id.value}")
-            
-            // 1) Local delete
+
+            // 1) Read entity first to capture channelId for OutBox payload filtering
+            val existing = taskDao.findById(id.value)
+
+            // 2) Local delete
             val deletedRows = taskDao.deleteById(id.value)
             android.util.Log.d(
                 "TaskRepository",
                 "Room delete completed for taskId=${id.value}, deletedRows=$deletedRows"
             )
 
-            // 2) Enqueue Outbox DELETE
+            // 3) Enqueue Outbox DELETE
             val now = System.currentTimeMillis()
-            val payload = """{"id":"${id.value}","deletedAt":$now}"""
+            // Include channelId so TaskSyncPort can filter this event for the correct channel
+            val payload = buildString {
+                append('{')
+                existing?.let { entity ->
+                    append("\"channelId\":\"")
+                    append(entity.channelId)
+                    append("\",")
+                }
+                append("\"id\":\"")
+                append(id.value)
+                append("\",")
+                append("\"deletedAt\":")
+                append(now)
+                append('}')
+            }
             val record = OutBoxRecord(
                 id = UUID.randomUUID().toString(),
                 stream = Task.COLLECTION_NAME,

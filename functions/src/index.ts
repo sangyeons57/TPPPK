@@ -66,6 +66,7 @@ export { unblockDMChannel } from "./domains/dm/http/unblockChannel";
 export { joinProject } from "./domains/members/http/joinProject";
 export { leaveProject } from "./domains/members/http/leaveProject";
 export { blockMember } from "./domains/members/http/blockMember";
+export { unblockMember } from "./domains/members/http/unblockMember";
 
 // =====================================
 // SYSTEM DOMAIN  

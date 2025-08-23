@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -34,15 +36,13 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.material3.RadioButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -64,11 +64,11 @@ import com.example.core_ui.components.project.ProjectProfileImage
 import com.example.core_ui.picker.ImagePicker
 import com.example.core_ui.theme.TeamnovaPersonalProjectProjectingKotlinTheme
 import com.example.domain.model.enum.ProjectChannelType
+import com.example.domain.model.ui.data.MemberUiModel
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.project.ProjectName
 import com.example.feature_model.CategoryUiModel
 import com.example.feature_model.ChannelUiModel
-import com.example.domain.model.ui.data.MemberUiModel
 import com.example.feature_project_setting.viewmodel.ProjectSettingEvent
 import com.example.feature_project_setting.viewmodel.ProjectSettingUiState
 import com.example.feature_project_setting.viewmodel.ProjectSettingViewModel
@@ -160,6 +160,7 @@ fun ProjectSettingScreen(
                 onAddCategoryClick = viewModel::requestCreateCategory,
                 onAddChannelClick = viewModel::requestCreateChannel,
                 onManageMembersClick = viewModel::requestManageMembers,
+                onManageBlockedMembersClick = viewModel::requestManageBlockedMembers,
                 onManageRolesClick = viewModel::requestManageRoles,
                 onRenameProjectClick = viewModel::requestRenameProject, // 프로젝트 이름 변경 요청
                 onDeleteProjectClick = viewModel::requestDeleteProject, // 프로젝트 삭제 요청
@@ -276,6 +277,8 @@ fun ProjectSettingScreen(
             }
         )
     }
+
+    // 내보내기 기능 제거됨
 }
 
 /**
@@ -292,6 +295,7 @@ fun ProjectSettingContent(
     onAddCategoryClick: () -> Unit,
     onAddChannelClick: (String) -> Unit, // categoryId
     onManageMembersClick: () -> Unit,
+    onManageBlockedMembersClick: () -> Unit,
     onManageRolesClick: () -> Unit,
     onRenameProjectClick: () -> Unit,
     onDeleteProjectClick: () -> Unit,
@@ -331,9 +335,14 @@ fun ProjectSettingContent(
                 onClick = onManageMembersClick
             )
             SettingMenuItem(
+                text = "차단된 멤버 관리",
+                onClick = onManageBlockedMembersClick
+            )
+            SettingMenuItem(
                 text = "역할 관리",
                 onClick = onManageRolesClick
             )
+            // 내보내기 메뉴 제거됨
         }
 
         item { Spacer(modifier = Modifier.height(16.dp)) }
@@ -674,6 +683,12 @@ fun RenameProjectDialog(
     )
 }
 
+// 프로젝트 내보내기 다이얼로그
+// ExportProjectDialog 제거됨
+
+// 내보내기 완료 다이얼로그
+// ExportSuccessDialog 제거됨
+
 // 소유권 전달 다이얼로그
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -801,6 +816,7 @@ private fun ProjectSettingContentLoadingPreview() {
             onAddCategoryClick = {},
             onAddChannelClick = {},
             onManageMembersClick = {},
+            onManageBlockedMembersClick = {},
             onManageRolesClick = {},
             onRenameProjectClick = {},
             onDeleteProjectClick = {},
@@ -828,6 +844,7 @@ private fun ProjectSettingContentErrorPreview() {
             onAddCategoryClick = {},
             onAddChannelClick = {},
             onManageMembersClick = {},
+            onManageBlockedMembersClick = {},
             onManageRolesClick = {},
             onRenameProjectClick = {},
             onDeleteProjectClick = {},

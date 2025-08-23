@@ -66,11 +66,26 @@ class ProjectRepositoryImpl @Inject constructor(
         return functionsRemoteDataSource.blockMember(projectId.value, targetUserId, blockType)
     }
 
+    override suspend fun unblockMember(
+        projectId: DocumentId,
+        targetUserId: String
+    ): CustomResult<Unit, Exception> {
+        return functionsRemoteDataSource.unblockMember(projectId.value, targetUserId)
+    }
+
     override suspend fun removeMember(
         projectId: String,
         targetUserId: String
     ): CustomResult<Unit, Exception> {
         return functionsRemoteDataSource.removeMember(projectId, targetUserId)
+    }
+
+    override suspend fun exportProject(
+        projectId: String,
+        includeMessages: Boolean,
+        format: String
+    ): CustomResult<Map<String, Any?>, Exception> {
+        return functionsRemoteDataSource.exportProject(projectId, includeMessages, format)
     }
 
 }

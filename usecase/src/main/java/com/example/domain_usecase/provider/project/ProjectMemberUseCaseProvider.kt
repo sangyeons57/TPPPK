@@ -12,11 +12,10 @@ import com.example.domain_repository.base.MemberRepository
 import com.example.domain_repository.base.MessageRepository
 import com.example.domain_repository.base.ProjectInvitationRepository
 import com.example.domain_repository.base.ProjectRepository
+import com.example.domain_repository.base.ProjectRoleRepository
 import com.example.domain_repository.base.UserRepository
 import com.example.domain_usecase.usecase.dm.AddDmChannelUseCase
 import com.example.domain_usecase.usecase.dm.GetDmChannelUseCase
-import com.example.domain_usecase.usecase.project.authorization.IsCurrentUserOwnerUseCase
-import com.example.domain_usecase.usecase.project.authorization.IsCurrentUserOwnerUseCaseImpl
 import com.example.domain_usecase.usecase.project.core.JoinProjectByIdUseCase
 import com.example.domain_usecase.usecase.project.invitation.AcceptProjectInvitationUseCase
 import com.example.domain_usecase.usecase.project.invitation.AcceptProjectInvitationUseCaseImpl
@@ -28,18 +27,38 @@ import com.example.domain_usecase.usecase.project.member.AddProjectMemberUseCase
 import com.example.domain_usecase.usecase.project.member.AddProjectMemberUseCaseImpl
 import com.example.domain_usecase.usecase.project.member.BlockMemberUseCase
 import com.example.domain_usecase.usecase.project.member.BlockMemberUseCaseImpl
+import com.example.domain_usecase.usecase.project.member.CanManageTargetMemberUseCase
+import com.example.domain_usecase.usecase.project.member.CanManageTargetMemberUseCaseImpl
 import com.example.domain_usecase.usecase.project.member.CheckUserProjectMembershipUseCase
 import com.example.domain_usecase.usecase.project.member.CheckUserProjectMembershipUseCaseImpl
+import com.example.domain_usecase.usecase.project.member.GetBlockedProjectMembersUseCase
+import com.example.domain_usecase.usecase.project.member.GetBlockedProjectMembersUseCaseImpl
 import com.example.domain_usecase.usecase.project.member.GetProjectMemberUseCase
 import com.example.domain_usecase.usecase.project.member.GetProjectMemberUseCaseImpl
 import com.example.domain_usecase.usecase.project.member.GetProjectMembersUseCase
 import com.example.domain_usecase.usecase.project.member.GetProjectMembersUseCaseImpl
 import com.example.domain_usecase.usecase.project.member.GetRoleMemberCountUseCase
 import com.example.domain_usecase.usecase.project.member.GetRoleMemberCountUseCaseImpl
+import com.example.domain_usecase.usecase.project.member.GetUserPermissionsForProjectUseCase
+import com.example.domain_usecase.usecase.project.member.GetUserPermissionsForProjectUseCaseImpl
+import com.example.domain_usecase.usecase.project.member.GetUserRolesForProjectUseCase
+import com.example.domain_usecase.usecase.project.member.GetUserRolesForProjectUseCaseImpl
+import com.example.domain_usecase.usecase.project.member.HasProjectPermissionUseCase
+import com.example.domain_usecase.usecase.project.member.HasProjectPermissionUseCaseImpl
+import com.example.domain_usecase.usecase.project.member.IsCurrentUserOwnerUseCase
+import com.example.domain_usecase.usecase.project.member.IsCurrentUserOwnerUseCaseImpl
+import com.example.domain_usecase.usecase.project.member.IsTargetMemberOwnerUseCase
+import com.example.domain_usecase.usecase.project.member.IsTargetMemberOwnerUseCaseImpl
 import com.example.domain_usecase.usecase.project.member.LeaveProjectUseCase
 import com.example.domain_usecase.usecase.project.member.LeaveProjectUseCaseImpl
+import com.example.domain_usecase.usecase.project.member.ObserveBlockedProjectMembersUseCase
+import com.example.domain_usecase.usecase.project.member.ObserveBlockedProjectMembersUseCaseImpl
 import com.example.domain_usecase.usecase.project.member.ObserveProjectMembersUseCase
 import com.example.domain_usecase.usecase.project.member.ObserveProjectMembersUseCaseImpl
+import com.example.domain_usecase.usecase.project.member.OwnerOrPermissionUseCase
+import com.example.domain_usecase.usecase.project.member.OwnerOrPermissionUseCaseImpl
+import com.example.domain_usecase.usecase.project.member.PermissionDeniedMessageUseCase
+import com.example.domain_usecase.usecase.project.member.PermissionDeniedMessageUseCaseImpl
 import com.example.domain_usecase.usecase.project.member.RemoveMemberUseCase
 import com.example.domain_usecase.usecase.project.member.RemoveMemberUseCaseImpl
 import com.example.domain_usecase.usecase.project.member.RemoveProjectMemberUseCase
@@ -48,6 +67,8 @@ import com.example.domain_usecase.usecase.project.member.SendProjectInviteMessag
 import com.example.domain_usecase.usecase.project.member.SendProjectInviteMessageUseCaseImpl
 import com.example.domain_usecase.usecase.project.member.TransferOwnershipUseCase
 import com.example.domain_usecase.usecase.project.member.TransferOwnershipUseCaseImpl
+import com.example.domain_usecase.usecase.project.member.UnblockMemberUseCase
+import com.example.domain_usecase.usecase.project.member.UnblockMemberUseCaseImpl
 import com.example.domain_usecase.usecase.project.member.UpdateMemberRolesUseCase
 import com.example.domain_usecase.usecase.project.member.UpdateMemberRolesUseCaseImpl
 import com.example.domain_usecase.usecase.project.member.VerifyProjectMembershipUseCase
@@ -67,6 +88,7 @@ class ProjectMemberUseCaseProvider @Inject constructor(
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
     private val projectRepository: ProjectRepository,
+    private val projectRoleRepository: ProjectRoleRepository,
     private val projectInvitationRepository: ProjectInvitationRepository,
     private val messageRepository: MessageRepository,
     private val dmChannelRepository: DMChannelRepository,
@@ -198,6 +220,21 @@ class ProjectMemberUseCaseProvider @Inject constructor(
                 projectRepository = this.projectRepository
             ),
 
+            // 멤버 차단 해제
+            unblockMemberUseCase = UnblockMemberUseCaseImpl(
+                projectRepository = this.projectRepository
+            ),
+
+            // 차단된 멤버 목록 조회
+            getBlockedProjectMembersUseCase = GetBlockedProjectMembersUseCaseImpl(
+                memberRepository = this.memberRepository
+            ),
+
+            // 차단된 멤버 목록 실시간 관찰
+            observeBlockedProjectMembersUseCase = ObserveBlockedProjectMembersUseCaseImpl(
+                memberRepository = this.memberRepository
+            ),
+
             // 멤버십 검증
             verifyProjectMembershipUseCase = VerifyProjectMembershipUseCaseImpl(
                 memberRepository = this.memberRepository,
@@ -207,8 +244,44 @@ class ProjectMemberUseCaseProvider @Inject constructor(
             // OWNER helper
             isCurrentUserOwnerUseCase = IsCurrentUserOwnerUseCaseImpl(
                 authRepository = this.authRepository,
+                projectRepository = this.projectRepository
+            ),
+
+            // 오너 보호 및 권한 관련 UseCase들
+            isTargetMemberOwnerUseCase = IsTargetMemberOwnerUseCaseImpl(
+                projectRepository = this.projectRepository
+            ),
+
+            canManageTargetMemberUseCase = CanManageTargetMemberUseCaseImpl(
+                authRepository = this.authRepository,
+                memberRepository = this.memberRepository,
+                projectRepository = this.projectRepository,
+                projectRoleRepository = this.projectRoleRepository
+            ),
+
+            hasProjectPermissionUseCase = HasProjectPermissionUseCaseImpl(
+                memberRepository = this.memberRepository,
+                projectRoleRepository = this.projectRoleRepository
+            ),
+
+            ownerOrPermissionUseCase = OwnerOrPermissionUseCaseImpl(
+                authRepository = this.authRepository,
+                memberRepository = this.memberRepository,
+                projectRoleRepository = this.projectRoleRepository
+            ),
+
+            getUserPermissionsForProjectUseCase = GetUserPermissionsForProjectUseCaseImpl(
+                authRepository = this.authRepository,
+                memberRepository = this.memberRepository,
+                projectRoleRepository = this.projectRoleRepository
+            ),
+
+            getUserRolesForProjectUseCase = GetUserRolesForProjectUseCaseImpl(
+                authRepository = this.authRepository,
                 memberRepository = this.memberRepository
-            )
+            ),
+
+            permissionDeniedMessageUseCase = PermissionDeniedMessageUseCaseImpl()
         )
     }
 
@@ -279,9 +352,27 @@ data class ProjectMemberUseCases(
     // 멤버 차단/금지
     val blockMemberUseCase: BlockMemberUseCase,
 
+    // 멤버 차단 해제
+    val unblockMemberUseCase: UnblockMemberUseCase,
+
+    // 차단된 멤버 목록 조회
+    val getBlockedProjectMembersUseCase: GetBlockedProjectMembersUseCase,
+
+    // 차단된 멤버 목록 실시간 관찰
+    val observeBlockedProjectMembersUseCase: ObserveBlockedProjectMembersUseCase,
+
     // 멤버십 검증
     val verifyProjectMembershipUseCase: VerifyProjectMembershipUseCase,
 
     // OWNER helper
-    val isCurrentUserOwnerUseCase: IsCurrentUserOwnerUseCase
+    val isCurrentUserOwnerUseCase: IsCurrentUserOwnerUseCase,
+
+    // 오너 보호 및 권한 관련 UseCase들
+    val isTargetMemberOwnerUseCase: IsTargetMemberOwnerUseCase,
+    val canManageTargetMemberUseCase: CanManageTargetMemberUseCase,
+    val hasProjectPermissionUseCase: HasProjectPermissionUseCase,
+    val ownerOrPermissionUseCase: OwnerOrPermissionUseCase,
+    val getUserPermissionsForProjectUseCase: GetUserPermissionsForProjectUseCase,
+    val getUserRolesForProjectUseCase: GetUserRolesForProjectUseCase,
+    val permissionDeniedMessageUseCase: PermissionDeniedMessageUseCase
 )

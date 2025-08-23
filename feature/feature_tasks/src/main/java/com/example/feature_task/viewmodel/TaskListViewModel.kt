@@ -1,5 +1,6 @@
 package com.example.feature_task.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -7,14 +8,14 @@ import com.example.core_common.result.CustomResult
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
+import com.example.domain.model.data.project.RolePermission
 import com.example.domain.vo.ChannelId
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.task.TaskType
 import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain_usecase.provider.auth.AuthSessionUseCases
+import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
 import com.example.domain_usecase.provider.task.TaskUseCaseProvider
-import com.example.domain_usecase.provider.project.ProjectAuthorizationUseCaseProvider
-import com.example.domain.model.data.project.RolePermission
 import com.example.domain_usecase.provider.task.TaskUseCases
 import com.example.domain_usecase.provider.user.UserUseCaseProvider
 import com.example.domain_usecase.provider.user.UserUseCases
@@ -22,9 +23,14 @@ import com.example.feature_task.mapper.TaskMapper
 import com.example.feature_task.model.TaskUiModel
 import com.example.orchestrator.SyncManagerFactory
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
@@ -37,6 +43,7 @@ import javax.inject.Inject
  * 작업 목록 화면 ViewModel
  * Google Keep 스타일의 간단한 메모 리스트
  */
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @HiltViewModel
 class TaskListViewModel @Inject constructor(
     private val taskUseCaseProvider: TaskUseCaseProvider,
@@ -44,7 +51,7 @@ class TaskListViewModel @Inject constructor(
     private val userUseCaseProvider: UserUseCaseProvider,
     private val navigationManger: NavigationManger,
     private val syncManagerFactory: SyncManagerFactory,
-    private val projectAuthorizationUseCaseProvider: ProjectAuthorizationUseCaseProvider,
+    private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     
@@ -68,6 +75,12 @@ class TaskListViewModel @Inject constructor(
         )
     )
     val uiState: StateFlow<TaskListUiState> = _uiState.asStateFlow()
+
+    // Throttled sync trigger to coalesce rapid edits
+    private val syncRequests = MutableSharedFlow<Unit>(
+        extraBufferCapacity = 64,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
     
     init {
         val composed = ChannelId.compose(projectId, channelId)
@@ -75,9 +88,9 @@ class TaskListViewModel @Inject constructor(
         // Cache write permission once for this project/channel (read gate is done in Home)
         viewModelScope.launch {
             try {
-                val auth =
-                    projectAuthorizationUseCaseProvider.createForProject(DocumentId(projectId))
-                val canWrite = when (val res = auth.ownerOrPermissionUseCase.invoke(
+                val memberUseCases =
+                    projectMemberUseCaseProvider.createForProject(DocumentId(projectId))
+                val canWrite = when (val res = memberUseCases.ownerOrPermissionUseCase.invoke(
                     DocumentId(projectId),
                     RolePermission.CHANNEL_WRITE
                 )) {
@@ -95,7 +108,6 @@ class TaskListViewModel @Inject constructor(
             try {
                 val coordinator = syncManagerFactory.forChannel(
                     composed.value,
-                    includeMessages = false,
                     includeTasks = true
                 )
                 coordinator.syncAll()
@@ -103,69 +115,91 @@ class TaskListViewModel @Inject constructor(
                 // best-effort
             }
         }
-        taskUseCases.observeChannelTasksUseCase(composed)
-            .onEach { taskResult ->
-                android.util.Log.d(
-                    "TaskListViewModel",
-                    "observeChannelTasks emitted result: ${taskResult::class.simpleName}"
-                )
-                if (taskResult is CustomResult.Success) {
-                    android.util.Log.d(
-                        "TaskListViewModel",
-                        "Received ${taskResult.data.size} tasks from repository"
+        // Consume sync requests with debounce to avoid spamming
+        syncRequests
+            .debounce(300)
+            .onEach {
+                try {
+                    val coordinator = syncManagerFactory.forChannel(
+                        composed.value,
+                        includeTasks = true
                     )
-                    taskResult.data.forEach { task ->
-                        android.util.Log.d(
-                            "TaskListViewModel",
-                            "Task: id=${task.id.value}, content=${task.content.value}, order=${task.order.value}"
+                    coordinator.syncAll()
+                } catch (_: Exception) {
+                    // ignore
+                }
+            }
+            .launchIn(viewModelScope)
+        taskUseCases.observeChannelTasksUseCase(composed)
+            .flatMapLatest { taskResult ->
+                // taskResult가 성공 상태가 아니거나 데이터가 비어있으면, 사용자 정보를 조회할 필요 없이 그대로 전달합니다.
+                if (taskResult !is CustomResult.Success || taskResult.data.isEmpty()) {
+                    return@flatMapLatest flowOf(Pair(taskResult, emptyMap()))
+                }
+
+                // 태스크 목록이 성공적으로 로드되었으면, 완료한 사용자 ID들을 추출합니다.
+                val tasks = taskResult.data
+                val userIds = tasks.mapNotNull { it.checkedBy?.value }.distinct()
+
+                // 사용자 ID가 없으면 사용자 정보를 조회할 필요가 없습니다.
+                if (userIds.isEmpty()) {
+                    flowOf(Pair(taskResult, emptyMap()))
+                } else {
+                    // 사용자 ID로 사용자 정보를 조회한 후, 원래의 taskResult와 짝을 지어(Pair) 반환합니다.
+                    userUseCases.getUsersUseCase(userIds).map { userResult ->
+                        val userMap = if (userResult is CustomResult.Success) {
+                            userResult.data.associateBy { it.id }
+                        } else {
+                            // 사용자 정보 조회를 실패하면 비어있는 맵을 사용합니다.
+                            emptyMap()
+                        }
+                        Pair(taskResult, userMap)
+                    }
+                }
+            }
+            .map { (taskResult, userMap) ->
+                // 태스크 결과와 사용자 정보를 바탕으로 최종 UI State를 만듭니다.
+                // 이 map 블록에서는 UI 상태를 변환하는 책임만 가집니다.
+                when (taskResult) {
+                    is CustomResult.Success -> {
+                        val uiTasks = taskResult.data.map { task ->
+                            val checkedByName =
+                                task.checkedBy?.let { userMap[DocumentId.from(it)]?.name?.value }
+                            TaskMapper.toUiModel(task, checkedByName)
+                        }
+                        _uiState.value.copy(
+                            isLoading = false,
+                            tasks = uiTasks,
+                            errorMessage = null
                         )
                     }
-                }
-            }
-            .flatMapLatest { taskResult ->
-                if (taskResult is CustomResult.Success) {
-                    val tasks = taskResult.data
-                    val userIds = tasks.mapNotNull { it.checkedBy?.value }.distinct()
 
-                    if (userIds.isEmpty()) {
-                        flowOf(Pair(tasks, emptyMap()))
-                    } else {
-                        userUseCases.getUsersUseCase(userIds).map {
-                            val userMap = if (it is CustomResult.Success) it.data.associateBy { user -> user.id } else emptyMap()
-                            Pair(tasks, userMap)
-                        }
+                    is CustomResult.Failure -> {
+                        _uiState.value.copy(
+                            isLoading = false,
+                            // 에러 발생 시 기존 태스크 목록은 유지하면서 에러 메시지를 표시합니다.
+                            errorMessage = taskResult.error.message ?: "태스크를 불러오는데 실패했습니다."
+                        )
                     }
-                } else {
-                    flowOf(Pair(emptyList(), emptyMap()))
+
+                    is CustomResult.Loading -> {
+                        _uiState.value.copy(isLoading = true)
+                    }
+                    // CustomResult.Initial 등 다른 상태는 현재 상태를 그대로 유지합니다.
+                    else -> _uiState.value
                 }
             }
-            .onEach { (tasks, userMap) ->
-                android.util.Log.d(
-                    "TaskListViewModel",
-                    "Processing ${tasks.size} tasks for UI update"
-                )
-                val uiTasks = tasks.map { task ->
-                    val checkedByName = task.checkedBy?.let { userMap[DocumentId.from(it)]?.name?.value }
-                    TaskMapper.toUiModel(task, checkedByName)
-                }
-
-                android.util.Log.d(
-                    "TaskListViewModel",
-                    "Updating UI state with ${uiTasks.size} tasks"
-                )
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    tasks = uiTasks,
-                    errorMessage = null
-                )
-                android.util.Log.d("TaskListViewModel", "UI state updated successfully")
+            .onEach { newState ->
+                // 최종적으로 변환된 UI State를 실제 StateFlow에 적용합니다.
+                Log.d("TaskListViewModel", "Updating UI state(count): ${newState.tasks.size}")
+                _uiState.value = newState
             }
             .launchIn(viewModelScope)
     }
     
     fun createTask(content: String, taskType: TaskType = TaskType.CHECKLIST) {
         viewModelScope.launch {
-            android.util.Log.d(
+            Log.d(
                 "TaskListViewModel",
                 "Creating task with content='$content', taskType=$taskType"
             )
@@ -176,10 +210,11 @@ class TaskListViewModel @Inject constructor(
             )
 
             result.onSuccess {
-                android.util.Log.d("TaskListViewModel", "Successfully created task")
+                Log.d("TaskListViewModel", "Successfully created task")
+                syncRequests.tryEmit(Unit)
             }
             result.onFailure { error ->
-                android.util.Log.e("TaskListViewModel", "Failed to create task: ${error.message}")
+                Log.e("TaskListViewModel", "Failed to create task: ${error.message}")
                 _uiState.value = _uiState.value.copy(
                     errorMessage = error.message
                 )
@@ -189,17 +224,18 @@ class TaskListViewModel @Inject constructor(
     
     fun updateTaskStatus(taskId: String, isCompleted: Boolean) {
         viewModelScope.launch {
-            android.util.Log.d("TaskListViewModel", "Toggling task check status for taskId=$taskId")
+            Log.d("TaskListViewModel", "Toggling task check status for taskId=$taskId")
             val result = taskUseCases.toggleTaskCheckUseCase(taskId)
 
             result.onSuccess {
-                android.util.Log.d(
+                Log.d(
                     "TaskListViewModel",
                     "Successfully toggled task check for taskId=$taskId"
                 )
+                syncRequests.tryEmit(Unit)
             }
             result.onFailure { error ->
-                android.util.Log.e(
+                Log.e(
                     "TaskListViewModel",
                     "Failed to toggle task check for taskId=$taskId: ${error.message}"
                 )
@@ -212,7 +248,7 @@ class TaskListViewModel @Inject constructor(
     
     fun editTask(taskId: String, content: String) {
         viewModelScope.launch {
-            android.util.Log.d(
+            Log.d(
                 "TaskListViewModel",
                 "Editing task taskId=$taskId with content='$content'"
             )
@@ -222,10 +258,11 @@ class TaskListViewModel @Inject constructor(
             )
 
             result.onSuccess {
-                android.util.Log.d("TaskListViewModel", "Successfully edited task taskId=$taskId")
+                Log.d("TaskListViewModel", "Successfully edited task taskId=$taskId")
+                syncRequests.tryEmit(Unit)
             }
             result.onFailure { error ->
-                android.util.Log.e(
+                Log.e(
                     "TaskListViewModel",
                     "Failed to edit task taskId=$taskId: ${error.message}"
                 )
@@ -238,14 +275,15 @@ class TaskListViewModel @Inject constructor(
     
     fun deleteTask(taskId: String) {
         viewModelScope.launch {
-            android.util.Log.d("TaskListViewModel", "Deleting task taskId=$taskId")
+            Log.d("TaskListViewModel", "Deleting task taskId=$taskId")
             val result = taskUseCases.deleteTaskUseCase(taskId)
 
             result.onSuccess {
-                android.util.Log.d("TaskListViewModel", "Successfully deleted task taskId=$taskId")
+                Log.d("TaskListViewModel", "Successfully deleted task taskId=$taskId")
+                syncRequests.tryEmit(Unit)
             }
             result.onFailure { error ->
-                android.util.Log.e(
+                Log.e(
                     "TaskListViewModel",
                     "Failed to delete task taskId=$taskId: ${error.message}"
                 )
@@ -298,7 +336,9 @@ class TaskListViewModel @Inject constructor(
                         }
                     }
                 }
-                
+                // Trigger a single sync after batch reorder completes
+                syncRequests.tryEmit(Unit)
+
             } catch (e: Exception) {
                 // 서버 동기화 실패 시 에러 표시
                 _uiState.value = _uiState.value.copy(
@@ -327,4 +367,3 @@ data class TaskListUiState(
     val errorMessage: String? = null,
     val canWrite: Boolean = true
 )
-

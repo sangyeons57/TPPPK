@@ -13,10 +13,10 @@ import com.example.domain.model.base.Role
 import com.example.domain.model.data.project.RolePermission
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.Name
+import com.example.domain.vo.UserId
 import com.example.domain_repository.base.AuthRepository
 import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectRoleUseCaseProvider
-import com.example.domain_usecase.usecase.project.authorization.GetUserPermissionsForProjectUseCaseImpl
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -54,11 +54,10 @@ sealed class RoleListEvent {
 @HiltViewModel
 class RoleListViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val projectRoleUseCaseProvider: ProjectRoleUseCaseProvider, // Added
+    private val projectRoleUseCaseProvider: ProjectRoleUseCaseProvider,
     private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider,
     private val navigationManger: NavigationManger,
     private val authRepository: AuthRepository,
-    private val getUserPermissionsForProjectUseCase: GetUserPermissionsForProjectUseCaseImpl,
 ) : ViewModel() {
 
     private val projectId: String = savedStateHandle.getRequiredString(RouteArgs.PROJECT_ID)
@@ -140,9 +139,9 @@ class RoleListViewModel @Inject constructor(
             // 2) Fallback to ROLE_EDIT permission
             val session = authRepository.getCurrentUserSession()
             if (session is CustomResult.Success) {
-                when (val hasRoleEdit = getUserPermissionsForProjectUseCase.hasPermission(
+                when (val hasRoleEdit = projectMemberUseCases.hasProjectPermissionUseCase.invoke(
                     DocumentId.from(projectId),
-                    DocumentId.from(session.data.userId),
+                    UserId.from(session.data.userId.value),
                     RolePermission.ROLE_EDIT
                 )) {
                     is CustomResult.Success -> _uiState.update { it.copy(canManageRoles = hasRoleEdit.data) }

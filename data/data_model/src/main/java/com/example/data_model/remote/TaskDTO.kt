@@ -11,14 +11,12 @@ import java.util.Date
 
 /**
  * 태스크 정보를 나타내는 DTO 클래스
- * 통합된 task_container collection에서 type="task"로 저장됩니다.
+ * 통합된 task_container collection에 저장됩니다. 불필요한 "type" 필드는 제거되었습니다.
  */
 data class TaskDTO(
     @DocumentId override val id: String = "",
     @get:PropertyName(CHANNEL_ID)
     val channelId: String = "",
-    @get:PropertyName(TYPE)
-    val type: String = TYPE_TASK,
     @get:PropertyName(TASK_TYPE)
     val taskType: String = "general",
     @get:PropertyName(STATUS)
@@ -39,7 +37,6 @@ data class TaskDTO(
 
     companion object {
         const val COLLECTION_NAME = Task.COLLECTION_NAME
-        const val TYPE = "type"
         const val CHANNEL_ID = Task.KEY_CHANNEL_ID
         const val TASK_TYPE = Task.KEY_TASK_TYPE
         const val STATUS = Task.KEY_STATUS
@@ -47,7 +44,6 @@ data class TaskDTO(
         const val ORDER = Task.KEY_ORDER
         const val CHECKED_BY = Task.KEY_CHECKED_BY
         const val CHECKED_AT = Task.KEY_CHECKED_AT
-        const val TYPE_TASK = "task"
     }
 
 }

@@ -2,12 +2,11 @@ package com.example.feature_chat.ui.components.input
 
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -51,28 +50,34 @@ fun AttachmentPreviewTray(
         }
     }
 
-    LazyRow(
+    LazyColumn(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(selectedUris) { uri ->
-            Box(
-                modifier = Modifier.size(64.dp),
-                contentAlignment = Alignment.TopEnd
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 AsyncImage(
                     model = uri,
                     contentDescription = null,
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .size(80.dp)
                         .clip(RoundedCornerShape(8.dp)),
                     contentScale = ContentScale.Crop
                 )
+                Text(
+                    text = "이미지 ${selectedUris.indexOf(uri) + 1}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f)
+                )
                 IconButton(
                     onClick = { onRemove(uri) },
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(24.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,

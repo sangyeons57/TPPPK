@@ -6,7 +6,7 @@ import com.example.domain_repository.base.MemberRepository
 import javax.inject.Inject
 
 /**
- * 특정 프로젝트의 전체 멤버 목록을 단발성으로 조회하는 UseCase
+ * 특정 프로젝트의 ACTIVE 상태 멤버 목록을 단발성으로 조회하는 UseCase
  * Provider에서 repository의 collection이 프로젝트 컨텍스트로 설정되어 있어야 합니다.
  */
 interface GetProjectMembersUseCase {
@@ -17,7 +17,7 @@ class GetProjectMembersUseCaseImpl @Inject constructor(
     private val projectMemberRepository: MemberRepository
 ) : GetProjectMembersUseCase {
     override suspend operator fun invoke(): CustomResult<List<Member>, Exception> {
-        return projectMemberRepository.findAll()
+        return projectMemberRepository.findAllActiveMembers()
     }
 }
 

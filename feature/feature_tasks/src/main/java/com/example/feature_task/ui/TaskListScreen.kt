@@ -1,38 +1,25 @@
 package com.example.feature_task.ui
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckBox
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Comment
-import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -46,31 +33,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_ui.components.buttons.DebouncedBackButton
-import com.example.core_ui.components.draggablelist.DraggableList
-import com.example.core_ui.components.draggablelist.DraggableListItem
-import com.example.core_ui.components.draggablelist.DraggableListItemData
-import com.example.core_ui.components.draggablelist.DraggableListState
-import com.example.core_ui.components.draggablelist.rememberDraggableListState
-import com.example.core_ui.components.fab.ExtendableFab
-import com.example.core_ui.components.fab.FabLabelStyle
-import com.example.core_ui.components.fab.FabMenuItem
 import com.example.domain.vo.task.TaskType
-import com.example.feature_task.model.TaskUiModel
 import com.example.feature_task.viewmodel.TaskListViewModel
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 /**
  * 작업 목록 화면
@@ -86,6 +57,7 @@ fun TaskListScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var fabExpanded by remember { mutableStateOf(false) }
     var isEditMode by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
 
     // 권한이 없으면 편집 모드 강제 해제
     LaunchedEffect(uiState.canWrite) {
@@ -105,6 +77,10 @@ fun TaskListScreen(
             val editingContent = editingContentMap[prevId]
             val originalTask = uiState.tasks.find { it.id.value == prevId }
             if (editingContent != null && editingContent != originalTask?.content?.value) {
+                android.util.Log.d(
+                    "TaskListScreen",
+                    "autosave prevId=$prevId newContentHash=${editingContent.hashCode()}"
+                )
                 viewModel.editTask(prevId, editingContent)
             }
         }
@@ -140,7 +116,14 @@ fun TaskListScreen(
                 actions = {
                     if (uiState.canWrite) {
                         IconButton(
-                            onClick = { isEditMode = !isEditMode }
+                            onClick = {
+                                // Finish editing and clear focus when toggling modes
+                                if (isEditMode && currentEditingTaskId != null) {
+                                    currentEditingTaskId = null
+                                    focusManager.clearFocus()
+                                }
+                                isEditMode = !isEditMode
+                            }
                         ) {
                             Icon(
                                 imageVector = if (isEditMode) Icons.Default.Visibility else Icons.Default.Edit,
@@ -162,6 +145,11 @@ fun TaskListScreen(
                     expanded = fabExpanded,
                     onExpandedChange = { fabExpanded = it },
                     onCreateTask = { taskType ->
+                        // End any ongoing editing and commit before creating a new task
+                        if (currentEditingTaskId != null) {
+                            currentEditingTaskId = null
+                            focusManager.clearFocus()
+                        }
                         viewModel.createTask(
                             content = if (taskType == TaskType.CHECKLIST) "새 체크리스트" else "새 메모",
                             taskType = taskType
@@ -175,7 +163,28 @@ fun TaskListScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                // Background tap ends editing and commits via LaunchedEffect(currentEditingTaskId)
+                .pointerInput(currentEditingTaskId) {
+                    detectTapGestures(onTap = {
+                        if (currentEditingTaskId != null) {
+                            android.util.Log.d(
+                                "TaskListScreen",
+                                "background tap: end editing and save"
+                            )
+                            currentEditingTaskId = null
+                            focusManager.clearFocus()
+                        }
+                    })
+                }
         ) {
+            // Compose-side logging to trace UI collection path
+            LaunchedEffect(uiState.tasks) {
+                val first = uiState.tasks.firstOrNull()
+                android.util.Log.d(
+                    "TaskListScreen",
+                    "compose collected tasks size=${uiState.tasks.size} firstId=${first?.id?.value} updatedAt=${first?.updatedAt}"
+                )
+            }
             if (uiState.isLoading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -197,17 +206,17 @@ fun TaskListScreen(
                             modifier = Modifier.size(64.dp),
                             tint = MaterialTheme.colorScheme.primary
                         )
-                        
+
                         Spacer(modifier = Modifier.height(16.dp))
-                        
+
                         Text(
                             text = "작업이 없습니다",
                             style = MaterialTheme.typography.headlineMedium,
                             textAlign = TextAlign.Center
                         )
-                        
+
                         Spacer(modifier = Modifier.height(8.dp))
-                        
+
                         Text(
                             text = "+ 버튼을 눌러 첫 작업을 만들어보세요",
                             style = MaterialTheme.typography.bodyLarge,
@@ -217,53 +226,27 @@ fun TaskListScreen(
                     }
                 }
             } else {
-                // Sort all tasks by order field instead of separating by type
-                val sortedTasks = uiState.tasks.sortedBy { it.order.value }
-                
-                // Create DraggableList state - 실시간 순서 기반 처리
-                val draggableListState = rememberDraggableListState(
-                    initialItems = sortedTasks.map { task ->
-                        DraggableListItemData(
-                            id = task.id.value,
-                            originalData = task
-                        )
-                    },
-                    onItemMove = { _, fromIndex, toIndex ->
-                        // 기존 콜백 (호환성을 위해 유지하지만 사용 안함)
-                    },
-                    onRealtimeReorder = { realtimeOrderedTasks ->
-                        // 드래그 완료 시 실시간 순서를 그대로 DB에 저장
-                        viewModel.finalizeReorder(realtimeOrderedTasks)
-                    }
-                )
-                
-                // Update draggable list state when tasks change (but not during drag)
-                LaunchedEffect(sortedTasks) {
-                    if (!draggableListState.isDragging) {
-                        draggableListState.updateItems(
-                            sortedTasks.map { task ->
-                                DraggableListItemData(
-                                    id = task.id.value,
-                                    originalData = task
-                                )
-                            }
-                        )
-                    }
-                }
-                
-                DraggableList(
-                    state = draggableListState,
+                val sortedTasks =
+                    remember(uiState.tasks) { uiState.tasks.sortedBy { it.order.value } }
+                LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(16.dp)
-                ) { index, itemData, isCurrentlyDragging, listState ->
-                    Column {
+                ) {
+                    items(
+                        items = sortedTasks,
+                        key = { it.id.value }
+                    ) { task ->
+                        // Per-item log for diagnosing missed updates
+                        LaunchedEffect(task.id, task.updatedAt) {
+                            android.util.Log.d(
+                                "TaskListScreen",
+                                "render item id=${task.id.value} updatedAt=${task.updatedAt} contentHash=${task.content.value.hashCode()}"
+                            )
+                        }
                         TaskItem(
-                            task = itemData.originalData,
+                            task = task,
                             isEditMode = isEditMode,
-                            isCurrentlyDragging = isCurrentlyDragging,
-                            draggableListState = listState,
-                            index = index,
                             currentEditingTaskId = currentEditingTaskId,
                             editingContentMap = editingContentMap,
                             onEditingStateChange = { taskId ->
@@ -278,13 +261,39 @@ fun TaskListScreen(
                             },
                             onDelete = { taskId ->
                                 viewModel.deleteTask(taskId)
+                            },
+                            onMoveUp = { taskId ->
+                                val idx = sortedTasks.indexOfFirst { it.id.value == taskId }
+                                if (idx > 0) {
+                                    val newList = sortedTasks.toMutableList().apply {
+                                        val tmp = this[idx - 1]
+                                        this[idx - 1] = this[idx]
+                                        this[idx] = tmp
+                                    }
+                                    android.util.Log.d(
+                                        "TaskListScreen",
+                                        "moveUp id=$taskId toIndex=${idx - 1}"
+                                    )
+                                    viewModel.finalizeReorder(newList)
+                                }
+                            },
+                            onMoveDown = { taskId ->
+                                val idx = sortedTasks.indexOfFirst { it.id.value == taskId }
+                                if (idx >= 0 && idx < sortedTasks.lastIndex) {
+                                    val newList = sortedTasks.toMutableList().apply {
+                                        val tmp = this[idx + 1]
+                                        this[idx + 1] = this[idx]
+                                        this[idx] = tmp
+                                    }
+                                    android.util.Log.d(
+                                        "TaskListScreen",
+                                        "moveDown id=$taskId toIndex=${idx + 1}"
+                                    )
+                                    viewModel.finalizeReorder(newList)
+                                }
                             }
                         )
-                        
-                        // Add spacing between items
-                        if (index < draggableListState.items.size - 1) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                        }
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
             }
@@ -305,283 +314,6 @@ fun TaskListScreen(
                 }
             )
         }
-        
     }
 }
-
-@Composable
-fun TaskItem(
-    task: TaskUiModel,
-    isEditMode: Boolean,
-    isCurrentlyDragging: Boolean = false,
-    draggableListState: DraggableListState<TaskUiModel>? = null,
-    index: Int = -1,
-    currentEditingTaskId: String?,
-    editingContentMap: Map<String, String>,
-    onEditingStateChange: (String) -> Unit,
-    onContentChange: (String, String) -> Unit,
-    onStatusChange: (String, Boolean) -> Unit,
-    onDelete: (String) -> Unit
-) {
-    // Global state-based editing status
-    val isEditingThisCard = currentEditingTaskId == task.id.value
-    val editingContent = editingContentMap[task.id.value] ?: task.content.value
-
-
-    // Wrap with DraggableListItem when in edit mode and draggable state is available
-    if (isEditMode && draggableListState != null && index >= 0) {
-        DraggableListItem(
-            itemData = DraggableListItemData(
-                id = task.id.value,
-                originalData = task
-            ),
-            index = index,
-            isCurrentlyDragging = isCurrentlyDragging,
-            draggableListState = draggableListState,
-            dragHandle = {
-                Icon(
-                    imageVector = Icons.Default.DragIndicator,
-                    contentDescription = "순서 변경",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        ) {
-            TaskCard(
-                task = task,
-                isEditMode = isEditMode,
-                isEditingThisCard = isEditingThisCard,
-                editingContent = editingContent,
-                onEditingStateChange = onEditingStateChange,
-                onContentChange = onContentChange,
-                onStatusChange = onStatusChange,
-                onDelete = onDelete,
-                isCurrentlyDragging = isCurrentlyDragging
-            )
-        }
-    } else {
-        TaskCard(
-            task = task,
-            isEditMode = isEditMode,
-            isEditingThisCard = isEditingThisCard,
-            editingContent = editingContent,
-            onEditingStateChange = onEditingStateChange,
-            onContentChange = onContentChange,
-            onStatusChange = onStatusChange,
-            onDelete = onDelete,
-            isCurrentlyDragging = false
-        )
-    }
-}
-
-@Composable
-private fun TaskCard(
-    task: TaskUiModel,
-    isEditMode: Boolean,
-    isEditingThisCard: Boolean,
-    editingContent: String,
-    onEditingStateChange: (String) -> Unit,
-    onContentChange: (String, String) -> Unit,
-    onStatusChange: (String, Boolean) -> Unit,
-    onDelete: (String) -> Unit,
-    isCurrentlyDragging: Boolean = false
-) {
-    val focusRequester = remember(task.id) { FocusRequester() }
-
-    // Auto-focus when editing starts - use try-catch for safety
-    LaunchedEffect(isEditingThisCard) {
-        if (isEditingThisCard) {
-            try {
-                kotlinx.coroutines.delay(50) // Small delay to ensure composition is complete
-                focusRequester.requestFocus()
-            } catch (e: IllegalStateException) {
-                // Ignore focus request errors during composition
-                android.util.Log.w("TaskCard", "Focus request failed: ${e.message}")
-            }
-        }
-    }
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isCurrentlyDragging) 8.dp else 2.dp
-        ),
-        colors = CardDefaults.cardColors(
-            containerColor = when {
-                isCurrentlyDragging -> MaterialTheme.colorScheme.primaryContainer
-                isEditMode -> MaterialTheme.colorScheme.surfaceVariant
-                else -> MaterialTheme.colorScheme.surface
-            }
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
-            ) {
-                if (task.taskType.isCheckbox()) {
-                    Checkbox(
-                        checked = task.isCompleted,
-                        onCheckedChange = if (isEditMode) null else { isChecked ->
-                            onStatusChange(task.id.value, isChecked)
-                        },
-                        enabled = !isEditMode
-                    )
-                    
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-                
-                Column(modifier = Modifier.weight(1f)) {
-                    if (isEditMode && isEditingThisCard) {
-                        // 편집 중: OutlinedTextField 사용
-                        val focusManager = LocalFocusManager.current
-                        
-                        OutlinedTextField(
-                            value = editingContent,  // Use global editing content
-                            onValueChange = { newContent ->
-                                onContentChange(task.id.value, newContent)  // Update global state
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .focusRequester(focusRequester),
-                            textStyle = MaterialTheme.typography.bodyLarge,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                            keyboardActions = KeyboardActions(
-                                onDone = {
-                                    onEditingStateChange(task.id.value)  // End editing
-                                    focusManager.clearFocus()
-                                }
-                            ),
-                            minLines = 1,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                            )
-                        )
-                    } else if (isEditMode) {
-                        // 편집 모드이지만 편집 중이 아님: 클릭 가능한 텍스트
-                        Text(
-                            text = task.content.value,  // Use Room Flow value
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = if (task.isCompleted) {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            } else {
-                                MaterialTheme.colorScheme.onSurface
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp) // Add padding to make click area larger
-                                .clickable {
-                                    // Start editing when clicked
-                                    onEditingStateChange(task.id.value)
-                                }
-                        )
-                    } else {
-                        // 보기 모드: 일반 텍스트
-                        Text(
-                            text = task.content.value,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = if (task.isCompleted) {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            } else {
-                                MaterialTheme.colorScheme.onSurface
-                            }
-                        )
-                        
-                        // 체크된 작업인 경우 체크한 사람과 시간 표시
-                        if (task.isCompleted && task.checkedBy != null && task.checkedAt != null) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "체크됨: ${task.checkedByName ?: task.checkedBy!!.internalValue} • ${formatTime(task.checkedAt!!)}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                fontSize = 11.sp
-                            )
-                        }
-                    }
-                }
-            }
-            
-            if (isEditMode) {
-                IconButton(
-                    onClick = { onDelete(task.id.value) }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "삭제",
-                        tint = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
-        }
-    }
-}
-
-
-@Composable
-fun TaskCreationFab(
-    expanded: Boolean,
-    onExpandedChange: (Boolean) -> Unit,
-    onCreateTask: (TaskType) -> Unit
-) {
-    val menuItems = remember {
-        listOf(
-            FabMenuItem(
-                icon = Icons.Default.CheckBox,
-                text = "체크리스트",
-                contentDescription = "체크리스트 작업 생성",
-                onClick = { 
-                    onCreateTask(TaskType.CHECKLIST)
-                    onExpandedChange(false)
-                }
-            ),
-            FabMenuItem(
-                icon = Icons.Default.Comment,
-                text = "메모",
-                contentDescription = "메모 작업 생성",
-                onClick = { 
-                    onCreateTask(TaskType.COMMENT)
-                    onExpandedChange(false)
-                }
-            )
-        )
-    }
-    
-    ExtendableFab(
-        menuItems = menuItems,
-        isExpanded = expanded,
-        onExpandedChange = onExpandedChange,
-        labelStyle = FabLabelStyle.CARD
-    )
-}
-
-/**
- * Instant를 사용자 친화적인 시간 문자열로 포맷팅
- */
-private fun formatTime(instant: Instant): String {
-    val localDateTime = LocalDateTime.ofInstant(instant, ZoneId.systemDefault())
-    val now = LocalDateTime.now()
-    
-    return when {
-        localDateTime.toLocalDate() == now.toLocalDate() -> {
-            // 오늘인 경우 시간만 표시
-            localDateTime.format(DateTimeFormatter.ofPattern("HH:mm"))
-        }
-        localDateTime.toLocalDate() == now.toLocalDate().minusDays(1) -> {
-            // 어제인 경우
-            "어제 ${localDateTime.format(DateTimeFormatter.ofPattern("HH:mm"))}"
-        }
-        localDateTime.year == now.year -> {
-            // 올해인 경우
-            localDateTime.format(DateTimeFormatter.ofPattern("MM/dd HH:mm"))
-        }
-        else -> {
-            // 다른 해인 경우
-            localDateTime.format(DateTimeFormatter.ofPattern("yy/MM/dd HH:mm"))
-        }
-    }
-}
+ 

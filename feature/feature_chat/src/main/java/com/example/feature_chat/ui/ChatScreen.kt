@@ -406,7 +406,7 @@ fun ChatScreen(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth(),
-                    maxVisibleItems = 7,
+                    maxVisibleItems = uiState.mentionSuggestionLimit,
                     selectedIndex = uiState.selectedMentionIndex,
                     query = uiState.mentionQueryText
                 )

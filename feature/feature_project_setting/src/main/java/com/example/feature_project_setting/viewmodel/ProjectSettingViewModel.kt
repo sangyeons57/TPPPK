@@ -13,24 +13,24 @@ import com.example.core_navigation.core.CreateCategoryRoute
 import com.example.core_navigation.core.CreateChannelRoute
 import com.example.core_navigation.core.EditCategoryRoute
 import com.example.core_navigation.core.EditChannelRoute
+import com.example.core_navigation.core.MemberListBlockedRoute
 import com.example.core_navigation.core.MemberListRoute
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.core.RoleListRoute
 import com.example.core_navigation.destination.RouteArgs
 import com.example.core_navigation.extension.getRequiredString
 import com.example.core_ui.components.project.ProjectImageUpdateEventManager
+import com.example.domain.model.data.project.RolePermission
+import com.example.domain.model.ui.data.MemberUiModel
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.UserId
 import com.example.domain.vo.project.ProjectName
-import com.example.domain.model.ui.data.MemberUiModel
-import com.example.domain.model.data.project.RolePermission
+import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
 import com.example.domain_usecase.provider.project.CoreProjectUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectAssetsUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectChannelUseCaseProvider
-import com.example.domain_usecase.provider.project.ProjectStructureUseCaseProvider
 import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
-import com.example.domain_usecase.provider.project.ProjectAuthorizationUseCaseProvider
-import com.example.domain_usecase.provider.auth.AuthSessionUseCaseProvider
+import com.example.domain_usecase.provider.project.ProjectStructureUseCaseProvider
 import com.example.feature_model.CategoryUiModel
 import com.example.feature_model.ChannelUiModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -83,7 +83,6 @@ class ProjectSettingViewModel @Inject constructor(
     private val projectChannelUseCaseProvider: ProjectChannelUseCaseProvider,
     private val projectAssetsUseCaseProvider: ProjectAssetsUseCaseProvider,
     private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider,
-    private val projectAuthorizationUseCaseProvider: ProjectAuthorizationUseCaseProvider,
     private val authSessionUseCaseProvider: AuthSessionUseCaseProvider,
     private val projectImageUpdateEventManager: ProjectImageUpdateEventManager
 ) : ViewModel() {
@@ -120,7 +119,7 @@ class ProjectSettingViewModel @Inject constructor(
 
     private fun computeSettingsPermission() {
         viewModelScope.launch {
-            val auth = projectAuthorizationUseCaseProvider.createForProject(projectId)
+            val auth = projectMemberUseCaseProvider.createForProject(projectId)
             when (val allowed =
                 auth.ownerOrPermissionUseCase(projectId, RolePermission.PROJECT_SETTINGS)) {
                 is CustomResult.Success -> _uiState.update { it.copy(canEditProjectSettings = allowed.data) }
@@ -347,6 +346,38 @@ class ProjectSettingViewModel @Inject constructor(
         )
     }
 
+    fun requestManageBlockedMembers() {
+        viewModelScope.launch {
+            // 차단된 멤버 관리 권한 확인 (오너이거나 MEMBER_MANAGE 권한 필요)
+            when (val canManageResult = projectMemberUseCases.ownerOrPermissionUseCase(
+                projectId,
+                RolePermission.MEMBER_MANAGE
+            )) {
+                is CustomResult.Success -> {
+                    if (canManageResult.data) {
+                        navigationManger.navigateTo(
+                            MemberListBlockedRoute(projectId.value)
+                        )
+                    } else {
+                        _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("차단된 멤버를 관리할 권한이 없습니다"))
+                    }
+                }
+
+                is CustomResult.Failure -> {
+                    Log.e(
+                        "ProjectSettingViewModel",
+                        "Failed to check member manage permission: ${canManageResult.error}"
+                    )
+                    _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("권한 확인에 실패했습니다"))
+                }
+
+                else -> {
+                    _eventFlow.emit(ProjectSettingEvent.ShowSnackbar("권한 확인 중 오류가 발생했습니다"))
+                }
+            }
+        }
+    }
+
     fun requestManageRoles() {
         navigationManger.navigateTo(
             RoleListRoute(projectId.value)
@@ -357,7 +388,7 @@ class ProjectSettingViewModel @Inject constructor(
     fun requestRenameProject() {
         if (!_uiState.value.canEditProjectSettings) {
             viewModelScope.launch {
-                val auth = projectAuthorizationUseCaseProvider.createForProject(projectId)
+                val auth = projectMemberUseCaseProvider.createForProject(projectId)
                 val msg = auth.permissionDeniedMessageUseCase(RolePermission.PROJECT_SETTINGS)
                 _eventFlow.emit(ProjectSettingEvent.ShowSnackbar(msg))
             }
@@ -669,7 +700,7 @@ class ProjectSettingViewModel @Inject constructor(
     fun onProjectImageClicked() {
         if (!_uiState.value.canEditProjectSettings) {
             viewModelScope.launch {
-                val auth = projectAuthorizationUseCaseProvider.createForProject(projectId)
+                val auth = projectMemberUseCaseProvider.createForProject(projectId)
                 val msg = auth.permissionDeniedMessageUseCase(RolePermission.PROJECT_SETTINGS)
                 _eventFlow.emit(ProjectSettingEvent.ShowSnackbar(msg))
             }
@@ -728,7 +759,7 @@ class ProjectSettingViewModel @Inject constructor(
     fun onSaveProjectImageClicked() {
         if (!_uiState.value.canEditProjectSettings) {
             viewModelScope.launch {
-                val auth = projectAuthorizationUseCaseProvider.createForProject(projectId)
+                val auth = projectMemberUseCaseProvider.createForProject(projectId)
                 val msg = auth.permissionDeniedMessageUseCase(RolePermission.PROJECT_SETTINGS)
                 _eventFlow.emit(ProjectSettingEvent.ShowSnackbar(msg))
             }
@@ -828,7 +859,7 @@ class ProjectSettingViewModel @Inject constructor(
     fun onRemoveProjectImageClicked() {
         if (!_uiState.value.canEditProjectSettings) {
             viewModelScope.launch {
-                val auth = projectAuthorizationUseCaseProvider.createForProject(projectId)
+                val auth = projectMemberUseCaseProvider.createForProject(projectId)
                 val msg = auth.permissionDeniedMessageUseCase(RolePermission.PROJECT_SETTINGS)
                 _eventFlow.emit(ProjectSettingEvent.ShowSnackbar(msg))
             }
@@ -844,7 +875,7 @@ class ProjectSettingViewModel @Inject constructor(
     fun confirmRemoveProjectImage() {
         if (!_uiState.value.canEditProjectSettings) {
             viewModelScope.launch {
-                val auth = projectAuthorizationUseCaseProvider.createForProject(projectId)
+                val auth = projectMemberUseCaseProvider.createForProject(projectId)
                 val msg = auth.permissionDeniedMessageUseCase(RolePermission.PROJECT_SETTINGS)
                 _eventFlow.emit(ProjectSettingEvent.ShowSnackbar(msg))
             }
@@ -910,7 +941,7 @@ class ProjectSettingViewModel @Inject constructor(
     fun onSetDefaultProjectProfileClicked() {
         if (!_uiState.value.canEditProjectSettings) {
             viewModelScope.launch {
-                val auth = projectAuthorizationUseCaseProvider.createForProject(projectId)
+                val auth = projectMemberUseCaseProvider.createForProject(projectId)
                 val msg = auth.permissionDeniedMessageUseCase(RolePermission.PROJECT_SETTINGS)
                 _eventFlow.emit(ProjectSettingEvent.ShowSnackbar(msg))
             }
@@ -968,6 +999,8 @@ class ProjectSettingViewModel @Inject constructor(
             }
         }
     }
+
+    // 내보내기 관련 로직 제거됨
 
     // UI 가 직접 뒤로가기를 요청할 때 호출
     fun navigateBack() {

@@ -166,9 +166,7 @@ open class MessageRemoteDataSourceImpl @Inject constructor(
         for (e in events) {
             try {
                 val payloadJson = JSONObject(e.payload)
-                val id = payloadJson.optString("id")
-                    .takeIf { it.isNotEmpty() }
-                    ?: throw IllegalArgumentException("Missing id in payload")
+                val id = e.aggregateId
                 val channelIdRaw = payloadJson.optString(ChannelConstants.KEY_CHANNEL_ID)
                     .takeIf { it.isNotEmpty() }
                     ?: throw IllegalArgumentException("Missing channelId in payload")

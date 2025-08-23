@@ -147,6 +147,17 @@ data class MemberListRoute(
 }
 
 @Serializable
+data class MemberListBlockedRoute(
+    val projectId: String
+) : TypeSafeRoute {
+    companion object {
+        const val ROUTE_PATTERN = "project/{${RouteArgs.PROJECT_ID}}/members_blocked"
+        val arguments = listOf(navArgument(RouteArgs.PROJECT_ID) { type = NavType.StringType })
+    }
+}
+
+
+@Serializable
 data class EditMemberRoute(
     val projectId: String,
     val userId: String
@@ -371,7 +382,9 @@ object TypeSafeRouteCompat {
         // Member routes
         is MemberListRoute -> "project/$projectId/members"
         is EditMemberRoute -> "project/$projectId/members/edit/$userId"
-        
+
+        is MemberListBlockedRoute -> "project/$projectId/members_blocked"
+
         // Role routes
         is RoleListRoute -> "project/$projectId/roles"
         is EditRoleRoute -> "project/$projectId/roles/edit/$roleId"

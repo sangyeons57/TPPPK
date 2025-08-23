@@ -9,9 +9,10 @@ import com.example.domain.model.base.Category
 import com.example.domain.model.data.project.RolePermission
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.UserId
-import com.example.domain_usecase.provider.project.ProjectAuthorizationUseCaseProvider
+import com.example.domain_usecase.provider.project.CoreProjectUseCaseProvider
+import com.example.domain_usecase.provider.project.ProjectMemberUseCaseProvider
+import com.example.domain_usecase.provider.project.ProjectMemberUseCases
 import com.example.domain_usecase.provider.user.UserUseCaseProvider
-import com.example.domain_usecase.usecase.project.authorization.GetUserPermissionsForProjectUseCaseImpl
 import com.example.feature_home.model.CategoryUiModel
 import com.example.feature_home.model.ChannelUiModel
 import com.example.feature_home.model.DmUiModel
@@ -41,8 +42,8 @@ class HomeViewModel @Inject constructor(
     private val homeServiceProvider: HomeServiceProvider,
     private val userUseCaseProvider: UserUseCaseProvider,
     private val navigationManger: NavigationManger,
-    private val projectAuthorizationUseCaseProvider: ProjectAuthorizationUseCaseProvider,
-    private val getUserPermissionsForProjectUseCase: GetUserPermissionsForProjectUseCaseImpl,
+    private val projectMemberUseCaseProvider: ProjectMemberUseCaseProvider,
+    private val coreProjectUseCaseProvider: CoreProjectUseCaseProvider,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -246,6 +247,22 @@ class HomeViewModel @Inject constructor(
     }
 
     /**
+     * 프로젝트 목록을 새로고침합니다.
+     */
+    private fun refreshProjectList() {
+        Log.d("HomeViewModel", "Refreshing project list")
+        val currentServices = services
+        if (currentServices == null) {
+            Log.w("HomeViewModel", "Services not initialized, skipping refreshProjectList")
+            return
+        }
+
+        // 기존 작업 취소하고 다시 로드
+        projectsStreamJob?.cancel()
+        loadProjects()
+    }
+
+    /**
      * DM 데이터 로드
      */
     private fun loadDms() {
@@ -305,7 +322,99 @@ class HomeViewModel @Inject constructor(
         Log.d("HomeViewModel", "Project clicked: $projectId")
         
         if (_uiState.value.selectedProjectId == projectId) return
-        
+
+        // 먼저 멤버 상태를 확인
+        viewModelScope.launch {
+            checkMemberStatusAndProceed(projectId)
+        }
+    }
+
+    /**
+     * 멤버 상태를 확인하고 적절한 처리를 수행합니다.
+     */
+    private suspend fun checkMemberStatusAndProceed(projectId: DocumentId) {
+        try {
+            // 멤버 상태 확인을 위한 UseCase 생성
+            val projectMemberUseCases = projectMemberUseCaseProvider.createForProject(projectId)
+
+            when (val result = projectMemberUseCases.verifyProjectMembershipUseCase(projectId)) {
+                is CustomResult.Success -> {
+                    if (result.data) {
+                        // ACTIVE 멤버인 경우 정상 처리
+                        proceedWithProjectSelection(projectId)
+                    } else {
+                        // ACTIVE가 아닌 경우 상세 상태 확인 필요
+                        checkNonActiveMemberStatus(projectId, projectMemberUseCases)
+                    }
+                }
+
+                is CustomResult.Failure -> {
+                    Log.e("HomeViewModel", "Failed to verify membership", result.error)
+                    _eventFlow.emit(HomeEvent.ShowSnackbar("멤버 상태 확인에 실패했습니다."))
+                }
+
+                else -> {
+                    Log.w("HomeViewModel", "Unexpected result from verifyProjectMembershipUseCase")
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("HomeViewModel", "Error checking member status", e)
+            _eventFlow.emit(HomeEvent.ShowSnackbar("멤버 상태 확인 중 오류가 발생했습니다."))
+        }
+    }
+
+    /**
+     * 비활성 멤버의 상세 상태를 확인하고 처리합니다.
+     */
+    private suspend fun checkNonActiveMemberStatus(
+        projectId: DocumentId,
+        projectMemberUseCases: ProjectMemberUseCases
+    ) {
+        try {
+            // 현재 사용자가 멤버인지 확인하고, 멤버가 아니면 project wrapper 삭제
+            deleteProjectWrapperAndShowMessage(projectId, "프로젝트 접근 권한이 없습니다.")
+        } catch (e: Exception) {
+            Log.e("HomeViewModel", "Error checking detailed member status", e)
+        }
+    }
+
+    /**
+     * Project wrapper를 삭제하고 메시지를 표시합니다.
+     */
+    private suspend fun deleteProjectWrapperAndShowMessage(projectId: DocumentId, message: String) {
+        try {
+            // Project wrapper 삭제
+            val coreProjectUseCases = coreProjectUseCaseProvider.createForCurrentUser()
+            when (val deleteResult = coreProjectUseCases.deleteProjectsWrapperUseCase(projectId)) {
+                is CustomResult.Success -> {
+                    Log.d("HomeViewModel", "Project wrapper deleted successfully")
+                }
+
+                is CustomResult.Failure -> {
+                    Log.e("HomeViewModel", "Failed to delete project wrapper", deleteResult.error)
+                }
+
+                else -> {
+                    Log.w("HomeViewModel", "Unexpected result from deleteProjectWrapper")
+                }
+            }
+
+            // 프로젝트 목록 새로고침
+            refreshProjectList()
+
+            // 스낵바 메시지 표시
+            _eventFlow.emit(HomeEvent.ShowSnackbar(message))
+
+        } catch (e: Exception) {
+            Log.e("HomeViewModel", "Error deleting project wrapper", e)
+            _eventFlow.emit(HomeEvent.ShowSnackbar("프로젝트 정리 중 오류가 발생했습니다."))
+        }
+    }
+
+    /**
+     * 정상적인 프로젝트 선택 처리를 수행합니다.
+     */
+    private fun proceedWithProjectSelection(projectId: DocumentId) {
         _uiState.update { it.copy(selectedProjectId = projectId) }
         
         // 프로젝트 선택 시 해당 프로젝트 컨텍스트로 services 재생성
@@ -318,9 +427,9 @@ class HomeViewModel @Inject constructor(
 
     private fun computeStructureEditPermission(projectId: DocumentId) {
         viewModelScope.launch {
-            val auth = projectAuthorizationUseCaseProvider.createForProject(projectId)
+            val memberUseCases = projectMemberUseCaseProvider.createForProject(projectId)
             when (val allowed =
-                auth.ownerOrPermissionUseCase(projectId, RolePermission.STRUCTURE_EDIT)) {
+                memberUseCases.ownerOrPermissionUseCase(projectId, RolePermission.STRUCTURE_EDIT)) {
                 is CustomResult.Success -> _uiState.update { it.copy(canStructureEdit = allowed.data) }
                 else -> _uiState.update { it.copy(canStructureEdit = false) }
             }
@@ -523,8 +632,8 @@ class HomeViewModel @Inject constructor(
 
         // 권한 게이트: OWNER 우선, 아니면 CHANNEL_READ 필요 (표준 메시지)
         viewModelScope.launch {
-            val auth = projectAuthorizationUseCaseProvider.createForProject(projectId)
-            when (val allowed = auth.ownerOrPermissionUseCase(
+            val memberUseCases = projectMemberUseCaseProvider.createForProject(projectId)
+            when (val allowed = memberUseCases.ownerOrPermissionUseCase(
                 projectId = projectId,
                 permission = RolePermission.CHANNEL_READ
             )) {
@@ -532,7 +641,8 @@ class HomeViewModel @Inject constructor(
                     if (allowed.data) {
                         currentServices.navigationService.handleChannelClick(projectId, channel)
                     } else {
-                        val msg = auth.permissionDeniedMessageUseCase(RolePermission.CHANNEL_READ)
+                        val msg =
+                            memberUseCases.permissionDeniedMessageUseCase(RolePermission.CHANNEL_READ)
                         _eventFlow.emit(HomeEvent.ShowSnackbar(msg))
                     }
                 }
@@ -567,12 +677,13 @@ class HomeViewModel @Inject constructor(
 
         // STRUCTURE_EDIT 권한 게이트 (OWNER 우선)
         viewModelScope.launch {
-            val auth = projectAuthorizationUseCaseProvider.createForProject(projectId)
+            val memberUseCases = projectMemberUseCaseProvider.createForProject(projectId)
             when (val allowed =
-                auth.ownerOrPermissionUseCase(projectId, RolePermission.STRUCTURE_EDIT)) {
+                memberUseCases.ownerOrPermissionUseCase(projectId, RolePermission.STRUCTURE_EDIT)) {
                 is CustomResult.Success -> {
                     if (!allowed.data) {
-                        val msg = auth.permissionDeniedMessageUseCase(RolePermission.STRUCTURE_EDIT)
+                        val msg =
+                            memberUseCases.permissionDeniedMessageUseCase(RolePermission.STRUCTURE_EDIT)
                         _eventFlow.emit(HomeEvent.ShowSnackbar(msg))
                         return@launch
                     }
@@ -613,12 +724,13 @@ class HomeViewModel @Inject constructor(
 
         // STRUCTURE_EDIT 권한 게이트 (OWNER 우선)
         viewModelScope.launch {
-            val auth = projectAuthorizationUseCaseProvider.createForProject(projectId)
+            val memberUseCases = projectMemberUseCaseProvider.createForProject(projectId)
             when (val allowed =
-                auth.ownerOrPermissionUseCase(projectId, RolePermission.STRUCTURE_EDIT)) {
+                memberUseCases.ownerOrPermissionUseCase(projectId, RolePermission.STRUCTURE_EDIT)) {
                 is CustomResult.Success -> {
                     if (!allowed.data) {
-                        val msg = auth.permissionDeniedMessageUseCase(RolePermission.STRUCTURE_EDIT)
+                        val msg =
+                            memberUseCases.permissionDeniedMessageUseCase(RolePermission.STRUCTURE_EDIT)
                         _eventFlow.emit(HomeEvent.ShowSnackbar(msg))
                         return@launch
                     }

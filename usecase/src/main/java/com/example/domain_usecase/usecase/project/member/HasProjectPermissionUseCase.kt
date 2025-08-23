@@ -1,37 +1,39 @@
-package com.example.domain_usecase.usecase.project.authorization
+package com.example.domain_usecase.usecase.project.member
 
 import com.example.core_common.result.CustomResult
-import com.example.domain.model.base.Member
 import com.example.domain.model.data.project.RolePermission
 import com.example.domain.vo.DocumentId
+import com.example.domain.vo.UserId
 import com.example.domain_repository.base.MemberRepository
 import com.example.domain_repository.base.ProjectRoleRepository
 import javax.inject.Inject
 
 /**
- * Checks if a given user has a specific permission in a project.
- * Single responsibility via invoke.
+ * 사용자가 프로젝트에서 특정 권한을 가지고 있는지 확인하는 UseCase
  */
 interface HasProjectPermissionUseCase {
-    suspend operator fun invoke(
+    suspend fun invoke(
         projectId: DocumentId,
-        userId: DocumentId,
+        userId: UserId,
         permission: RolePermission
     ): CustomResult<Boolean, Exception>
 }
 
+/**
+ * 사용자의 프로젝트 권한 확인 UseCase 구현체
+ */
 class HasProjectPermissionUseCaseImpl @Inject constructor(
     private val memberRepository: MemberRepository,
     private val projectRoleRepository: ProjectRoleRepository,
 ) : HasProjectPermissionUseCase {
     override suspend fun invoke(
         projectId: DocumentId,
-        userId: DocumentId,
+        userId: UserId,
         permission: RolePermission
     ): CustomResult<Boolean, Exception> {
-        val memberResult = memberRepository.findById(userId)
+        val memberResult = memberRepository.findById(DocumentId.from(userId.value))
         val roleIds = when (memberResult) {
-            is CustomResult.Success -> (memberResult.data as Member).roleIds
+            is CustomResult.Success -> memberResult.data.roleIds
             is CustomResult.Failure -> return CustomResult.Failure(memberResult.error)
             is CustomResult.Initial -> return CustomResult.Initial
             is CustomResult.Loading -> return CustomResult.Loading
@@ -54,4 +56,3 @@ class HasProjectPermissionUseCaseImpl @Inject constructor(
         return CustomResult.Success(false)
     }
 }
-

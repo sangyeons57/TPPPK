@@ -44,6 +44,7 @@ import com.example.core_navigation.core.FriendsListRoute
 import com.example.core_navigation.core.JoinProjectRoute
 import com.example.core_navigation.core.LoginRoute
 import com.example.core_navigation.core.MainContainerRoute
+import com.example.core_navigation.core.MemberListBlockedRoute
 import com.example.core_navigation.core.MemberListRoute
 import com.example.core_navigation.core.NavigationManger
 import com.example.core_navigation.core.PrivacyPolicyRoute
@@ -77,6 +78,7 @@ import com.example.feature_join_project.ui.JoinProjectScreen
 import com.example.feature_login.ui.LoginScreen
 import com.example.feature_main.MainContainerScreen
 import com.example.feature_member_list.ui.MemberListScreen
+import com.example.feature_member_list_blocked.ui.BlockedMemberListScreen
 import com.example.feature_privacy_policy.ui.PrivacyPolicyScreen
 import com.example.feature_profile.ui.EditProfileScreen
 import com.example.feature_project_setting.ui.ProjectSettingScreen
@@ -315,7 +317,16 @@ fun NavGraphBuilder.projectGraph(navigationManger: NavigationManger) {
         ) {
             MemberListScreen()
         }
-        
+
+        // 멤버 관리 화면
+        composable(
+            route = MemberListBlockedRoute.ROUTE_PATTERN,
+            arguments = MemberListBlockedRoute.arguments
+        ) {
+            BlockedMemberListScreen()
+        }
+
+
         // 역할 관리 화면
         composable(
             route = RoleListRoute.ROUTE_PATTERN,

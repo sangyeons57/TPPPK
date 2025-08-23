@@ -55,6 +55,7 @@ data class ChatUiState(
     val mentionQueryText: String = "",
     val mentionQueryStartPosition: Int = -1,
     val selectedMentionIndex: Int = -1, // -1 means no selection
+    val mentionSuggestionLimit: Int = 7,
 
     // Current message mentions (for composing message)
     val pendingMessageMentions: List<MentionInfo> = emptyList(),

@@ -81,18 +81,18 @@ class Member private constructor(
     }
 
     /**
-     * 멤버를 영구 차단합니다.
+     * 멤버가 프로젝트에서 나간 상태로 변경합니다.
      */
-    fun ban(bannedBy: DocumentId) {
-        this.status = MemberStatus.BANNED
-        this.blockedAt = DateTimeUtil.nowInstant()
-        this.blockedBy = bannedBy
+    fun leave() {
+        this.status = MemberStatus.LEAVE
+        this.blockedAt = null
+        this.blockedBy = null
     }
 
     /**
-     * 멤버의 차단 상태를 해제합니다.
+     * 멤버의 차단 상태를 해제하거나 프로젝트에 재참여 시 활성 상태로 변경합니다.
      */
-    fun unblock() {
+    fun activate() {
         this.status = MemberStatus.ACTIVE
         this.blockedAt = null
         this.blockedBy = null
@@ -109,9 +109,9 @@ class Member private constructor(
     fun isBlocked(): Boolean = status == MemberStatus.BLOCKED
 
     /**
-     * 멤버가 영구 차단된 상태인지 확인합니다.
+     * 멤버가 프로젝트를 나간 상태인지 확인합니다.
      */
-    fun isBanned(): Boolean = status == MemberStatus.BANNED
+    fun hasLeft(): Boolean = status == MemberStatus.LEAVE
 
     companion object {
         const val COLLECTION_NAME = "members"

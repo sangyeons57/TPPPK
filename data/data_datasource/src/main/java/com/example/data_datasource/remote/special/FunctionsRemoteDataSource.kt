@@ -241,17 +241,29 @@ interface FunctionsRemoteDataSource {
     suspend fun removeMember(projectId: String, targetUserId: String): CustomResult<Unit, Exception>
 
     /**
-     * 프로젝트 멤버를 차단/금지합니다.
+     * 프로젝트 멤버를 차단합니다.
      *
      * @param projectId 프로젝트 ID
      * @param targetUserId 차단할 사용자 ID
-     * @param blockType 차단 유형 ("blocked" 또는 "banned")
+     * @param blockType 차단 유형 ("blocked")
      * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
      */
     suspend fun blockMember(
         projectId: String,
         targetUserId: String,
         blockType: String
+    ): CustomResult<Unit, Exception>
+
+    /**
+     * 프로젝트 멤버 차단을 해제합니다.
+     *
+     * @param projectId 프로젝트 ID
+     * @param targetUserId 차단 해제할 사용자 ID
+     * @return 성공 시 Unit, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun unblockMember(
+        projectId: String,
+        targetUserId: String
     ): CustomResult<Unit, Exception>
 
     // ================== 프로젝트 초대 링크 관련 메서드 ==================
@@ -313,6 +325,20 @@ interface FunctionsRemoteDataSource {
         projectId: String,
         inviterId: String? = null
     ): CustomResult<Boolean, Exception>
+
+    /**
+     * 프로젝트 데이터를 내보냅니다.
+     *
+     * @param projectId 내보낼 프로젝트 ID
+     * @param includeMessages 메시지 포함 여부
+     * @param format 내보내기 형식 ("json" 또는 "csv")
+     * @return 성공 시 내보내기 결과 데이터, 실패 시 Exception을 담은 CustomResult
+     */
+    suspend fun exportProject(
+        projectId: String,
+        includeMessages: Boolean = false,
+        format: String = "json"
+    ): CustomResult<Map<String, Any?>, Exception>
 
 }
 
@@ -659,7 +685,7 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
     override suspend fun acceptFriendRequest(friendUserId: UserId): CustomResult<Map<String, Any?>, Exception> =
         withContext(Dispatchers.IO) {
         try {
-            val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
+            auth.currentUser ?: throw Exception("User not authenticated")
             
             val requestData = mapOf(
                 FirebaseFunctionParameters.Friend.FRIEND_USER_ID to friendUserId.value,
@@ -687,7 +713,7 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
     override suspend fun rejectFriendRequest(friendUserId: UserId): CustomResult<Map<String, Any?>, Exception> =
         withContext(Dispatchers.IO) {
         try {
-            val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
+            auth.currentUser ?: throw Exception("User not authenticated")
             
             val requestData = mapOf(
                 FirebaseFunctionParameters.Friend.FRIEND_USER_ID to friendUserId.value,
@@ -1090,6 +1116,49 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
         }
     }
 
+    override suspend fun unblockMember(
+        projectId: String,
+        targetUserId: String
+    ): CustomResult<Unit, Exception> = withContext(Dispatchers.IO) {
+        try {
+            Log.d(
+                "FunctionsRemoteDataSource",
+                "Starting unblockMember for projectId: $projectId, targetUserId: $targetUserId"
+            )
+
+            val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
+            Log.d("FunctionsRemoteDataSource", "Current user: ${currentUser.uid}")
+
+            val data = mapOf<String, String>(
+                FirebaseFunctionParameters.Project.PROJECT_ID to projectId,
+                FirebaseFunctionParameters.Project.TARGET_USER_ID to targetUserId
+            )
+
+            Log.d("FunctionsRemoteDataSource", "Calling unblockMember function with data: $data")
+
+            val result = withTimeoutOrNull(DEFAULT_TIMEOUT_MS) {
+                functions.getHttpsCallable("unblockMember")
+                    .call(data)
+                    .await()
+            }
+
+            if (result != null) {
+                Log.d("FunctionsRemoteDataSource", "Unblock member function call successful")
+                CustomResult.Success(Unit)
+            } else {
+                Log.e(
+                    "FunctionsRemoteDataSource",
+                    "Unblock member function call timed out after ${DEFAULT_TIMEOUT_MS}ms"
+                )
+                CustomResult.Failure(Exception("Unblock member function call timed out"))
+            }
+        } catch (e: Exception) {
+            Log.e("FunctionsRemoteDataSource", "Exception in unblockMember", e)
+            if (e is CancellationException) throw e
+            CustomResult.Failure(e)
+        }
+    }
+
     override suspend fun revokeInviteLink(inviteCode: String): CustomResult<Map<String, Any?>, Exception> {
         TODO("Not yet implemented - 초대 링크 무효화 기능")
     }
@@ -1118,6 +1187,49 @@ class FunctionsRemoteDataSourceImpl @Inject constructor(
         inviterId: String?
     ): CustomResult<Boolean, Exception> {
         TODO("Not yet implemented - 활성 초대 링크 존재 확인")
+    }
+
+    override suspend fun exportProject(
+        projectId: String,
+        includeMessages: Boolean,
+        format: String
+    ): CustomResult<Map<String, Any?>, Exception> = withContext(Dispatchers.IO) {
+        try {
+            auth.currentUser ?: throw Exception("User not authenticated")
+
+            val requestData = mapOf(
+                "projectId" to projectId,
+                "includeMessages" to includeMessages,
+                "format" to format
+            )
+
+            Log.d(
+                "FunctionsRemoteDataSource",
+                "Calling exportProject function with data: $requestData"
+            )
+
+            val callable = functions.getHttpsCallable("exportProject")
+            val result = withTimeoutOrNull(300000L) { // 5분 타임아웃 (대용량 데이터 처리 시간 고려)
+                callable.call(requestData).await()
+            }
+
+            if (result != null) {
+                @Suppress("UNCHECKED_CAST")
+                val data = result.data as? Map<String, Any?> ?: emptyMap()
+                Log.d("FunctionsRemoteDataSource", "Export project function call successful")
+                CustomResult.Success(data)
+            } else {
+                Log.e(
+                    "FunctionsRemoteDataSource",
+                    "Export project function call timed out after 300000ms"
+                )
+                CustomResult.Failure(Exception("Export project function call timed out"))
+            }
+        } catch (e: Exception) {
+            Log.e("FunctionsRemoteDataSource", "Exception in exportProject", e)
+            if (e is CancellationException) throw e
+            CustomResult.Failure(e)
+        }
     }
 
 }

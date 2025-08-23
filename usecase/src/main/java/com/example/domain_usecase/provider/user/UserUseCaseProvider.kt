@@ -5,6 +5,8 @@ import com.example.domain_repository.base.AuthRepository
 import com.example.domain_repository.base.UserRepository
 import com.example.domain_usecase.usecase.user.CheckNicknameAvailabilityUseCase
 import com.example.domain_usecase.usecase.user.CheckNicknameAvailabilityUseCaseImpl
+import com.example.domain_usecase.usecase.user.FindUserIdByUserNameUseCase
+import com.example.domain_usecase.usecase.user.FindUserIdByUserNameUseCaseImpl
 import com.example.domain_usecase.usecase.user.GetCurrentUserStreamUseCase
 import com.example.domain_usecase.usecase.user.GetCurrentUserStreamUseCaseImpl
 import com.example.domain_usecase.usecase.user.GetUserByIdUseCase
@@ -27,8 +29,6 @@ import com.example.domain_usecase.usecase.user.UpdateUserMemoUseCaseImpl
 import com.example.domain_usecase.usecase.user.UpdateUserStatusUseCase
 import com.example.domain_usecase.usecase.user.UpdateUserStatusUseCaseImpl
 import com.example.domain_usecase.usecase.user.UploadProfileImageUseCase
-import com.example.domain_usecase.usecase.user.FindUserIdByUserNameUseCase
-import com.example.domain_usecase.usecase.user.FindUserIdByUserNameUseCaseImpl
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -113,7 +113,10 @@ class UserUseCaseProvider @Inject constructor(
 
             findUserIdByUserNameUseCase = FindUserIdByUserNameUseCaseImpl(
                 userRepository = this.userRepository
-            )
+            ),
+
+            userRepository = this.userRepository,
+            authRepository = this.authRepository,
         )
     }
 }
@@ -141,5 +144,8 @@ data class UserUseCases(
     val uploadProfileImageUseCase: UploadProfileImageUseCase,
 
     // 사용자 검색
-    val findUserIdByUserNameUseCase: FindUserIdByUserNameUseCase
+    val findUserIdByUserNameUseCase: FindUserIdByUserNameUseCase,
+
+    val userRepository: UserRepository,
+    val authRepository: AuthRepository
 )

@@ -18,8 +18,8 @@ class SyncManagerFactory @Inject constructor(
 ) {
     fun forChannel(
         channelId: String,
-        includeMessages: Boolean = true,
-        includeTasks: Boolean = true
+        includeMessages: Boolean = false,
+        includeTasks: Boolean = false
     ): SyncCoordinator {
         val ports = mutableListOf<com.example.domain.model.sync.SyncPort<out AggregateRoot>>()
         if (includeMessages) ports += messagePortFactory.create(channelId)
