@@ -40,39 +40,46 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            
-            <!-- Deep linking for invite links -->
+
+
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+                <!-- Channel links: https://tpppk.app/channel/{id} -->
                 <data android:scheme="https"
                       android:host="tpppk.app"
-                      android:pathPrefix="/invite" />
+                    android:pathPrefix="/channel" />
             </intent-filter>
-            
-            <!-- Alternative deep linking for development -->
+
+            <!-- App scheme deep links for internal navigation -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="tpppk"
-                      android:host="invite" />
+                <!-- Channel navigation: app://channel/{id} -->
+                <data
+                    android:host="channel"
+                    android:scheme="app" />
+            </intent-filter>
+
+
+            <!-- Development/Debug deep links for channels only -->
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <!-- Channel development: tpppk://channel/{id} -->
+                <data
+                    android:host="channel"
+                    android:scheme="tpppk" />
             </intent-filter>
         </activity>
 
         <meta-data android:name="com.google.android.gms.version" android:value="@integer/google_play_services_version" />
 
-
-        
-        
-        
-        
-        
-        
-        
-        
-        
 
         <!-- FCM 서비스 등록 -->
         <service

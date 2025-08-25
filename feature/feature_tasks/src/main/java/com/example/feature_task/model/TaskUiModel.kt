@@ -23,6 +23,7 @@ data class TaskUiModel(
     val checkedBy: UserId?,
     val checkedByName: String?,
     val checkedAt: Instant?,
+    val deletedAt: Instant?,
     val updatedAt: Instant
 ) {
     

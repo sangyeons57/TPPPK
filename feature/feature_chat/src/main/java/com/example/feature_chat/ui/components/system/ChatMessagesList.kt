@@ -102,23 +102,10 @@ fun ChatMessagesList(
             count = lazyPagingItems.itemCount,
             key = { index ->
                 val message = lazyPagingItems[index]
-                // 향상된 키 안정성: 메시지 내용 해시 추가로 동일 내용 메시지도 개별 아이템으로 처리
+                // localId를 사용한 간단하고 안정적인 키 생성
                 when {
                     message == null -> "loading_$index" // 로딩 중 null에 대해 인덱스 기반 고유 키
-                    message.isOptimistic -> {
-                        // 임시 메시지: 내용 해시 추가로 동일 내용도 구분
-                        val ts = message.clientSentAt?.toEpochMilli()
-                            ?: message.actualTimestamp.toEpochMilli()
-                        val contentHash = message.message.hashCode()
-                        "temp_${message.messageId}_${ts}_${contentHash}"
-                    }
-                    else -> {
-                        // 실제 메시지: 내용 해시와 payload 해시 추가로 완전한 유니크성 보장
-                        val timestamp = message.actualTimestamp.toEpochMilli()
-                        val contentHash = message.message.hashCode()
-                        val payloadHash = message.payload?.hashCode() ?: 0
-                        "actual_${message.messageId}_${timestamp}_${contentHash}_${payloadHash}"
-                    }
+                    else -> message.localId // ChatMessageUiModel의 고유 localId 사용
                 }
             },
             contentType = { index ->

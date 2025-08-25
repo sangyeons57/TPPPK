@@ -18,6 +18,7 @@ class Task private constructor(
     initialOrder: TaskOrder,
     initialCheckedBy: UserId?,
     initialCheckedAt: Instant?,
+    initialDeletedAt: Instant?,
     override val id: DocumentId,
     override var isNew: Boolean,
     override val createdAt: Instant,
@@ -37,6 +38,8 @@ class Task private constructor(
         private set
     var checkedAt: Instant? = initialCheckedAt
         private set
+    var deletedAt: Instant? = initialDeletedAt
+        private set
 
     init {
         setOriginalState()
@@ -51,6 +54,7 @@ class Task private constructor(
             KEY_ORDER to this.order.value,
             KEY_CHECKED_BY to this.checkedBy?.internalValue,
             KEY_CHECKED_AT to this.checkedAt,
+            KEY_DELETED_AT to this.deletedAt,
             KEY_CREATED_AT to this.createdAt,
             KEY_UPDATED_AT to this.updatedAt
         )
@@ -138,6 +142,7 @@ class Task private constructor(
         const val KEY_ORDER = "order"
         const val KEY_CHECKED_BY = "checkedBy"
         const val KEY_CHECKED_AT = "checkedAt"
+        const val KEY_DELETED_AT = "deletedAt"
 
         /**
          * Factory method for creating a new task.
@@ -157,6 +162,7 @@ class Task private constructor(
                 initialOrder = order,
                 initialCheckedBy = null,
                 initialCheckedAt = null,
+                initialDeletedAt = null,
                 createdAt = DateTimeUtil.nowInstant(),
                 updatedAt = DateTimeUtil.nowInstant(),
                 id = id,
@@ -177,6 +183,7 @@ class Task private constructor(
             order: TaskOrder,
             checkedBy: UserId?,
             checkedAt: Instant?,
+            deletedAt: Instant?,
             createdAt: Instant?,
             updatedAt: Instant?
         ): Task {
@@ -188,10 +195,39 @@ class Task private constructor(
                 initialOrder = order,
                 initialCheckedBy = checkedBy,
                 initialCheckedAt = checkedAt,
+                initialDeletedAt = deletedAt,
                 createdAt = createdAt ?: DateTimeUtil.nowInstant(),
                 updatedAt = updatedAt ?: DateTimeUtil.nowInstant(),
                 id = id,
                 isNew = false
+            )
+        }
+
+        // Backward-compatible overload (without deletedAt)
+        fun fromDataSource(
+            id: DocumentId,
+            channelId: DocumentId,
+            taskType: TaskType,
+            status: TaskStatus,
+            content: TaskContent,
+            order: TaskOrder,
+            checkedBy: UserId?,
+            checkedAt: Instant?,
+            createdAt: Instant?,
+            updatedAt: Instant?
+        ): Task {
+            return fromDataSource(
+                id = id,
+                channelId = channelId,
+                taskType = taskType,
+                status = status,
+                content = content,
+                order = order,
+                checkedBy = checkedBy,
+                checkedAt = checkedAt,
+                deletedAt = null,
+                createdAt = createdAt,
+                updatedAt = updatedAt
             )
         }
     }

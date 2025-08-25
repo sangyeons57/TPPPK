@@ -16,6 +16,7 @@ object TaskMapper {
             checkedBy = task.checkedBy,
             checkedByName = checkedByName,
             checkedAt = task.checkedAt,
+            deletedAt = task.deletedAt,
             updatedAt = task.updatedAt
         )
     }
@@ -30,6 +31,7 @@ object TaskMapper {
             order = taskUiModel.order,
             checkedBy = taskUiModel.checkedBy,
             checkedAt = taskUiModel.checkedAt,
+            deletedAt = null,
             createdAt = null,
             updatedAt = taskUiModel.updatedAt
         )

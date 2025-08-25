@@ -34,6 +34,7 @@ class TaskJsonConverter @Inject constructor(
                 Task.KEY_ORDER to data.order.value,
                 Task.KEY_CHECKED_BY to data.checkedBy?.value,
                 Task.KEY_CHECKED_AT to data.checkedAt?.toEpochMilli(),
+                Task.KEY_DELETED_AT to data.deletedAt?.toEpochMilli(),
                 AggregateRoot.KEY_CREATED_AT to data.createdAt?.toEpochMilli(),
                 AggregateRoot.KEY_UPDATED_AT to data.updatedAt?.toEpochMilli()
             )
@@ -57,6 +58,8 @@ class TaskJsonConverter @Inject constructor(
                 order = TaskOrder((taskData[Task.KEY_ORDER] as Double).toInt()),
                 checkedBy = (taskData[Task.KEY_CHECKED_BY] as? String)?.let { UserId(it) },
                 checkedAt = (taskData[Task.KEY_CHECKED_AT] as? Double)?.toLong()
+                    ?.let { Instant.ofEpochMilli(it) },
+                deletedAt = (taskData[Task.KEY_DELETED_AT] as? Double)?.toLong()
                     ?.let { Instant.ofEpochMilli(it) },
                 createdAt = (taskData[AggregateRoot.KEY_CREATED_AT] as? Double)?.toLong()
                     ?.let { Instant.ofEpochMilli(it) },

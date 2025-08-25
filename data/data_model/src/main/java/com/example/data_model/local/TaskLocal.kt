@@ -14,7 +14,8 @@ import kotlinx.coroutines.flow.Flow
     tableName = "tasks",
     indices = [
         Index(value = ["channelId", "order"]),
-        Index(value = ["channelId", "updatedAt"])
+        Index(value = ["channelId", "updatedAt"]),
+        Index(value = ["channelId", "deletedAt"])
     ]
 )
 data class TaskEntity(
@@ -43,6 +44,9 @@ data class TaskEntity(
     @ColumnInfo(name = "checkedAt")
     val checkedAt: Long?,
 
+    @ColumnInfo(name = "deletedAt")
+    val deletedAt: Long?,
+
     @ColumnInfo(name = "createdAt")
     val createdAt: Long,
 
@@ -58,7 +62,7 @@ interface TaskDao {
     @Query(
         """
         SELECT * FROM tasks
-        WHERE channelId = :channelId
+        WHERE channelId = :channelId AND deletedAt IS NULL
         ORDER BY `order` ASC, createdAt ASC
         """
     )
@@ -70,7 +74,7 @@ interface TaskDao {
     @Query(
         """
         SELECT * FROM tasks
-        WHERE channelId LIKE :projectId || ':%'
+        WHERE channelId LIKE :projectId || ':%' AND deletedAt IS NULL
         ORDER BY channelId ASC, `order` ASC, updatedAt DESC
         """
     )
@@ -82,7 +86,7 @@ interface TaskDao {
     @Query(
         """
         SELECT * FROM tasks
-        WHERE channelId = :channelId
+        WHERE channelId = :channelId AND deletedAt IS NULL
         ORDER BY `order` ASC, createdAt ASC
         """
     )

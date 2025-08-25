@@ -31,6 +31,7 @@ class TaskMapper @Inject constructor() : Mapper<TaskEntity, Task, TaskDTO>,
             order = TaskOrder(entity.order),
             checkedBy = entity.checkedBy?.let { UserId(it) },
             checkedAt = entity.checkedAt?.let { Instant.ofEpochMilli(it) },
+            deletedAt = entity.deletedAt?.let { Instant.ofEpochMilli(it) },
             createdAt = Instant.ofEpochMilli(entity.createdAt),
             updatedAt = Instant.ofEpochMilli(entity.updatedAt)
         )
@@ -46,6 +47,7 @@ class TaskMapper @Inject constructor() : Mapper<TaskEntity, Task, TaskDTO>,
             order = domain.order.value,
             checkedBy = domain.checkedBy?.value,
             checkedAt = domain.checkedAt?.toEpochMilli(),
+            deletedAt = domain.deletedAt?.toEpochMilli(),
             createdAt = domain.createdAt.toEpochMilli(),
             updatedAt = domain.updatedAt.toEpochMilli(),
         )
@@ -61,6 +63,7 @@ class TaskMapper @Inject constructor() : Mapper<TaskEntity, Task, TaskDTO>,
             order = TaskOrder(dto.order),
             checkedBy = dto.checkedBy?.let { UserId(it) },
             checkedAt = dto.checkedAt?.toInstant(),
+            deletedAt = dto.deletedAt?.toInstant(),
             createdAt = dto.createdAt?.toInstant(),
             updatedAt = dto.updatedAt?.toInstant()
         )
@@ -76,6 +79,7 @@ class TaskMapper @Inject constructor() : Mapper<TaskEntity, Task, TaskDTO>,
             order = domain.order.value,
             checkedBy = domain.checkedBy?.value,
             checkedAt = null, // ServerTimestamp가 처리
+            deletedAt = null, // Soft delete에서 서버 타임스탬프 처리
             createdAt = null, // ServerTimestamp가 처리
             updatedAt = null  // ServerTimestamp가 처리
         )

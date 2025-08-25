@@ -6,6 +6,7 @@ import com.example.domain.AggregateRoot
 import com.example.domain.model.sync.SyncCursorStore
 import com.example.domain.model.sync.SyncPort
 import com.example.domain.model.sync.SyncScope
+import com.example.domain.vo.ChannelId
 import com.example.orchestrator.DefaultSyncManager
 import com.example.orchestrator.MessageSyncPortFactory
 import javax.inject.Inject
@@ -26,7 +27,7 @@ class SyncUseCase @Inject constructor(
         return try {
             val ports: List<SyncPort<AggregateRoot>> = when {
                 stream.startsWith("messages-") -> {
-                    val channelId = stream.removePrefix("messages-")
+                    val channelId = ChannelId(stream.removePrefix("messages-"))
                     @Suppress("UNCHECKED_CAST")
                     listOf(messageSyncPortFactory.create(channelId)) as List<SyncPort<AggregateRoot>>
                 }
@@ -47,6 +48,6 @@ class SyncUseCase @Inject constructor(
         }
     }
 
-    suspend fun syncChannel(channelId: String): CustomResult<Unit, Exception> =
-        invoke("messages-$channelId")
+    suspend fun syncChannel(channelId: ChannelId): CustomResult<Unit, Exception> =
+        invoke("messages-${channelId.value}")
 }

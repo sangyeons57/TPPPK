@@ -55,6 +55,7 @@ class TaskRepositoryImpl @Inject constructor(
                 order = payload.order.value,
                 checkedBy = payload.checkedBy?.value,
                 checkedAt = payload.checkedAt?.toEpochMilli(),
+                deletedAt = null,
                 createdAt = payload.createdAt.toEpochMilli(),
                 updatedAt = payload.updatedAt.toEpochMilli(),
             )
@@ -130,6 +131,7 @@ class TaskRepositoryImpl @Inject constructor(
                 order = payload.order.value,
                 checkedBy = payload.checkedBy?.value,
                 checkedAt = payload.checkedAt?.toEpochMilli(),
+                deletedAt = null,
                 createdAt = existing.createdAt, // 기존 생성시간 유지
                 updatedAt = payload.updatedAt.toEpochMilli(), // 수정시간만 업데이트
             )
@@ -215,15 +217,21 @@ class TaskRepositoryImpl @Inject constructor(
             // 1) Read entity first to capture channelId for OutBox payload filtering
             val existing = taskDao.findById(id.value)
 
-            // 2) Local delete
-            val deletedRows = taskDao.deleteById(id.value)
-            android.util.Log.d(
-                "TaskRepository",
-                "Room delete completed for taskId=${id.value}, deletedRows=$deletedRows"
-            )
+            // 2) Local soft delete (tombstone)
+            val now = System.currentTimeMillis()
+            if (existing != null) {
+                val tombstoned = existing.copy(
+                    deletedAt = now,
+                    updatedAt = now
+                )
+                taskDao.upsert(tombstoned)
+                android.util.Log.d(
+                    "TaskRepository",
+                    "Room soft delete (tombstone) applied for taskId=${id.value}"
+                )
+            }
 
             // 3) Enqueue Outbox DELETE
-            val now = System.currentTimeMillis()
             // Include channelId so TaskSyncPort can filter this event for the correct channel
             val payload = buildString {
                 append('{')

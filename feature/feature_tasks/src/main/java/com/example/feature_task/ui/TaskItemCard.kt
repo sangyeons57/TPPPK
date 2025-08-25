@@ -171,10 +171,10 @@ fun TaskCard(
                             color = if (task.isCompleted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
                         )
 
-                        if (task.isCompleted && task.checkedBy != null && task.checkedAt != null) {
+                        if (task.isCompleted && task.checkedBy != null && task.checkedAt != null && task.checkedByName != null) {
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "체크됨: ${task.checkedByName ?: task.checkedBy!!.internalValue} • ${
+                                text = "체크됨: ${task.checkedByName} • ${
                                     formatTime(
                                         task.checkedAt!!
                                     )

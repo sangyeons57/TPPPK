@@ -162,7 +162,7 @@ class WebSocketChatViewModel @Inject constructor(
                     // 채널 입장 시 초기 동기화 실행 (SyncMetadata 기반) - 커서 기준 멱등
                     Log.d(TAG, "🚀 채널 입장시 초기 동기화 시작: $channelId")
                     try {
-                        val result = syncUseCase.syncChannel(channelId.value)
+                        val result = syncUseCase.syncChannel(channelId)
                         if (result.isSuccess) {
                             Log.d(TAG, "✅ 초기 동기화 완료: $channelId")
                         } else {
@@ -193,11 +193,16 @@ class WebSocketChatViewModel @Inject constructor(
 
         // 4. WebSocket 이벤트 구독 (UI 이벤트만)
         observeWebSocketEventsForUiEvents()
-        // 프로필 업데이트 신호가 오면 Paging을 자동 재매핑하도록 트리거 (간단히 event만 발생)
+        // 프로필 업데이트 신호가 오면 Paging을 자동 재매핑하도록 트리거
         viewModelScope.launch {
-            services.profileUpdates.collect { _ ->
-                // UI는 Paging 아이템 recompose 시 최신 이름/이미지를 조회하여 반영
-                _eventFlow.emit(ChatEvent.SystemMessage("프로필이 갱신되었습니다"))
+            services.profileUpdates.collect { updateCount ->
+                Log.d(TAG, "🔄 프로필 업데이트 감지 (count: $updateCount), Paging 갱신 트리거")
+
+                // Paging refresh를 트리거하기 위한 이벤트 발생
+                _eventFlow.emit(ChatEvent.RefreshMessages)
+
+                // 추가적으로 사용자에게 알림 (선택사항)
+                Log.d(TAG, "✅ 사용자 프로필이 갱신되어 메시지가 업데이트됩니다")
             }
         }
 
@@ -238,6 +243,9 @@ class WebSocketChatViewModel @Inject constructor(
         } else {
             _uiState.update { it.copy(canWrite = !it.isDMBlocked, canInvite = true) }
         }
+
+        // 7. 초기 사용자 프로필 배치 로딩 (성능 개선)
+        loadInitialUserProfiles()
 
     }
 
@@ -1783,6 +1791,58 @@ class WebSocketChatViewModel @Inject constructor(
                     isLoadingParticipants = false
                 )
             }
+        }
+    }
+
+    /**
+     * 화면 진입 시 최근 메시지의 사용자 프로필들을 배치 로딩 (성능 개선)
+     * 대부분의 사용자 이름이 "로딩 중.." 없이 바로 표시되도록 함
+     */
+    private fun loadInitialUserProfiles() {
+        viewModelScope.launch {
+            try {
+                Log.d(TAG, "🚀 초기 사용자 프로필 배치 로딩 시작")
+
+                // 최근 50개 메시지에서 사용자 ID들 추출
+                val recentUserIds = getRecentMessageUserIds(50)
+
+                if (recentUserIds.isNotEmpty()) {
+                    Log.d(
+                        TAG,
+                        "📝 최근 메시지에서 ${recentUserIds.size}명의 사용자 발견: ${recentUserIds.take(5)}..."
+                    )
+
+                    // UserProfileService의 배치 로딩 활용
+                    services.userProfileService.loadUserProfiles(recentUserIds)
+
+                    Log.d(TAG, "✅ 초기 사용자 프로필 배치 로딩 완료")
+                } else {
+                    Log.d(TAG, "📝 최근 메시지에서 사용자를 찾을 수 없음")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ 초기 사용자 프로필 배치 로딩 실패", e)
+            }
+        }
+    }
+
+    /**
+     * 최근 메시지들에서 사용자 ID 목록을 추출
+     * @param limit 조회할 최대 메시지 수
+     * @return 중복 제거된 사용자 ID 목록
+     */
+    private suspend fun getRecentMessageUserIds(limit: Int = 50): Set<String> {
+        return try {
+            // MessageRepository를 통해 최근 메시지들 조회
+            val recentMessages = services.messageService.getRecentMessages(limit)
+            val userIds = recentMessages.mapNotNull { message ->
+                message.senderId.value.takeIf { it.isNotBlank() }
+            }.toSet()
+
+            Log.d(TAG, "📊 최근 ${recentMessages.size}개 메시지에서 ${userIds.size}명 사용자 추출")
+            userIds
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ 최근 메시지 사용자 ID 추출 실패", e)
+            emptySet()
         }
     }
     

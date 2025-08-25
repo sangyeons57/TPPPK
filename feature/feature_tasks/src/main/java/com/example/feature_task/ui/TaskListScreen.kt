@@ -26,6 +26,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,6 +39,9 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core_ui.components.buttons.DebouncedBackButton
 import com.example.domain.vo.task.TaskType
@@ -58,6 +62,28 @@ fun TaskListScreen(
     var fabExpanded by remember { mutableStateOf(false) }
     var isEditMode by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
+
+    // Handle lifecycle events for auto-sync management
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> {
+                    viewModel.resumeAutoSync()
+                }
+
+                Lifecycle.Event.ON_PAUSE -> {
+                    viewModel.stopAutoSync()
+                }
+
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     // 권한이 없으면 편집 모드 강제 해제
     LaunchedEffect(uiState.canWrite) {

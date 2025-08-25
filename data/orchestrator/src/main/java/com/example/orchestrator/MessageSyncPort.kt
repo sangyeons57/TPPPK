@@ -1,8 +1,7 @@
 package com.example.orchestrator
 
-import android.util.Log
-import com.example.data_datasource.remote.MessageRemoteDataSource
 import com.example.core_common.constants.ChannelConstants
+import com.example.data_datasource.remote.MessageRemoteDataSource
 import com.example.data_model.local.MessageDao
 import com.example.data_model.local.OutboxDao
 import com.example.data_model.local.toModel
@@ -14,8 +13,10 @@ import com.example.domain.model.sync.OutBoxRecord
 import com.example.domain.model.sync.PushResult
 import com.example.domain.model.sync.RemoteBatch
 import com.example.domain.model.sync.SyncPort
+import com.example.domain.vo.ChannelId
 import com.example.domain.vo.CollectionPath
 import com.example.mapper.message.MessageMapper
+import com.example.orchestrator.util.SyncLogger
 import javax.inject.Inject
 
 /**
@@ -26,19 +27,17 @@ import javax.inject.Inject
  * - applyRemote: Room DB에 원격 데이터를 적용하여 Paging3 자동 업데이트 트리거 (MessageRepository 사용)
  * - pushToRemote: 로컬 변경사항을 Firestore로 전송 (OutBox 패턴)
  */
-class MessageSyncPort @Inject constructor(
+class MessageSyncPort(
     private val messageRemoteDataSource: MessageRemoteDataSource, // Firestore 직접 접근
     private val messageDao: MessageDao, // Room DB 직접 접근
     private val messageMapper: MessageMapper, // Message <-> MessageEntity 변환
     private val outboxDao: OutboxDao, // OutBox 접근
-    private val channelId: String
+    private val channelId: ChannelId
 ) : SyncPort<Message> {
 
-    companion object {
-        private const val TAG = "MessageSyncPort"
-    }
+    private val logger = SyncLogger("MessageSyncPort")
 
-    override val name = "${ChannelConstants.STREAM_MESSAGES}-$channelId"
+    override val name = "${ChannelConstants.STREAM_MESSAGES}-${channelId.value}"
 
     // ================================
     // 서버 → 로컬 (Pull) 동기화
@@ -54,26 +53,30 @@ class MessageSyncPort @Inject constructor(
      * @return 원격 배치 데이터
      */
     override suspend fun pullSince(cursor: String?, limit: Int): RemoteBatch<Message> {
+        logger.logPullStart(name, cursor)
         return try {
-            val path = CollectionPath.dmChannelMessages(channelId)
+            val path = CollectionPath.messages(channelId)
             messageRemoteDataSource.setCollection(path)
 
             val dtoBatch = messageRemoteDataSource.pullSince(cursor, limit)
             val items = dtoBatch.items.map { dto ->
-                val fixed = if (dto.channelId.isBlank()) dto.copy(channelId = channelId) else dto
+                val fixed =
+                    if (dto.channelId.isBlank()) dto.copy(channelId = channelId.value) else dto
                 messageMapper.dtoToDomain(fixed)
             }
 
-            RemoteBatch(
+            val batch = RemoteBatch(
                 items = items,
                 tombstones = emptyList(),
                 nextCursor = dtoBatch.nextCursor,
                 hasMore = dtoBatch.hasMore,
                 watermark = dtoBatch.watermark
             )
+
+            logger.logPullSuccess(name, batch)
+            batch
         } catch (e: Exception) {
-            Log.e(TAG, "pullSince failed (cursor=$cursor, limit=$limit)", e)
-            // Exception을 다시 던져서 상위 계층에서 처리하도록 함
+            logger.logPullFailure(name, cursor, e)
             throw e
         }
     }
@@ -89,7 +92,7 @@ class MessageSyncPort @Inject constructor(
         batch: RemoteBatch<Message>,
         resolver: ConflictResolver<Message>
     ): ApplyOutcome {
-        Log.d(TAG, "📥 Applying ${batch.items.size} remote messages to Room DB")
+        logger.logApplyStart(name, batch.items.size)
 
         return try {
             var successCount = 0
@@ -102,21 +105,20 @@ class MessageSyncPort @Inject constructor(
                     val messageEntity = messageMapper.domainToEntity(message)
                     messageDao.upsert(messageEntity)
                     successCount++
-                    Log.d(TAG, "✅ Applied message to Room DB: id=${message.id.value}")
                 } catch (e: Exception) {
                     failCount++
-                    Log.e(TAG, "❌ Failed to apply message to Room DB: id=${message.id.value}", e)
+                    logger.error("Failed to apply message to Room DB: id=${message.id.value}", e)
                 }
             }
 
-            Log.d(TAG, "📊 Apply remote complete: success=$successCount, failed=$failCount")
+            logger.logApplyResult(name, successCount, failCount)
 
             // 성공한 메시지가 하나라도 있으면 성공으로 처리
             // Room DB 변경 → Paging3 자동 UI 업데이트 트리거됨
             ApplyOutcome(success = successCount > 0)
 
         } catch (e: Exception) {
-            Log.e(TAG, "💥 Exception during applyRemote", e)
+            logger.logApplyFailure(name, e)
             ApplyOutcome(success = false, error = e)
         }
     }
@@ -132,19 +134,20 @@ class MessageSyncPort @Inject constructor(
      * @return 전송할 OutBox 레코드들
      */
     override suspend fun readOutboxBatch(limit: Int): List<OutBoxRecord> {
-        Log.d(TAG, "📤 Reading outbox batch (generic), limit: $limit")
         return try {
             val pending = outboxDao.peek(ChannelConstants.STREAM_MESSAGES, limit)
-            pending.mapNotNull { e ->
+            val filtered = pending.mapNotNull { e ->
                 try {
                     val json = org.json.JSONObject(e.payload)
-                    if (json.optString(ChannelConstants.KEY_CHANNEL_ID) == channelId) e.toModel() else null
+                    if (json.optString(ChannelConstants.KEY_CHANNEL_ID) == channelId.value) e.toModel() else null
                 } catch (_: Exception) {
                     null
                 }
             }
+            logger.logOutboxOperation("Read", name, filtered.size)
+            filtered
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to read outbox batch", e)
+            logger.error("Failed to read outbox batch", e)
             emptyList()
         }
     }
@@ -156,11 +159,12 @@ class MessageSyncPort @Inject constructor(
      * @return 전송 결과 (성공/실패 ID 리스트)
      */
     override suspend fun pushToRemote(events: List<OutBoxRecord>): PushResult {
-        Log.d(TAG, "🚀 Pushing ${events.size} events to remote")
         return try {
-            messageRemoteDataSource.push(events)
+            val result = messageRemoteDataSource.push(events)
+            logger.logPushResult(name, result.successIds.size, result.failIds.size)
+            result
         } catch (e: Exception) {
-            Log.e(TAG, "💥 Exception during pushToRemote", e)
+            logger.logException("pushToRemote", name, e)
             PushResult(
                 successIds = emptyList(),
                 failIds = events.map { FailedEvent(it.id, e.message ?: "Push failed", 5000L) }
@@ -172,13 +176,13 @@ class MessageSyncPort @Inject constructor(
      * 성공적으로 전송된 OutBox 레코드들을 확인 처리합니다.
      */
     override suspend fun ackOutbox(successIds: List<String>) {
-        Log.d(TAG, "✅ Acknowledging ${successIds.size} successful outbox records")
         try {
             if (successIds.isNotEmpty()) {
                 outboxDao.markDispatched(successIds)
+                logger.logOutboxOperation("Ack", name, successIds.size)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to ack outbox records", e)
+            logger.error("Failed to ack outbox records", e)
         }
     }
 
@@ -186,14 +190,14 @@ class MessageSyncPort @Inject constructor(
      * 실패한 OutBox 레코드들을 재시도 대기 상태로 변경합니다.
      */
     override suspend fun retryOutBox(failed: List<FailedEvent>) {
-        Log.d(TAG, "🔄 Marking ${failed.size} events for retry")
         try {
             val ids = failed.map { it.id }
             if (ids.isNotEmpty()) {
                 outboxDao.markFailed(ids)
+                logger.logOutboxOperation("Retry", name, ids.size)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Failed to mark events for retry", e)
+            logger.error("Failed to mark events for retry", e)
         }
     }
 
@@ -211,7 +215,7 @@ class MessageSyncPortFactory @Inject constructor(
     /**
      * 특정 채널용 MessageSyncPort 생성
      */
-    fun create(channelId: String): MessageSyncPort {
+    fun create(channelId: ChannelId): MessageSyncPort {
         return MessageSyncPort(
             messageRemoteDataSource,
             messageDao,

@@ -1,6 +1,7 @@
 package com.example.feature_chat.model
 
 sealed class MessageDeliveryState {
+    data object Unknown : MessageDeliveryState() // OutBox 상태를 알 수 없는 경우
     data object Sending : MessageDeliveryState()
     data object Sent : MessageDeliveryState()
     data object Delivered : MessageDeliveryState()

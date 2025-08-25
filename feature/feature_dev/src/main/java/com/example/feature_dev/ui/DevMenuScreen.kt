@@ -129,7 +129,9 @@ fun DevMenuScreen(
 
             // --- 각 버튼의 onClick에서 NavigationManager의 해당 메서드 호출 ---
             Text("--- 인증 ---", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 16.dp))
-            DevMenuButton(text = "스플래시 (Splash)") { navigationManger.navigateTo(SplashRoute) }
+            DevMenuButton(text = "스플래시 (Splash)") {
+                navigationManger.navigateTo(SplashRoute)
+            }
             DevMenuButton(text = "로그인 (Login)") { navigationManger.navigateTo(LoginRoute) }
             DevMenuButton(text = "회원가입 (SignUp)") { navigationManger.navigateTo(SignUpRoute) }
             DevMenuButton(text = "비밀번호 찾기 (FindPassword)") {
@@ -148,7 +150,6 @@ fun DevMenuScreen(
                     SetProjectNameRoute
                 )
             }
-            DevMenuButton(text = "프로젝트 참여 (JoinProject)") { navigationManger.navigateToJoinProject() }
             DevMenuButton(text = "프로젝트 설정 (ProjectSetting - 임시ID)") {
                 navigationManger.navigateToProjectSettings(
                     "temp_project_1"

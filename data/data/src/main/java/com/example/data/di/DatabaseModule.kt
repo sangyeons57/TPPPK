@@ -3,10 +3,7 @@ package com.example.data.di
 import android.content.Context
 import androidx.room.Room
 import com.example.data_datasource.database.AppDatabase
-import com.example.data_datasource.database.migration.MIGRATION_3_4
-import com.example.data_datasource.database.migration.MIGRATION_6_7
-import com.example.data_datasource.database.migration.MIGRATION_7_8
-import com.example.data_datasource.database.migration.MIGRATION_8_9
+import com.example.data_datasource.database.migration.DatabaseMigrations
 import com.example.data_model.local.MessageDao
 import com.example.data_model.local.OutboxDao
 import com.example.data_model.local.SyncMetadataDao
@@ -31,13 +28,23 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
+        // 마이그레이션 체인 검증 (개발 모드에서만)
+        // BuildConfig 대신 시스템 속성 사용
+        val isDebug = System.getProperty("debug.mode", "false").toBoolean() ||
+                context.applicationInfo?.let { (it.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0 } ?: false
+
+        if (isDebug) {
+            DatabaseMigrations.validateMigrationChain()?.let { error ->
+                throw IllegalStateException("마이그레이션 검증 실패: $error")
+            }
+        }
+        
         return Room.databaseBuilder(
             context,
             AppDatabase::class.java,
             "projecting_kotlin_database"
         )
-            .addMigrations(MIGRATION_3_4, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9) // 마이그레이션 추가
-            .fallbackToDestructiveMigration() // messageType + payload 전환을 위한 파괴적 마이그레이션 활성화
+            .addMigrations(*DatabaseMigrations.ALL_MIGRATIONS) // 자동화된 마이그레이션 관리
             .build()
     }
 
@@ -60,11 +67,11 @@ object DatabaseModule {
     }
 
     /**
-     * ScopeMetadataDao 제공
+     * SyncMetadataDao 제공
      */
     @Provides
     @Singleton
-    fun provideScopeMetadataDao(database: AppDatabase): SyncMetadataDao {
+    fun provideSyncMetadataDao(database: AppDatabase): SyncMetadataDao {
         return database.syncMetadataDao()
     }
 

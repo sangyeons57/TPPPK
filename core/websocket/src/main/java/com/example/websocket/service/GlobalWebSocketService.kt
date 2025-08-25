@@ -111,7 +111,7 @@ class GlobalWebSocketService @Inject constructor(
         // 앱 시작 후 지연된 연결 시도 (ANR 방지)
         scope.launch {
             // 앱이 완전히 시작될 때까지 대기
-            delay(3000) // 3초 대기
+            delay(1000) // 1초 대기 (3초에서 단축)
 
             // 인증 토큰이 있고 포그라운드에 있을 때만 연결
             if (currentAuthToken != null && _isInForeground.value) {

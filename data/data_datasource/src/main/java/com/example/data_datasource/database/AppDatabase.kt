@@ -21,7 +21,7 @@ import com.example.data_model.local.TaskEntity
         SyncMetadataEntity::class,
         TaskEntity::class,
     ],
-    version = 9, // v9: tasks 테이블 추가
+    version = 10, // v10: tasks.deletedAt 컬럼 추가 (soft delete)
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

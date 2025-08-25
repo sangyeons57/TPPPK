@@ -29,6 +29,8 @@ data class TaskDTO(
     val checkedBy: String? = null,
     @get:PropertyName(CHECKED_AT)
     val checkedAt: Date? = null,
+    @get:PropertyName(DELETED_AT)
+    val deletedAt: Date? = null,
     @get:PropertyName(AggregateRoot.KEY_CREATED_AT)
     @get:ServerTimestamp override val createdAt: Date? = null,
     @get:PropertyName(AggregateRoot.KEY_UPDATED_AT)
@@ -44,6 +46,7 @@ data class TaskDTO(
         const val ORDER = Task.KEY_ORDER
         const val CHECKED_BY = Task.KEY_CHECKED_BY
         const val CHECKED_AT = Task.KEY_CHECKED_AT
+        const val DELETED_AT = Task.KEY_DELETED_AT
     }
 
 }

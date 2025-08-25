@@ -157,6 +157,12 @@ fun ChatScreen(
                     showUserProfileDialog = event.userId
                 }
 
+                is ChatEvent.RefreshMessages -> {
+                    // 프로필 업데이트로 인한 메시지 갱신
+                    Log.d("ChatScreen", "🔄 RefreshMessages 이벤트 수신, Paging 갱신")
+                    lazyPagingItems.refresh()
+                }
+
                 else -> {} // 다른 이벤트는 UI에서 직접 처리
             }
         }

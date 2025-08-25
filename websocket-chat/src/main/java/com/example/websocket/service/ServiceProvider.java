@@ -1,12 +1,6 @@
 package com.example.websocket.service;
 
 import com.example.websocket.auth.FirebaseAuthService;
-import com.example.websocket.fcm.FcmSender;
-import com.example.websocket.fcm.FirebaseFcmSender;
-import com.example.websocket.fcm.FcmTokenRepository;
-import com.example.websocket.fcm.FirestoreFcmTokenRepository;
-import com.example.websocket.fcm.MentionDataFactory;
-import com.example.websocket.fcm.MentionNotificationService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.slf4j.Logger;
@@ -26,7 +20,7 @@ public class ServiceProvider {
     // Service instances
     private final FirebaseAuthService authService;
     private final ChatRoomManager roomManager;
-    private final MentionNotificationService mentionNotificationService;
+    private final FcmNotificationService fcmNotificationService;
     private final ExecutorService notifyExecutor;
     
     /**
@@ -53,23 +47,20 @@ public class ServiceProvider {
             throw new RuntimeException("ChatRoomManager creation failed", e);
         }
 
-        // FCM mention services (shared singleton instances)
-        MentionNotificationService tmpMentionSvc;
+        // FCM notification service (shared singleton instance)
+        FcmNotificationService tmpFcmSvc;
         ExecutorService tmpExec;
         try {
-            logger.info("🔧 Creating MentionNotificationService and shared executor...");
-            FcmSender sender = new FirebaseFcmSender();
-            FcmTokenRepository tokenRepo = new FirestoreFcmTokenRepository();
-            MentionDataFactory dataFactory = new MentionDataFactory("app://channel", 100);
-            tmpMentionSvc = new MentionNotificationService(sender, tokenRepo, dataFactory);
+            logger.info("🔧 Creating FcmNotificationService and shared executor...");
+            tmpFcmSvc = new FcmNotificationService("app://channel", 100);
             tmpExec = Executors.newFixedThreadPool(8);
-            logger.info("✅ MentionNotificationService created: {}", tmpMentionSvc.getClass().getName());
+            logger.info("✅ FcmNotificationService created: {}", tmpFcmSvc.getClass().getName());
         } catch (Exception e) {
-            logger.warn("⚠️ Failed to initialize MentionNotificationService; mention notifications disabled: {}", e.getMessage());
-            tmpMentionSvc = null;
+            logger.warn("⚠️ Failed to initialize FcmNotificationService; FCM notifications disabled: {}", e.getMessage());
+            tmpFcmSvc = null;
             tmpExec = Executors.newFixedThreadPool(2);
         }
-        this.mentionNotificationService = tmpMentionSvc;
+        this.fcmNotificationService = tmpFcmSvc;
         this.notifyExecutor = tmpExec;
         
         logger.info("✅ ServiceProvider constructor completed successfully");
@@ -130,9 +121,9 @@ public class ServiceProvider {
         return roomManager;
     }
 
-    /** Shared MentionNotificationService */
-    public MentionNotificationService getMentionNotificationService() {
-        return mentionNotificationService; // can be null if init failed
+    /** Shared FcmNotificationService */
+    public FcmNotificationService getFcmNotificationService() {
+        return fcmNotificationService; // can be null if init failed
     }
 
     /** Shared executor for async notifications */

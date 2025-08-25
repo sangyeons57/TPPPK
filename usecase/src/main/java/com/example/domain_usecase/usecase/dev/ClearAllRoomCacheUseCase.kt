@@ -14,7 +14,13 @@ class ClearAllRoomCacheUseCase @Inject constructor(
      * 모든 메시지/아웃박스/동기화 메타데이터를 삭제합니다.
      */
     suspend operator fun invoke(): CustomResult<Unit, Exception> {
-        return messageRepository.clearAllCache()
+        try {
+            messageRepository.clearAllCache()
+
+            return CustomResult.Success(Unit)
+        } catch (e: Exception) {
+            return CustomResult.Failure(e)
+        }
     }
 }
 

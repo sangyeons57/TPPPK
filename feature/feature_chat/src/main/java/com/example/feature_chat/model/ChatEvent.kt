@@ -14,4 +14,5 @@ sealed class ChatEvent {
     data class Error(val message: String) : ChatEvent() // 오류 발생 알림
     data class ShowMessageActions(val messageId: String, val messageText: String) : ChatEvent() // 메시지 액션 표시 (편집/삭제)
     data class SystemMessage(val content: String) : ChatEvent() // 시스템 메시지
+    object RefreshMessages : ChatEvent() // 사용자 프로필 업데이트 등으로 인한 메시지 갱신 요청
 } 

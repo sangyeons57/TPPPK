@@ -60,12 +60,20 @@ class MessageRepositoryImpl @Inject constructor(
                     if (existingId != null && existingId != entityModel.id) {
                         // 이전(중복) 레코드를 tombstone 처리하여 UI 중복 제거
                         messageDao.tombstone(existingId, entityModel.updatedAt)
+                        Log.d(
+                            "MessageRepository",
+                            "🧹 Duplicate optimistic record tombstoned: $existingId -> keep ${entityModel.id}"
+                        )
                     }
                 }.onFailure {
                     Log.w("MessageRepository", "중복 검사 실패(무시): ${it.message}")
                 }
 
                 messageDao.upsert(entityModel)
+                Log.d(
+                    "MessageRepository",
+                    "💾 Upsert(Room) message id=${entityModel.id}, channel=${entityModel.channelId}, updatedAt=${entityModel.updatedAt}"
+                )
 
                 // OutBox UPSERT 레코드 생성 (로컬 저장과 같은 트랜잭션)
                 val outboxPayload = OutboxPayloadUtil.toPayload(entityModel)
@@ -78,6 +86,10 @@ class MessageRepositoryImpl @Inject constructor(
                     createdAt = System.currentTimeMillis()
                 )
                 outboxDao.enqueue(outboxRecord.toEntity(OutBoxStatus.PENDING))
+                Log.d(
+                    "MessageRepository",
+                    "📤 Enqueued OutBox UPSERT id=${outboxRecord.id}, msg=${outboxRecord.aggregateId}, channel=${entityModel.channelId}"
+                )
             }
             CustomResult.Success(entity.id)
         } catch (e: Exception) {
@@ -186,17 +198,46 @@ class MessageRepositoryImpl @Inject constructor(
     override suspend fun deleteMessage(id: String) {
         val now = System.currentTimeMillis()
         db.withTransaction {
+            // 채널ID를 OutBox payload에 포함해야 원격 push 경로를 계산할 수 있음
+            val existing = runCatching { messageDao.findById(id) }.getOrNull()
+            if (existing == null) {
+                Log.w(
+                    "MessageRepository",
+                    "⚠️ deleteMessage: local entity not found, skip OutBox enqueue. id=$id"
+                )
+                // 여전히 tombstone 시도하여 UI 상에서 제거 효과는 유지
+                messageDao.tombstone(id, now)
+                return@withTransaction
+            }
+
+            // 1) 로컬 tombstone 처리
             messageDao.tombstone(id, now)
-            val payload = """{"id":"$id","deletedAt":$now}"""
-            outboxDao.enqueue(
-                OutBoxRecord(
-                    id = UUID.randomUUID().toString(),
-                    stream = Message.COLLECTION_NAME,
-                    aggregateId = id,
-                    op = OutBoxRecord.Op.DELETE,
-                    payload = payload,
-                    createdAt = now
-                ).toEntity()
+            Log.d(
+                "MessageRepository",
+                "🪦 Tombstoned(Room) message id=$id, channel=${existing.channelId}, ts=$now"
+            )
+
+            // 2) OutBox DELETE enqueue (channelId 포함 필수)
+            val payload = """
+                {
+                  "id":"$id",
+                  "channelId":"${existing.channelId}",
+                  "isDeleted":true,
+                  "deletedAt":$now
+                }
+            """.trimIndent()
+            val record = OutBoxRecord(
+                id = UUID.randomUUID().toString(),
+                stream = Message.COLLECTION_NAME,
+                aggregateId = id,
+                op = OutBoxRecord.Op.DELETE,
+                payload = payload,
+                createdAt = now
+            )
+            outboxDao.enqueue(record.toEntity())
+            Log.d(
+                "MessageRepository",
+                "🗑️ Enqueued OutBox DELETE id=${record.id}, msg=${record.aggregateId}, channel=${existing.channelId}"
             )
         }
     }
@@ -211,6 +252,7 @@ class MessageRepositoryImpl @Inject constructor(
     @Suppress("UNCHECKED_CAST")
     override fun <T : Any> getMessageEntityPagingSource(channelId: String): PagingSource<Int, T> {
         require(channelId.isNotBlank()) { "channelId must not be blank for message paging" }
+        Log.d("MessageRepository", "📚 Create PagingSource for channel=$channelId")
         return messageDao.pagingSource(channelId) as PagingSource<Int, T>
     }
 
@@ -228,8 +270,16 @@ class MessageRepositoryImpl @Inject constructor(
         limit: Int
     ): CustomResult<List<Message>, Exception> {
         return try {
+            Log.d(
+                "MessageRepository",
+                "🔎 getMessagesAfter channel=$channelId after=$afterTimestamp limit=$limit"
+            )
             val entities = messageDao.getMessagesAfter(channelId, afterTimestamp, limit)
             val messages = entities.map { entity -> entityMapper.entityToDomain(entity) }
+            Log.d(
+                "MessageRepository",
+                "🔎 getMessagesAfter -> ${messages.size} item(s)"
+            )
             CustomResult.Success(messages)
         } catch (e: Exception) {
             CustomResult.Failure(e)

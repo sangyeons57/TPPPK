@@ -212,6 +212,7 @@ class MessageService @Inject constructor(
 
         return ChatMessageUiModel(
             messageId = message.id.value,
+            localId = "${message.id.value}_${message.createdAt.toEpochMilli()}_${message.payload.value.hashCode()}",
             userId = senderId,
             userName = userProfileService.getUserDisplayName(senderId),
             userProfileUrl = userProfileService.getCachedProfileUrl(senderId),
@@ -274,9 +275,9 @@ class MessageService @Inject constructor(
         messageRepository.observeChannelOutBoxStatuses(roomId)
 
     private suspend fun loadWithTimeout(userId: String) {
-        // 150ms 내에 프로필 불러오기 시도 (캐시 미스 시만)
+        // 1초 내에 프로필 불러오기 시도 (캐시 미스 시만) - 배치 로딩으로 대부분 해결되지만 새 사용자 대비
         try {
-            kotlinx.coroutines.withTimeout(400) {
+            kotlinx.coroutines.withTimeout(1000) {
                 userProfileService.loadUserProfile(userId)
             }
         } catch (_: Exception) { /* timeout or error - fallback to unknown */
@@ -1383,6 +1384,38 @@ class MessageService @Inject constructor(
         } catch (e: Exception) {
             Log.e(TAG, "❌ 실패한 이미지 메시지 재전송 중 예외", e)
             CustomResult.Failure(e)
+        }
+    }
+
+    /**
+     * 최근 메시지들을 조회 (사용자 프로필 배치 로딩용)
+     * @param limit 조회할 최대 메시지 수
+     * @return 최근 메시지 목록 (생성 시간 역순)
+     */
+    suspend fun getRecentMessages(limit: Int = 50): List<Message> {
+        return try {
+            Log.d(TAG, "📋 최근 메시지 조회 시작 (limit: $limit)")
+
+            // Repository를 통해 최근 메시지들 조회
+            when (val result = messageRepository.getRecentMessages(roomId, limit)) {
+                is Success -> {
+                    Log.d(TAG, "📊 최근 메시지 조회 완료: ${result.data.size}개 메시지")
+                    result.data
+                }
+
+                is CustomResult.Failure -> {
+                    Log.e(TAG, "❌ 최근 메시지 조회 실패", result.error)
+                    emptyList()
+                }
+
+                else -> {
+                    Log.w(TAG, "⚠️ 최근 메시지 조회 결과 알 수 없음: ${result::class.simpleName}")
+                    emptyList()
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ 최근 메시지 조회 예외", e)
+            emptyList()
         }
     }
 

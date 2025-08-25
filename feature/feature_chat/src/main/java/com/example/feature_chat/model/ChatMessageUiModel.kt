@@ -11,6 +11,7 @@ import java.time.Instant // Import Instant
  */
 data class ChatMessageUiModel(
     val messageId: String, // Firestore document ID (LazyColumn Key 및 모든 작업의 식별자)
+    val localId: String = java.util.UUID.randomUUID().toString(), // UI 고유 식별자 (중복 방지용)
     val userId: String,
     val userName: String,
     val userProfileUrl: String?,

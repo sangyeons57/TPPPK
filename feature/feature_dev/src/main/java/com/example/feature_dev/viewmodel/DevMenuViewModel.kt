@@ -512,7 +512,7 @@ class DevMenuViewModel @Inject constructor(
             Log.d("DevMenuViewModel-Sync", "   - Stream Name: $streamName")
 
             try {
-                val result = syncUseCase.syncChannel(channelId)
+                val result = syncUseCase.syncChannel(ChannelId(channelId))
                 if (result.isSuccess) {
                     _outBoxStatus.value = "✅ 증분 동기화 완료"
                     Log.d("DevMenuViewModel-Sync", "✅ Incremental sync completed successfully")
@@ -549,7 +549,7 @@ class DevMenuViewModel @Inject constructor(
                 addMessage("🗑️ 로컬 캐시 삭제 중...")
 
                 // 전체/부분 캐시 삭제 후 동기화 (단순화)
-                val result = syncUseCase.syncChannel(channelId)
+                val result = syncUseCase.syncChannel(ChannelId(channelId))
                 _outBoxStatus.value = if (result.isSuccess) "✅ 리셋 및 동기화 완료!" else "⚠️ 동기화 결과 알 수 없음"
                 addMessage("✅ 리셋 및 동기화 완료! (테이블: $tableName, 채널: $channelId)")
             } catch (e: Exception) {
@@ -601,6 +601,10 @@ class DevMenuViewModel @Inject constructor(
                 _isRoomClearing.value = false
             }
         }
+    }
+
+    fun deleteSyncMetadata() {
+
     }
 
     // ================================
@@ -775,7 +779,7 @@ class DevMenuViewModel @Inject constructor(
                 _outBoxStatus.value = "🔄 동기화 실행 중..."
                 "messages-$channelId"
 
-                val result = syncUseCase.syncChannel(channelId)
+                val result = syncUseCase.syncChannel(ChannelId(channelId))
 
                 // 동기화 실행 후 상태
                 Log.d("DevMenuViewModel-Sync", "📊 === DB STATE AFTER SYNC ===")

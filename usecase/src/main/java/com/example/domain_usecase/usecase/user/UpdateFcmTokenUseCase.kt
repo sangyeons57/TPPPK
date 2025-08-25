@@ -3,6 +3,7 @@ package com.example.domain_usecase.usecase.user
 import com.example.core_common.result.CustomResult
 import com.example.core_common.result.CustomResult.Loading.getOrDefault
 import com.example.domain.event.EventDispatcher
+import com.example.domain.event.user.UserFcmTokenUpdatedEvent
 import com.example.domain.model.base.User
 import com.example.domain.vo.DocumentId
 import com.example.domain.vo.user.UserFcmToken
@@ -21,6 +22,12 @@ interface UpdateFcmTokenUseCase {
      * Retrieves the current device token internally from FirebaseMessaging.
      */
     suspend operator fun invoke(): CustomResult<Unit, Exception>
+
+    /**
+     * Updates the current user's FCM token for push notifications.
+     * Uses the provided token instead of fetching from FirebaseMessaging.
+     */
+    suspend operator fun invoke(fcmToken: String): CustomResult<Unit, Exception>
 }
 
 /**
@@ -35,11 +42,11 @@ class UpdateFcmTokenUseCaseImpl @Inject constructor(
 
     /**
      * 유스케이스를 실행하여 사용자의 FCM 토큰을 업데이트합니다.
-     * @param token 새로운 FCM 토큰 (null이면 토큰 제거)
+     * FirebaseMessaging에서 자동으로 토큰을 조회합니다.
      * @return CustomResult<Unit, Exception> 업데이트 처리 결과
      */
     override suspend fun invoke(): CustomResult<Unit, Exception> {
-        val session = authRepository.getCurrentUserSession().getOrDefault(null)
+        authRepository.getCurrentUserSession().getOrDefault(null)
             ?: return CustomResult.Failure(Exception("User not logged in"))
 
         val token = kotlinx.coroutines.suspendCancellableCoroutine<String?> { cont ->
@@ -51,6 +58,19 @@ class UpdateFcmTokenUseCaseImpl @Inject constructor(
             return CustomResult.Failure(Exception("Unable to fetch FCM token"))
         }
 
+        return invoke(token)
+    }
+
+    /**
+     * 유스케이스를 실행하여 사용자의 FCM 토큰을 업데이트합니다.
+     * 제공된 토큰을 사용합니다.
+     * @param fcmToken 새로운 FCM 토큰
+     * @return CustomResult<Unit, Exception> 업데이트 처리 결과
+     */
+    override suspend fun invoke(fcmToken: String): CustomResult<Unit, Exception> {
+        val session = authRepository.getCurrentUserSession().getOrDefault(null)
+            ?: return CustomResult.Failure(Exception("User not logged in"))
+
         val userRes = userRepository.findById(DocumentId.from(session.userId))
         if (userRes is CustomResult.Failure) {
             return CustomResult.Failure(userRes.error)
@@ -59,11 +79,12 @@ class UpdateFcmTokenUseCaseImpl @Inject constructor(
         }
 
         val user = userRes.data as User
-        user.updateFcmToken(UserFcmToken(token))
+        user.updateFcmToken(UserFcmToken(fcmToken))
         
         return when (val saveRes = userRepository.save(user)) {
             is CustomResult.Success -> {
                 EventDispatcher.publish(user)
+                EventDispatcher.publish(UserFcmTokenUpdatedEvent(session.userId.value))
                 CustomResult.Success(Unit)
             }
             is CustomResult.Failure -> CustomResult.Failure(saveRes.error)

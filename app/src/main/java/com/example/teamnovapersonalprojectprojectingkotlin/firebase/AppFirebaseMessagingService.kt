@@ -3,7 +3,6 @@ package com.example.teamnovapersonalprojectprojectingkotlin.firebase
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.util.Log
@@ -34,6 +33,9 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
 
         // 서버에 토큰 업데이트
         updateTokenOnServer(token)
+
+        // FcmTokenManager에게 토큰 업데이트 알림
+        broadcastTokenUpdate(token)
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
@@ -146,12 +148,13 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Show notification
+        // Show notification with unique ID
+        val uniqueNotificationId = (messageId + System.currentTimeMillis()).hashCode()
         showNotification(
             title = title,
             body = body,
             pendingIntent = pendingIntent,
-            notificationId = messageId.hashCode(),
+            notificationId = uniqueNotificationId,
             channelId = MENTION_CHANNEL_ID,
             channelName = "멘션 알림"
         )
@@ -229,11 +232,16 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
                 description = "${channelName} 채널"
                 enableVibration(true)
                 setShowBadge(true)
+                enableLights(true)
+                lightColor = 0xFF2196F3.toInt() // 파란색 LED
+                setBypassDnd(false) // 방해금지 모드 우회하지 않음
+                lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
+                canShowBadge() // 배지 표시 가능
             }
             notificationManager.createNotificationChannel(channel)
         }
 
-        // Build notification
+        // Build notification with enhanced visibility settings
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(com.example.core_ui.R.drawable.ic_stat_ic_notification)
             .setContentTitle(title)
@@ -242,6 +250,11 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setGroup("MENTION_NOTIFICATIONS") // 그룹 설정
+            .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_ALL) // 모든 알림 표시
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // 잠금화면에서도 표시
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE) // 메시지 카테고리
+            .setOnlyAlertOnce(false) // 매번 소리/진동
 
         // Add pending intent if provided
         pendingIntent?.let { intent ->
@@ -251,6 +264,20 @@ class AppFirebaseMessagingService : FirebaseMessagingService() {
         // Show notification
         notificationManager.notify(notificationId, notificationBuilder.build())
         Log.d(TAG, "Notification shown with ID: $notificationId")
+    }
+
+    /**
+     * FCM 토큰 업데이트를 FcmTokenManager에게 브로드캐스트
+     */
+    private fun broadcastTokenUpdate(token: String) {
+        try {
+            val intent = Intent("com.example.FCM_TOKEN_UPDATED")
+            intent.putExtra("token", token)
+            sendBroadcast(intent)
+            Log.d(TAG, "FCM token update broadcasted: ${token.take(20)}...")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to broadcast FCM token update", e)
+        }
     }
 
     companion object {

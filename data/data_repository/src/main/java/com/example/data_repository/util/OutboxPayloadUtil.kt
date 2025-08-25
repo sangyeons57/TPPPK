@@ -1,5 +1,6 @@
 package com.example.data_repository.util
 
+import com.example.core_common.constants.ChannelConstants
 import com.example.data_model.local.MessageEntity
 import com.example.data_model.local.TaskEntity
 import com.example.domain.model.base.Message
@@ -13,7 +14,6 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
-import com.example.core_common.constants.ChannelConstants
 
 object OutboxPayloadUtil {
 
@@ -80,6 +80,10 @@ object OutboxPayloadUtil {
                 "checkedAt",
                 JsonPrimitive(entity.checkedAt)
             ) else put("checkedAt", JsonNull)
+            if (entity.deletedAt != null) put(
+                "deletedAt",
+                JsonPrimitive(entity.deletedAt)
+            ) else put("deletedAt", JsonNull)
             put("createdAt", JsonPrimitive(entity.createdAt))
             put("updatedAt", JsonPrimitive(entity.updatedAt))
         }
@@ -137,6 +141,8 @@ object OutboxPayloadUtil {
             )
             task.checkedAt?.let { put("checkedAt", JsonPrimitive(it.toEpochMilli())) }
                 ?: put("checkedAt", JsonNull)
+            task.deletedAt?.let { put("deletedAt", JsonPrimitive(it.toEpochMilli())) }
+                ?: put("deletedAt", JsonNull)
             put("createdAt", JsonPrimitive(task.createdAt.toEpochMilli()))
             put("updatedAt", JsonPrimitive(task.updatedAt.toEpochMilli()))
         }

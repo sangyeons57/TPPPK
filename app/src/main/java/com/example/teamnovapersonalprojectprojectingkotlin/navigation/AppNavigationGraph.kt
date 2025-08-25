@@ -25,6 +25,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
+import androidx.navigation.navDeepLink
 import com.example.core_navigation.core.AcceptFriendsRoute
 import com.example.core_navigation.core.AddProjectRoute
 import com.example.core_navigation.core.AddRoleRoute
@@ -135,8 +136,7 @@ import kotlinx.coroutines.launch
 fun AppNavigationGraph(
     navController: NavHostController,
     navigationManger: NavigationManger,
-    startDestination: String = "auth",
-    pendingInviteCode: String? = null
+    startDestination: String = "auth"
 ) {
 
     val activity = (LocalContext.current as? Activity)
@@ -145,14 +145,6 @@ fun AppNavigationGraph(
     var backPressedTime by remember { mutableStateOf(0L) }
     LocalContext.current // Toast 사용 시
 
-    // 딥링크로부터 초대 코드가 있을 경우 자동으로 프로젝트 참여 화면으로 이동
-    LaunchedEffect(pendingInviteCode) {
-        pendingInviteCode?.let { inviteCode ->
-            // 약간의 지연을 주어 네비게이션이 초기화되도록 함
-            delay(500)
-            navigationManger.navigateToJoinProjectWithInviteCode(inviteCode)
-        }
-    }
 
     BackHandler(enabled = navController.previousBackStackEntry == null) {
         if ((System.currentTimeMillis() - backPressedTime) < 2000L) { // 2초 안에 다시 누르면
@@ -425,14 +417,18 @@ fun NavGraphBuilder.chatGraph(navigationManger: NavigationManger) {
         // 채팅 화면
         composable(
             route = ChatRoute.ROUTE_PATTERN,
-            arguments = ChatRoute.arguments
+            arguments = ChatRoute.arguments,
+            deepLinks = listOf(
+                navDeepLink {
+                    uriPattern = "app://channel/{channelId}"
+                }
+            )
         ) { backStackEntry ->
             val roomId = backStackEntry.arguments?.getString(RouteArgs.CHANNEL_ID) ?: ""
             ChatScreen(
                 roomId = roomId,
                 onNavigateBack = { navigationManger.navigateBack() },
                 onNavigateToProfile = { userId -> 
-                    // TODO: Implement profile navigation 
                 }
             )
         }

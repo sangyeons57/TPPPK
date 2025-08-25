@@ -159,6 +159,7 @@ open class MessageRemoteDataSourceImpl @Inject constructor(
     }
 
     override suspend fun push(events: List<OutBoxRecord>): PushResult {
+        Log.d("MessageRemoteDataSource", "📤 push() start: ${events.size} event(s)")
         val success = mutableListOf<String>()
         val failed = mutableListOf<com.example.domain.model.sync.FailedEvent>()
 
@@ -174,6 +175,10 @@ open class MessageRemoteDataSourceImpl @Inject constructor(
 
                 // Map payload to DTO (store leaf channelId)
                 val channelIdLeaf = com.example.domain.vo.ChannelId(channelIdRaw).last()
+                Log.d(
+                    "MessageRemoteDataSource",
+                    "push event op=${e.op} id=$id channelRaw=$channelIdRaw leaf=$channelIdLeaf"
+                )
                 val dto = MessageDTO(
                     id = id,
                     channelId = channelIdLeaf,
@@ -197,15 +202,37 @@ open class MessageRemoteDataSourceImpl @Inject constructor(
                 when (e.op) {
                     OutBoxRecord.Op.UPSERT -> {
                         collection.document(dto.id).set(dto).await()
+                        Log.d(
+                            "MessageRemoteDataSource",
+                            "✅ PUSH UPSERT ok id=${dto.id} path=${currentChannelPath}"
+                        )
                         success.add(e.id)
                     }
 
                     OutBoxRecord.Op.DELETE -> {
-                        collection.document(dto.id).delete().await()
+                        // 메시지는 하드 삭제 대신 isDeleted=true 소프트 삭제를 적용한다.
+                        val tombstone = hashMapOf(
+                            MessageDTO.IS_DELETED to true,
+                            AggregateRoot.KEY_UPDATED_AT to com.google.firebase.firestore.FieldValue.serverTimestamp()
+                        )
+                        com.google.firebase.firestore.SetOptions.merge()
+                        collection
+                            .document(dto.id)
+                            .set(tombstone, com.google.firebase.firestore.SetOptions.merge())
+                            .await()
+                        Log.d(
+                            "MessageRemoteDataSource",
+                            "✅ PUSH DELETE->SOFT ok id=${dto.id} path=${currentChannelPath}"
+                        )
                         success.add(e.id)
                     }
                 }
             } catch (ex: Exception) {
+                Log.e(
+                    "MessageRemoteDataSource",
+                    "❌ PUSH failed id=${e.aggregateId} op=${e.op}: ${ex.message}",
+                    ex
+                )
                 failed.add(
                     com.example.domain.model.sync.FailedEvent(
                         id = e.id,
@@ -216,11 +243,47 @@ open class MessageRemoteDataSourceImpl @Inject constructor(
             }
         }
 
-        return PushResult(successIds = success, failIds = failed)
+        val result = PushResult(successIds = success, failIds = failed)
+        Log.d(
+            "MessageRemoteDataSource",
+            "📤 push() done: success=${result.successIds.size}, failed=${result.failIds.size}"
+        )
+        return result
+    }
+
+    private fun normalizeCollectionForChannelId() {
+        if (!this::collection.isInitialized) return
+        val current =
+            collection.path // e.g., dm_channels/<id>/messages or projects/<pid>/project_channels/<cid>/messages
+        try {
+            val parts = current.split('/')
+            // Expecting [rootCollection, id, messages]
+            if (parts.size >= 3 && parts[0] == com.example.domain.model.base.DMChannel.COLLECTION_NAME) {
+                val channelIdRaw = parts[1]
+                // If DM path is being used with a composite id (contains ':'), it's actually a project channel.
+                if (channelIdRaw.contains(':')) {
+                    val channelId = com.example.domain.vo.ChannelId(channelIdRaw)
+                    val corrected = CollectionPath.messages(channelId)
+                    setCollection(corrected)
+                    Log.w(
+                        "MessageRemoteDataSource",
+                        "⚠️ normalizeCollection: DM→Project path corrected. old=$current new=${corrected.value}"
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(
+                "MessageRemoteDataSource",
+                "normalizeCollection failed for path=$current: ${e.message}"
+            )
+        }
     }
 
     override suspend fun pullSince(cursor: String?, limit: Int): RemoteBatch<MessageDTO> {
+        // Defensive: correct mis-set collection when composite channelId was treated as DM
+        //normalizeCollectionForChannelId()
         val (lastTs, lastId) = parseCursor(cursor)
+        Log.d("MessageRemoteDataSource", "$lastTs:$lastId")
 
         var q: Query = collection
             .orderBy(AggregateRoot.KEY_UPDATED_AT, Query.Direction.ASCENDING)
@@ -237,6 +300,7 @@ open class MessageRemoteDataSourceImpl @Inject constructor(
 
         val hasMore = items.size == limit
         val nextCursor = items.lastOrNull()?.let { dto ->
+            Log.d("MessageRemoteDataSource", "nextCursor: ${dto.updatedAt}")
             val millis = dto.updatedAt?.time ?: return@let null
             "$millis:${dto.id}"
         }

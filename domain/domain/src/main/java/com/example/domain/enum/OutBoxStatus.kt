@@ -16,11 +16,12 @@ enum class OutBoxStatus(val value: String) {
     companion object {
         /**
          * 문자열 값으로부터 OutBoxStatus Enum 상수를 반환합니다.
-         * 일치하는 값이 없으면 PENDING을 기본값으로 반환합니다.
+         * null이면 OutBox 레코드가 없다는 의미로 DISPATCHED(전송완료)를 반환합니다.
          * @param value 찾고자 하는 Enum 상수의 문자열 값
-         * @return 매칭되는 OutBoxStatus 상수, 없으면 PENDING
+         * @return 매칭되는 OutBoxStatus 상수, null이면 DISPATCHED
          */
         fun fromString(value: String?): OutBoxStatus {
+            if (value == null) return DISPATCHED // OutBox 레코드가 없으면 전송 완료로 간주
             return entries.find { it.value.equals(value, ignoreCase = true) } ?: PENDING
         }
     }

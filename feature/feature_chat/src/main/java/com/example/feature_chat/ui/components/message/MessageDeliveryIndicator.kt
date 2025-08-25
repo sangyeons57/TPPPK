@@ -32,6 +32,12 @@ fun MessageDeliveryIndicator(
     modifier: Modifier = Modifier
 ) {
     val (icon, color, isVisible) = when (deliveryState) {
+        is MessageDeliveryState.Unknown -> Triple(
+            Icons.Default.Done,
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+            false // Unknown 상태는 표시하지 않음 (기본적으로 완료로 간주)
+        )
+        
         is MessageDeliveryState.Sending -> Triple(
             Icons.Default.Schedule,
             MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
@@ -76,6 +82,7 @@ fun MessageDeliveryIndicator(
             Icon(
                 imageVector = icon,
                 contentDescription = when (deliveryState) {
+                    is MessageDeliveryState.Unknown -> "상태 불명"
                     is MessageDeliveryState.Sending -> "전송 중"
                     is MessageDeliveryState.Sent -> "전송됨"
                     is MessageDeliveryState.Delivered -> "전달됨"

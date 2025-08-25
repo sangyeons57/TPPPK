@@ -29,6 +29,14 @@ import com.example.teamnovapersonalprojectprojectingkotlin.navigation.AppNavigat
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
+// FCM 알림 데이터를 담는 데이터 클래스
+data class FcmNotificationData(
+    val notificationType: String,
+    val messageId: String,
+    val channelId: String,
+    val projectId: String? = null
+)
+
 @AndroidEntryPoint // Hilt 사용 시 Activity에 추가
 class MainActivity : ComponentActivity() {
     
@@ -41,9 +49,9 @@ class MainActivity : ComponentActivity() {
 
     private var backPressedTime: Long = 0
     private var backToast: Toast? = null
-    
-    // 딥링크로부터 추출된 초대 코드를 저장
-    private var pendingInviteCode: String? = null
+
+    // FCM 알림으로부터 추출된 데이터를 저장
+    private var pendingFcmData: FcmNotificationData? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // 앱 시작 성능 측정 시작
@@ -59,14 +67,52 @@ class MainActivity : ComponentActivity() {
         // fcmTokenManager.initialize() - 제거됨
         
         setContent {
-            
+
             // NavController 생성 및 AppNavigator에 설정
             val navController = rememberNavController()
-            
+
             // NavigationHandler에 최상위 NavController 설정 (한 번만 호출)
             LaunchedEffect(navController) {
                 navigationManger.setNavController(navController)
                 setupNavigationTracking(navController)
+            }
+
+            // FCM 알림 데이터 처리를 위한 LaunchedEffect
+            LaunchedEffect(pendingFcmData) {
+                pendingFcmData?.let { fcmData ->
+                    try {
+                        when (fcmData.notificationType) {
+                            "mention" -> {
+                                // 채널 ID 유효성 검사
+                                if (fcmData.channelId.isBlank()) {
+                                    return@LaunchedEffect
+                                }
+
+                                // 딥링크를 사용하여 채팅방으로 직접 이동
+                                val deepLinkUri = Uri.parse("app://channel/${fcmData.channelId}")
+
+                                // 네비게이션 시도 및 결과 확인
+                                try {
+                                    navController.navigate(deepLinkUri)
+                                } catch (e: Exception) {
+                                    // 네비게이션 실패 시 메인 화면으로 이동
+                                    navController.navigate("main") {
+                                        popUpTo("main") { inclusive = true }
+                                    }
+                                }
+                            }
+
+                            else -> {
+                                // 알 수 없는 FCM 알림 타입
+                            }
+                        }
+                    } catch (e: Exception) {
+                        // FCM 알림 데이터 처리 실패
+                    } finally {
+                        // FCM 데이터 처리 완료 후 항상 초기화
+                        pendingFcmData = null
+                    }
+                }
             }
 
             TeamnovaPersonalProjectProjectingKotlinTheme {
@@ -77,8 +123,7 @@ class MainActivity : ComponentActivity() {
                     AppNavigationGraph(
                         navController = navController,
                         navigationManger = navigationManger,
-                        startDestination = decideStartDestination(),
-                        pendingInviteCode = pendingInviteCode
+                        startDestination = decideStartDestination()
                     )
                 }
             }
@@ -148,58 +193,60 @@ class MainActivity : ComponentActivity() {
     }
     
     /**
-     * Intent를 처리하여 딥링크에서 초대 코드를 추출합니다.
+     * Intent를 처리하여 FCM 알림 데이터를 추출합니다.
      */
     private fun handleIntent(intent: Intent) {
-        if (intent.action == Intent.ACTION_VIEW) {
-            intent.data?.let { uri ->
-                val inviteCode = extractInviteCodeFromUri(uri)
-                if (inviteCode != null) {
-                    pendingInviteCode = inviteCode
-                    // NavigationManger가 초기화된 후 네비게이션 수행
-                    if (::navigationManger.isInitialized) {
-                        navigateToJoinProject(inviteCode)
-                    }
+        // FCM 알림 데이터 처리
+        try {
+            extractFcmNotificationData(intent)?.let { fcmData ->
+                pendingFcmData = fcmData
+                // NavigationManger가 초기화된 후 네비게이션 수행
+                if (::navigationManger.isInitialized) {
+                    navigateToFcmTarget(fcmData)
                 }
             }
+        } catch (e: Exception) {
+            // FCM 데이터 처리 실패 로깅
         }
     }
     
     /**
-     * URI에서 초대 코드를 추출합니다.
-     * 
-     * 지원하는 URI 형식:
-     * - https://tpppk.app/invite/{code}
-     * - tpppk://invite/{code}
+     * Intent에서 FCM 알림 데이터를 추출합니다.
      */
-    private fun extractInviteCodeFromUri(uri: Uri): String? {
-        return when {
-            // HTTPS 딥링크: https://tpppk.app/invite/{code}
-            uri.scheme == "https" && uri.host == "tpppk.app" -> {
-                val pathSegments = uri.pathSegments
-                if (pathSegments.size >= 2 && pathSegments[0] == "invite") {
-                    pathSegments[1]
-                } else null
+    private fun extractFcmNotificationData(intent: Intent): FcmNotificationData? {
+        return try {
+            val notificationType = intent.getStringExtra("notification_type")
+            val messageId = intent.getStringExtra("message_id")
+            val channelId = intent.getStringExtra("channel_id")
+            val projectId = intent.getStringExtra("project_id")
+
+            // 필수 데이터 유효성 검사
+            if (notificationType.isNullOrBlank() ||
+                messageId.isNullOrBlank() ||
+                channelId.isNullOrBlank()
+            ) {
+                return null
             }
-            // 커스텀 스킴: tpppk://invite/{code}
-            uri.scheme == "tpppk" && uri.host == "invite" -> {
-                val pathSegments = uri.pathSegments
-                if (pathSegments.isNotEmpty()) {
-                    pathSegments[0]
-                } else {
-                    // Query parameter로 전달된 경우: tpppk://invite?code={code}
-                    uri.getQueryParameter("code")
-                }
-            }
-            else -> null
+
+            FcmNotificationData(
+                notificationType = notificationType,
+                messageId = messageId,
+                channelId = channelId,
+                projectId = projectId
+            )
+        } catch (e: Exception) {
+            null
         }
     }
     
     /**
-     * 초대 코드를 사용하여 프로젝트 참여 화면으로 네비게이션합니다.
+     * FCM 알림 목적지로 네비게이션합니다.
+     * LaunchedEffect 내부에서 사용하기 위해 pending 데이터로 처리합니다.
      */
-    private fun navigateToJoinProject(inviteCode: String) {
-        navigationManger.navigateToJoinProjectWithInviteCode(inviteCode)
+    private fun navigateToFcmTarget(fcmData: FcmNotificationData) {
+        // 이 메소드는 NavigationManger가 아직 초기화되지 않았을 때 호출될 수 있으므로
+        // 실제 네비게이션은 LaunchedEffect에서 pendingFcmData를 확인하여 처리합니다.
+        // 여기서는 로깅만 수행
     }
     
     /**
@@ -232,12 +279,16 @@ class MainActivity : ComponentActivity() {
 
     /**
      * 앱의 시작 목적지를 결정합니다.
-     * TODO: 실제 앱 로직(예: 로그인 상태)에 따라 수정 필요
+     * FCM 알림 데이터는 LaunchedEffect에서 별도 처리하므로 기본 로직만 사용합니다.
      */
     private fun decideStartDestination(): String {
+        // 기본 로직: 로그인 상태에 따라 결정
         // val isLoggedIn = false // 예시: 사용자 로그인 상태 확인 로직
         // return if (isLoggedIn) "main" else "auth"
-        return DevMenuRoute.toAppRoutePath() // 임시: WebSocket 테스트를 위해 DevMenu로 시작
+
+        // 임시: WebSocket 테스트를 위해 DevMenu로 시작
+        val destination = DevMenuRoute.toAppRoutePath()
+        return destination
         // return "auth" // Auth 네비게이션 그래프 자체를 시작점으로 지정
     }
 }

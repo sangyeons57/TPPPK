@@ -9,7 +9,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.example.websocket.fcm.MentionNotificationService;
+import com.example.websocket.service.FcmNotificationService;
 import jakarta.websocket.*;
 import jakarta.websocket.server.ServerEndpoint;
 import jakarta.websocket.server.ServerEndpointConfig;
@@ -32,8 +32,8 @@ public class ChatWebSocketHandler {
     private FirestoreMessageService firestoreService;
     private ObjectMapper objectMapper;
     
-    // Mention notification dependencies (shared from ServiceProvider)
-    private MentionNotificationService mentionNotificationService;
+    // FCM notification dependencies (shared from ServiceProvider)
+    private FcmNotificationService fcmNotificationService;
     private java.util.concurrent.ExecutorService notifyExecutor;
     private com.example.websocket.service.ProjectMemberService projectMemberService;
     
@@ -64,7 +64,7 @@ public class ChatWebSocketHandler {
         this.roomManager = roomManager;
         // Pull shared services from ServiceProvider
         com.example.websocket.service.ServiceProvider provider = com.example.websocket.service.ServiceProvider.getInstance();
-        this.mentionNotificationService = provider.getMentionNotificationService();
+        this.fcmNotificationService = provider.getFcmNotificationService();
         this.notifyExecutor = provider.getNotifyExecutor();
         this.projectMemberService = new com.example.websocket.service.ProjectMemberService();
     }
@@ -349,14 +349,14 @@ public class ChatWebSocketHandler {
                             boolean enabled = Boolean.parseBoolean(System.getenv().getOrDefault("MENTION_FCM_ENABLED", "true"));
                             if (enabled) {
                                 List<String> mentionedUserIds = extractMentionedUserIds(message);
-                                if (mentionNotificationService != null && mentionedUserIds != null && !mentionedUserIds.isEmpty()) {
+                                if (fcmNotificationService != null && mentionedUserIds != null && !mentionedUserIds.isEmpty()) {
                                     String channelType = (currentRoomId != null && currentRoomId.contains(":")) ? "project" : "dm";
                                     String channelId = currentRoomId;
                                     String notificationMessageId = message.getId();
                                     String senderId = userId;
                                     String senderName = userId;
                                     String fullText = safeGetTextFromPayload(message);
-                                    notifyExecutor.submit(() -> mentionNotificationService.notifyMentions(
+                                    notifyExecutor.submit(() -> fcmNotificationService.sendMentionNotifications(
                                             channelType, channelId, messageId, senderId, senderName, fullText, mentionedUserIds
                                     ));
                                 }

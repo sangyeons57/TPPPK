@@ -9,6 +9,7 @@ import com.example.domain.model.sync.PushResult
 import com.example.domain.model.sync.RemoteBatch
 import com.example.domain.vo.task.TaskStatus
 import com.google.firebase.firestore.FieldPath
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.tasks.await
@@ -73,6 +74,8 @@ class TaskRemoteDataSourceImpl @Inject constructor(
                             else payload.optString("checkedBy").takeIf { it.isNotBlank() },
                             checkedAt = payload.optLong("checkedAt").takeIf { it > 0 }
                                 ?.let { Date(it) },
+                            deletedAt = payload.optLong("deletedAt").takeIf { it > 0 }
+                                ?.let { Date(it) },
                             createdAt = payload.optLong("createdAt").takeIf { it > 0 }
                                 ?.let { Date(it) },
                             updatedAt = payload.optLong("updatedAt").takeIf { it > 0 }
@@ -88,12 +91,23 @@ class TaskRemoteDataSourceImpl @Inject constructor(
                     }
 
                     OutBoxRecord.Op.DELETE -> {
+                        // Soft delete: mark deletedAt and updatedAt with server timestamp
                         android.util.Log.d(
                             TAG,
-                            "Attempting to DELETE document: ${collection.path}/$id"
+                            "Attempting to SOFT DELETE (tombstone) document: ${collection.path}/$id"
                         )
-                        collection.document(id).delete().await()
-                        android.util.Log.i(TAG, "SUCCESS: DELETE document ${collection.path}/$id")
+                        val update = hashMapOf(
+                            TaskDTO.DELETED_AT to FieldValue.serverTimestamp(),
+                            AggregateRoot.KEY_UPDATED_AT to FieldValue.serverTimestamp()
+                        )
+                        collection.document(id).set(
+                            update as Map<String, Any>,
+                            com.google.firebase.firestore.SetOptions.merge()
+                        ).await()
+                        android.util.Log.i(
+                            TAG,
+                            "SUCCESS: SOFT DELETE document ${collection.path}/$id"
+                        )
                         success.add(e.id)
                     }
                 }

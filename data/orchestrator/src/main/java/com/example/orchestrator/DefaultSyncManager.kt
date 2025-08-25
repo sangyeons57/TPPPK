@@ -7,6 +7,7 @@ import com.example.domain.model.sync.SyncCoordinator
 import com.example.domain.model.sync.SyncCursorStore
 import com.example.domain.model.sync.SyncPort
 import com.example.domain.model.sync.SyncScope
+import com.example.orchestrator.util.SyncLogger
 
 class DefaultSyncManager(
     private val ports: List<SyncPort<out AggregateRoot>>,
@@ -14,6 +15,8 @@ class DefaultSyncManager(
     private val pageSize: Int = 200,
     private val defaultResolver: ConflictResolver<Any> = NoopResolver,
 ) : SyncCoordinator {
+
+    private val logger = SyncLogger("DefaultSyncManager")
 
     override suspend fun syncAll() {
         ports.forEach { syncInternal(it) }
@@ -27,67 +30,59 @@ class DefaultSyncManager(
     }
 
     private suspend fun <T : AggregateRoot> syncInternal(port: SyncPort<T>) {
-        // Gemini-added temporary logging. To remove, delete all lines containing "SyncManager".
-        android.util.Log.d("SyncManager", "[SYNC START] Starting sync for port: ${port.name}")
+        val timer = logger.startTimer("Full Sync")
+        logger.logSyncStart(port.name)
 
-        // Push local changes from Outbox
-        val out = port.readOutboxBatch(pageSize)
-        if (out.isNotEmpty()) {
-            android.util.Log.d(
-                "SyncManager",
-                "[SYNC PUSH] Pushing ${out.size} items for port: ${port.name}. IDs: ${out.joinToString { it.aggregateId }}"
-            )
-            val result: PushResult = port.pushToRemote(out)
-            if (result.successIds.isNotEmpty()) port.ackOutbox(result.successIds)
-            if (result.failIds.isNotEmpty()) port.retryOutBox(result.failIds)
-        } else {
-            android.util.Log.d("SyncManager", "[SYNC PUSH] No items to push for port: ${port.name}")
-        }
+        try {
+            // Push local changes from Outbox
+            val out = port.readOutboxBatch(pageSize)
+            logger.logPushStart(port.name, out.size, out)
 
-        // Pull remote changes
-        var cursor = cursorStore.getCursor(port.name)
-        do {
-            android.util.Log.d(
-                "SyncManager",
-                "[SYNC PULL] Pulling items for port: ${port.name} since cursor: $cursor"
-            )
-            val remoteBatch = port.pullSince(cursor, pageSize)
-            if (remoteBatch.items.isNotEmpty()) {
-                android.util.Log.d(
-                    "SyncManager",
-                    "[SYNC PULL] Pulled ${remoteBatch.items.size} items for port: ${port.name}. IDs: ${remoteBatch.items.joinToString { it.id.value }}"
-                )
-                val outcome = port.applyRemote(remoteBatch, defaultResolver as ConflictResolver<T>)
-                if (!outcome.success) {
-                    android.util.Log.e(
-                        "SyncManager",
-                        "[SYNC PULL] Failed to apply remote batch for port: ${port.name}"
-                    )
-                    break
+            if (out.isNotEmpty()) {
+                val result: PushResult = port.pushToRemote(out)
+                logger.logPushResult(port.name, result.successIds.size, result.failIds.size)
+
+                if (result.successIds.isNotEmpty()) port.ackOutbox(result.successIds)
+                if (result.failIds.isNotEmpty()) port.retryOutBox(result.failIds)
+            }
+
+            // Pull remote changes
+            var cursor = cursorStore.getCursor(port.name)
+            do {
+                logger.logPullStart(port.name, cursor)
+
+                val remoteBatch = port.pullSince(cursor, pageSize)
+                logger.logPullSuccess(port.name, remoteBatch)
+
+                if (remoteBatch.items.isNotEmpty()) {
+                    logger.logApplyStart(port.name, remoteBatch.items.size)
+
+                    val outcome =
+                        port.applyRemote(remoteBatch, defaultResolver as ConflictResolver<T>)
+                    if (!outcome.success) {
+                        logger.logApplyFailure(
+                            port.name,
+                            outcome.error ?: Exception("Unknown apply error")
+                        )
+                        break
+                    }
                 }
-            } else {
-                android.util.Log.d(
-                    "SyncManager",
-                    "[SYNC PULL] No new items to pull for port: ${port.name}"
-                )
-            }
 
+                remoteBatch.nextCursor?.let { newCursor ->
+                    logger.logCursorUpdate(port.name, cursor, newCursor)
+                    cursor = newCursor
+                    cursorStore.saveCursor(port.name, cursor)
+                }
 
-            if (!remoteBatch.hasMore) {
-                android.util.Log.d(
-                    "SyncManager",
-                    "[SYNC PULL] No more items to pull for port: ${port.name}"
-                )
-            }
+            } while (remoteBatch.hasMore)
 
-            remoteBatch.nextCursor?.let {
-                cursor = it
-                cursorStore.saveCursor(port.name, cursor)
-            }
+            timer.finish(port.name)
+            logger.logSyncEnd(port.name)
 
-        } while (remoteBatch.hasMore)
-
-        android.util.Log.d("SyncManager", "[SYNC END] Sync finished for port: ${port.name}")
+        } catch (e: Exception) {
+            logger.logException("syncInternal", port.name, e)
+            throw e
+        }
     }
 
 

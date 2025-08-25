@@ -25,7 +25,9 @@ import com.example.orchestrator.SyncManagerFactory
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -81,6 +83,14 @@ class TaskListViewModel @Inject constructor(
         extraBufferCapacity = 64,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
+
+    // Auto-sync timer job
+    private var autoSyncJob: Job? = null
+    private var isAutoSyncActive = false
+
+    companion object {
+        private const val AUTO_SYNC_INTERVAL_MS = 60_000L // 1 minute
+    }
     
     init {
         val composed = ChannelId.compose(projectId, channelId)
@@ -107,7 +117,7 @@ class TaskListViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val coordinator = syncManagerFactory.forChannel(
-                    composed.value,
+                    composed,
                     includeTasks = true
                 )
                 coordinator.syncAll()
@@ -121,7 +131,7 @@ class TaskListViewModel @Inject constructor(
             .onEach {
                 try {
                     val coordinator = syncManagerFactory.forChannel(
-                        composed.value,
+                        composed,
                         includeTasks = true
                     )
                     coordinator.syncAll()
@@ -162,7 +172,9 @@ class TaskListViewModel @Inject constructor(
                 // 이 map 블록에서는 UI 상태를 변환하는 책임만 가집니다.
                 when (taskResult) {
                     is CustomResult.Success -> {
-                        val uiTasks = taskResult.data.map { task ->
+                        val uiTasks = taskResult.data
+                            .filter { it.deletedAt == null }
+                            .map { task ->
                             val checkedByName =
                                 task.checkedBy?.let { userMap[DocumentId.from(it)]?.name?.value }
                             TaskMapper.toUiModel(task, checkedByName)
@@ -195,6 +207,9 @@ class TaskListViewModel @Inject constructor(
                 _uiState.value = newState
             }
             .launchIn(viewModelScope)
+
+        // Start auto-sync timer
+        startAutoSync()
     }
     
     fun createTask(content: String, taskType: TaskType = TaskType.CHECKLIST) {
@@ -352,6 +367,56 @@ class TaskListViewModel @Inject constructor(
     fun reorderTasks(fromIndex: Int, toIndex: Int) {
         // 기존 방식: 현재는 사용하지 않음
         // finalizeReorder는 실시간 순서 리스트를 파라미터로 받음
+    }
+
+    /**
+     * 자동 동기화 시작
+     */
+    private fun startAutoSync() {
+        if (isAutoSyncActive) return
+
+        isAutoSyncActive = true
+        autoSyncJob = viewModelScope.launch {
+            Log.d("TaskListViewModel", "Auto-sync started (interval: ${AUTO_SYNC_INTERVAL_MS}ms)")
+
+            while (isAutoSyncActive) {
+                delay(AUTO_SYNC_INTERVAL_MS)
+
+                if (isAutoSyncActive) {
+                    Log.d("TaskListViewModel", "Triggering auto-sync")
+                    syncRequests.tryEmit(Unit)
+                }
+            }
+        }
+    }
+
+    /**
+     * 자동 동기화 중지
+     */
+    fun stopAutoSync() {
+        if (!isAutoSyncActive) return
+
+        Log.d("TaskListViewModel", "Auto-sync stopped")
+        isAutoSyncActive = false
+        autoSyncJob?.cancel()
+        autoSyncJob = null
+    }
+
+    /**
+     * 자동 동기화 재시작
+     */
+    fun resumeAutoSync() {
+        if (isAutoSyncActive) return
+
+        Log.d("TaskListViewModel", "Auto-sync resumed")
+        // Immediately sync once when resuming, then start the timer
+        syncRequests.tryEmit(Unit)
+        startAutoSync()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        stopAutoSync()
     }
     
 }
