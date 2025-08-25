@@ -50,25 +50,6 @@ class MessageRepositoryImpl @Inject constructor(
             db.withTransaction {
                 val entityModel = entityMapper.domainToEntity(entity)
 
-                // 중복 방지: 동일 채널/보낸이/페이로드가 이미 존재하면 이전 레코드를 정리
-                runCatching {
-                    val existingId = messageDao.findExistingIdBySenderAndPayload(
-                        channelId = entityModel.channelId,
-                        senderId = entityModel.senderId,
-                        payload = entityModel.payload
-                    )
-                    if (existingId != null && existingId != entityModel.id) {
-                        // 이전(중복) 레코드를 tombstone 처리하여 UI 중복 제거
-                        messageDao.tombstone(existingId, entityModel.updatedAt)
-                        Log.d(
-                            "MessageRepository",
-                            "🧹 Duplicate optimistic record tombstoned: $existingId -> keep ${entityModel.id}"
-                        )
-                    }
-                }.onFailure {
-                    Log.w("MessageRepository", "중복 검사 실패(무시): ${it.message}")
-                }
-
                 messageDao.upsert(entityModel)
                 Log.d(
                     "MessageRepository",
@@ -142,21 +123,6 @@ class MessageRepositoryImpl @Inject constructor(
             // 원격(Firestore)을 건드리지 않고, 로컬(Room)만 업서트한다.
             db.withTransaction {
                 val entityModel = entityMapper.domainToEntity(entity)
-
-                // 가능 시 중복 업서트 방지: 동일 채널/보낸이/페이로드가 이미 있으면 최신화만
-                runCatching {
-                    val existingId = messageDao.findExistingIdBySenderAndPayload(
-                        channelId = entityModel.channelId,
-                        senderId = entityModel.senderId,
-                        payload = entityModel.payload
-                    )
-                    if (existingId != null && existingId != entityModel.id) {
-                        // 기존 낙관적 레코드를 tombstone 처리하여 중복 제거 후 서버 반영본으로 교체
-                        messageDao.tombstone(existingId, entityModel.updatedAt)
-                    }
-                }.onFailure {
-                    Log.w("MessageRepository", "saveReceivedMessage 중복 검사 실패(무시): ${it.message}")
-                }
 
                 messageDao.upsert(entityModel)
             }

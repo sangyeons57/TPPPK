@@ -102,10 +102,10 @@ fun ChatMessagesList(
             count = lazyPagingItems.itemCount,
             key = { index ->
                 val message = lazyPagingItems[index]
-                // localId를 사용한 간단하고 안정적인 키 생성
+                // messageId (Room PK)를 직접 키로 사용하여 완전한 고유성 보장
                 when {
                     message == null -> "loading_$index" // 로딩 중 null에 대해 인덱스 기반 고유 키
-                    else -> message.localId // ChatMessageUiModel의 고유 localId 사용
+                    else -> message.messageId // Firestore document ID = Room PK (완전히 고유함)
                 }
             },
             contentType = { index ->

@@ -20,6 +20,19 @@ class NavigationService(
     }
     
     /**
+     * 홈 화면으로 이동
+     */
+    suspend fun navigateToHome() {
+        Log.d("NavigationService", "Navigating to home screen")
+        navigationManager.navigateToHome()
+    }
+    
+    /**
+     * NavController 인스턴스 반환 (딥링크 진입 여부 확인용)
+     */
+    fun getNavController() = navigationManager.getNavController()
+    
+    /**
      * 사용자 프로필 화면으로 이동
      */
     suspend fun navigateToUserProfile(userId: String) {

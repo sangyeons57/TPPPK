@@ -212,7 +212,7 @@ class MessageService @Inject constructor(
 
         return ChatMessageUiModel(
             messageId = message.id.value,
-            localId = "${message.id.value}_${message.createdAt.toEpochMilli()}_${message.payload.value.hashCode()}",
+            localId = "${message.id.value}_${message.createdAt.toEpochMilli()}",
             userId = senderId,
             userName = userProfileService.getUserDisplayName(senderId),
             userProfileUrl = userProfileService.getCachedProfileUrl(senderId),

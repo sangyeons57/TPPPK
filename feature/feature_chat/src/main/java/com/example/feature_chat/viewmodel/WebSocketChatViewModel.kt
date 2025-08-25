@@ -146,6 +146,9 @@ class WebSocketChatViewModel @Inject constructor(
     val anchorTargetMessageId: StateFlow<String?> = services.messageService.anchorTargetMessageId
 
     init {
+        // 0. 딥링크 인터셉터: 딥링크로 진입한 경우 강제로 로그인 → 홈 → 채팅 순서로 진행
+        checkDeepLinkAndRedirect()
+
         // 1. 🎯 Pager initialKey 방식을 사용하므로 초기 Anchor 설정은 생략
 
         // 2. 채팅방 즉시 입장 (해당 방 이벤트만 수신/저장하도록 보장)
@@ -786,12 +789,24 @@ class WebSocketChatViewModel @Inject constructor(
 
     /**
      * 뒤로가기 클릭 처리
+     * 딥링크로 진입한 경우 홈화면으로, 일반 진입인 경우 이전 화면으로 이동
      */
     fun onBackClick() {
         viewModelScope.launch {
             try {
                 Log.d(TAG, "⬅️ 뒤로가기 클릭")
-                services.navigationService.navigateBack()
+                
+                // 딥링크로 진입했는지 확인 (백스택에 이전 엔트리가 없는 경우)
+                val navController = services.navigationService.getNavController()
+                val isFromDeepLink = navController?.previousBackStackEntry == null
+                
+                if (isFromDeepLink) {
+                    Log.d(TAG, "🔗 딥링크 진입 감지, 홈화면으로 이동")
+                    services.navigationService.navigateToHome()
+                } else {
+                    Log.d(TAG, "↩️ 일반 진입, 이전 화면으로 이동")
+                    services.navigationService.navigateBack()
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "❌ 뒤로가기 처리 실패", e)
             }
